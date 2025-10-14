@@ -1,17 +1,30 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, Alert, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Pressable,
+  KeyboardAvoidingView,
+  ScrollView,
+} from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { styles } from "@/styles/auth.styles";
+import { COLORS } from "@/constants/themes";
 
 const LoginScreen = () => {
   const { isLoaded, signIn, setActive } = useSignIn();
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const isAllowedEmail = (email: string) => email.endsWith("@marwadiuniversity.ac.in");
+  const isAllowedEmail = (email: string) =>
+    email.endsWith("@marwadiuniversity.ac.in");
 
   const handleSignIn = async () => {
     if (!isLoaded || !signIn) {
@@ -20,7 +33,10 @@ const LoginScreen = () => {
     }
 
     if (!isAllowedEmail(email)) {
-      Alert.alert("Access Denied", "Only @marwadiuniversity.ac.in emails can log in.");
+      Alert.alert(
+        "Access Denied",
+        "Only @marwadiuniversity.ac.in emails can log in."
+      );
       return;
     }
 
@@ -32,46 +48,144 @@ const LoginScreen = () => {
 
       if (signInAttempt.status === "complete") {
         await setActive({ session: signInAttempt.createdSessionId });
-        router.replace("/(tabs)"); // redirect to home tabs
+        router.replace("/(tabs)");
       } else {
         Alert.alert("Error", "Unexpected sign-in state");
       }
     } catch (err: any) {
-      Alert.alert("Sign-in failed", err.errors ? err.errors[0].message : "Something went wrong");
+      Alert.alert(
+        "Sign-in failed",
+        err.errors ? err.errors[0].message : "Something went wrong"
+      );
     }
   };
 
   return (
-    <View style={{ padding: 20, marginTop: 80 }}>
-      <Text>Email:</Text>
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        style={{ borderWidth: 1, marginVertical: 10, padding: 8 }}
-      />
+    <KeyboardAvoidingView style={styles.container} behavior="height">
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          paddingHorizontal: 24,
+          backgroundColor: COLORS.background,
+        }}
+      >
+        {/* Brand Header */}
+        <View style={styles.brandSection}>
+          <View style={styles.logoContainer}>
+            <Ionicons name="lock-closed" size={32} color={COLORS.primary} />
+          </View>
+          <Text style={styles.appName}>CampusConnext</Text>
+          <Text style={styles.tagline}>Welcome back!</Text>
+        </View>
 
-      <Text>Password:</Text>
-      <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, marginVertical: 10, padding: 8 }}>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          style={{ flex: 1 }}
-        />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Ionicons name={showPassword ? "eye-off" : "eye"} size={24} />
-        </TouchableOpacity>
-      </View>
+        {/* Card Container */}
+        <View
+          style={{
+            marginTop: 40,
+            backgroundColor: COLORS.white,
+            borderRadius: 20,
+            padding: 24,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 6,
+          }}
+        >
+          <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 16 }}>
+            Sign In
+          </Text>
 
-      <Button title="Sign In" onPress={handleSignIn} />
+          {/* Email */}
+          <Text style={{ color: COLORS.grey }}>Email</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholder="Enter your Marwadi email"
+            placeholderTextColor="#aaa"
+            style={{
+              borderWidth: 1,
+              borderColor: COLORS.grey + "40",
+              borderRadius: 10,
+              padding: 12,
+              marginVertical: 8,
+            }}
+          />
 
-      {/* Navigate to Signup */}
-      <View style={{ marginTop: 20 }}>
-        <Button title="Go to Sign Up" onPress={() => router.push("./signup")} />
-      </View>
-    </View>
+          {/* Password */}
+          <Text style={{ color: COLORS.grey }}>Password</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: COLORS.grey + "40",
+              borderRadius: 10,
+              marginVertical: 8,
+              paddingHorizontal: 12,
+            }}
+          >
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              placeholder="Enter password"
+              placeholderTextColor="#aaa"
+              style={{ flex: 1, paddingVertical: 10 }}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Ionicons
+                name={showPassword ? "eye-off" : "eye"}
+                size={22}
+                color={COLORS.grey}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Sign In Button */}
+          <Pressable
+            onPress={handleSignIn}
+            style={{
+              backgroundColor: COLORS.primary,
+              paddingVertical: 14,
+              borderRadius: 12,
+              marginTop: 16,
+            }}
+          >
+            <Text
+              style={{
+                color: COLORS.white,
+                textAlign: "center",
+                fontSize: 16,
+                fontWeight: "600",
+              }}
+            >
+              Sign In
+            </Text>
+          </Pressable>
+
+          {/* Navigate to Signup */}
+          <View
+            style={{
+              marginTop: 20,
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: COLORS.grey }}>Don’t have an account? </Text>
+            <TouchableOpacity onPress={() => router.push("./signup")}>
+              <Text style={{ color: COLORS.primary, fontWeight: "600" }}>
+                Sign Up
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

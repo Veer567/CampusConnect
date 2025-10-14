@@ -1,8 +1,20 @@
 import { useSignUp } from "@clerk/clerk-expo";
 import React, { useState } from "react";
-import { Alert, Button, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Button,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Pressable,
+  KeyboardAvoidingView,
+  ScrollView,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { styles } from "@/styles/auth.styles";
+import { COLORS } from "@/constants/themes";
 
 export default function SignupScreen() {
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -23,7 +35,10 @@ export default function SignupScreen() {
     if (!isLoaded || !signUp) return;
 
     if (!isAllowedEmail(email)) {
-      Alert.alert("Access Denied", "Only @marwadiuniversity.ac.in emails are allowed.");
+      Alert.alert(
+        "Access Denied",
+        "Only @marwadiuniversity.ac.in emails are allowed."
+      );
       return;
     }
 
@@ -73,57 +88,194 @@ export default function SignupScreen() {
   };
 
   return (
-    <View style={{ padding: 20, marginTop: 80 }}>
-      {!isCodeSent ? (
-        <>
-          <Text>Email:</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            keyboardType= "email-address"
-            autoCapitalize="none"
-            style={{ borderWidth: 1, marginVertical: 10, padding: 8 }}
-          />
-
-          <Text>Password:</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, marginVertical: 10, padding: 8 }}>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              style={{ flex: 1 }}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons name={showPassword ? "eye-off" : "eye"} size={24} />
-            </TouchableOpacity>
+    <KeyboardAvoidingView style={styles.container} behavior="height">
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          paddingHorizontal: 24,
+          backgroundColor: COLORS.background,
+        }}
+      >
+        <View style={styles.brandSection}>
+          <View style={styles.logoContainer}>
+            <Ionicons name="school" size={32} color={COLORS.primary} />
           </View>
+          <Text style={styles.appName}>CampusConnect</Text>
+          <Text style={styles.tagline}>Lets Connect</Text>
+        </View>
 
-          <Text>Confirm Password:</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, marginVertical: 10, padding: 8 }}>
-            <TextInput
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showConfirmPassword}
-              style={{ flex: 1 }}
-            />
-            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-              <Ionicons name={showConfirmPassword ? "eye-off" : "eye"} size={24} />
-            </TouchableOpacity>
-          </View>
+        <View
+          style={{
+            marginTop: 40,
+            backgroundColor: COLORS.white,
+            borderRadius: 20,
+            padding: 24,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 6,
+          }}
+        >
+          {!isCodeSent ? (
+            <>
+              <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 16 }}>
+                Create Account
+              </Text>
 
-          <Button title="Sign Up" onPress={handleSignUp} />
-        </>
-      ) : (
-        <>
-          <Text>Enter Verification Code:</Text>
-          <TextInput
-            value={code}
-            onChangeText={setCode}
-            style={{ borderWidth: 1, marginVertical: 10, padding: 8 }}
-          />
-          <Button title="Verify & Continue" onPress={handleVerifyCode} />
-        </>
-      )}
-    </View>
+              {/* Email */}
+              <Text style={{ color: COLORS.grey }}>Email</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholder="Enter your Marwadi email"
+                placeholderTextColor="#aaa"
+                style={{
+                  borderWidth: 1,
+                  borderColor: COLORS.grey + "40",
+                  borderRadius: 10,
+                  padding: 12,
+                  marginVertical: 8,
+                }}
+              />
+
+              {/* Password */}
+              <Text style={{ color: COLORS.grey }}>Password</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: COLORS.grey + "40",
+                  borderRadius: 10,
+                  marginVertical: 8,
+                  paddingHorizontal: 12,
+                }}
+              >
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholder="Enter password"
+                  placeholderTextColor="#aaa"
+                  style={{ flex: 1, paddingVertical: 10 }}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={22}
+                    color={COLORS.grey}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Confirm Password */}
+              <Text style={{ color: COLORS.grey }}>Confirm Password</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: COLORS.grey + "40",
+                  borderRadius: 10,
+                  marginVertical: 8,
+                  paddingHorizontal: 12,
+                }}
+              >
+                <TextInput
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  placeholder="Re-enter password"
+                  placeholderTextColor="#aaa"
+                  style={{ flex: 1, paddingVertical: 10 }}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye-off" : "eye"}
+                    size={22}
+                    color={COLORS.grey}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Sign Up Button */}
+              <Pressable
+                onPress={handleSignUp}
+                style={{
+                  backgroundColor: COLORS.primary,
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  marginTop: 16,
+                }}
+              >
+                <Text
+                  style={{
+                    color: COLORS.white,
+                    textAlign: "center",
+                    fontSize: 16,
+                    fontWeight: "600",
+                  }}
+                >
+                  Sign Up
+                </Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 16 }}>
+                Verify Your Email
+              </Text>
+              <Text style={{ color: COLORS.grey, marginBottom: 8 }}>
+                Enter the 6-digit code sent to your email:
+              </Text>
+
+              <TextInput
+                value={code}
+                onChangeText={setCode}
+                keyboardType="number-pad"
+                placeholder="Enter verification code"
+                placeholderTextColor="#aaa"
+                style={{
+                  borderWidth: 1,
+                  borderColor: COLORS.grey + "40",
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 16,
+                  textAlign: "center",
+                  fontSize: 16,
+                  letterSpacing: 2,
+                }}
+              />
+
+              <Pressable
+                onPress={handleVerifyCode}
+                style={{
+                  backgroundColor: COLORS.primary,
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                }}
+              >
+                <Text
+                  style={{
+                    color: COLORS.white,
+                    textAlign: "center",
+                    fontSize: 16,
+                    fontWeight: "600",
+                  }}
+                >
+                  Verify & Continue
+                </Text>
+              </Pressable>
+            </>
+          )}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
