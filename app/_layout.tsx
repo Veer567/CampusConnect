@@ -1,15 +1,16 @@
-import InitalLayout from "@/components/initalLayout";
-import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
 import React from "react";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+const { Slot }  = require('expo-router');
+import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
+import InitalLayout from "@/components/initalLayout";
 
 export default function RootLayout() {
   return (
     <ClerkAndConvexProvider>
       <SafeAreaProvider>
-        <SafeAreaView style={{ flex: 1 }}>
-          <InitalLayout />
-        </SafeAreaView>
+        <InitalLayout>
+          <Slot />
+        </InitalLayout>
       </SafeAreaProvider>
     </ClerkAndConvexProvider>
   );

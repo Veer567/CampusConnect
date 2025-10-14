@@ -1,69 +1,68 @@
-import { COLORS } from '@/constants/themes'
-import { styles } from '@/styles/auth.styles'
-import { useSSO } from '@clerk/clerk-expo'
-import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
-import React from 'react'
-import { Image, Text, TouchableOpacity, View } from 'react-native'
+import React, { useState } from "react";
+import { View, Text, TextInput, Button, Alert } from "react-native";
+import { useSignIn } from "@clerk/clerk-expo";
+import { useRouter } from "expo-router";
+import SignupScreen from "./signup";
 
+const LoginScreen = () => {
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-export default function Login() {
+  const isAllowedEmail = (email: string) => email.endsWith("@marwadiuniversity.ac.in");
 
-    const { startSSOFlow } = useSSO()
-    const router = useRouter();
+  const handleSignIn = async () => {
+    if (!isLoaded || !signIn) {
+  Alert.alert("Please wait", "Authentication is initializing...");
+  return;
+}
 
-
-    const handleGoogleSignIn = async () => { 
-        try {
-            // Your Google Sign-In logic here
-            const { createdSessionId, setActive } = await startSSOFlow({ strategy: 'oauth_google' });
-             
-            if (createdSessionId && setActive) {
-                setActive({ session: createdSessionId });
-                router.replace('/(tabs)');
-            }
-        } catch (error) {
-            console.error("Google Sign-In error:", error);
-        }
+    
+    if (!isAllowedEmail(email)) {
+      Alert.alert("Access Denied", "Only @marwadiuniversity.ac.in emails can log in.");
+      return;
     }
 
+    try {
+      const signInAttempt = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      if (signInAttempt.status === "complete") {
+        await setActive({ session: signInAttempt.createdSessionId });
+        router.replace("/(tabs)"); // redirect to your home tabs
+      } else {
+        Alert.alert("Error", "Unexpected sign-in state");
+      }
+    } catch (err: any) {
+      Alert.alert("Sign-in failed", err.errors ? err.errors[0].message : "Something went wrong");
+    }
+  };
+
   return (
-    
-    <View style={styles.container}>
-      <View style={styles.brandSection}>
-        <View style={styles.logoContainer}>
-          <Ionicons name="leaf" size={32} color={COLORS.primary} /> 
-        </View>
-        <Text style={styles.appName}>Spotlight</Text>
-        <Text style={styles.tagline}>Discover. Share. Inspire.</Text>
-          </View>
-          
-          {/* Illustration Section */}
-          <View style={styles.illustrationContainer}>
-              <Image
-                  source={require('../../assets/images/Online wishes-bro.png')}
-                  style={styles.illustration}
-                    resizeMode="cover"
-              />
-          </View>
-              
-          {/* Login Section */}
-          
-          <View style={styles.loginSection}>
-              <TouchableOpacity
-                  style={styles.googleButton}
-                  onPress= {handleGoogleSignIn}
-                  activeOpacity={0.9}
-              >
-                  <View style={styles.googleIconContainer}>
-                      <Ionicons name="logo-google" size={24} color={COLORS.surface} />
-                  </View>
-                    <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </TouchableOpacity>
-              <Text style={styles.termsText}>
-                  By continuing, you agree to our Terms of Service and Privacy Policy.
-              </Text>
-          </View>
+    <View style={{ padding: 20, marginTop: 80 }}>
+      <Text>Email:</Text>
+      <TextInput
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        style={{ borderWidth: 1, marginVertical: 10, padding: 8 }}
+      />
+      <Text>Password:</Text>
+      <TextInput
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        style={{ borderWidth: 1, marginVertical: 10, padding: 8 }}
+      />
+      <Button title="Sign In" onPress={handleSignIn} />
+      <View style={{ marginTop: 20 }}>
+        <Button title="Go to Sign Up" onPress={() => router.push("/(auth)/")} />
+      </View>
     </View>
-  )
-}
+  );
+};
+
+export default LoginScreen;
