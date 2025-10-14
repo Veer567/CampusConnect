@@ -2,7 +2,6 @@ import { useSignUp } from "@clerk/clerk-expo";
 import React, { useState } from "react";
 import {
   Alert,
-  Button,
   Text,
   TextInput,
   TouchableOpacity,
