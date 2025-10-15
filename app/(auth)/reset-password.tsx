@@ -1,173 +1,294 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "@/constants/themes";
 
-export default function ForgotPassword() {
-  const { signIn, isLoaded } = useSignIn();
+const ResetPasswordScreen = () => {
+  const { isLoaded, signIn } = useSignIn();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [stage, setStage] = useState<"request" | "reset">("request");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [step, setStep] = useState<"request" | "verify">("request");
 
-  if (!isLoaded) return null;
-
-  const handlePasswordResetRequest = async () => {
-    try {
-      await signIn?.create({
-        strategy: "reset_password_email_code",
-        identifier: email,
-      });
-      Alert.alert("Check your email", "A verification code has been sent.");
-      setStage("reset");
-    } catch (err: any) {
-      Alert.alert("Error", err.errors?.[0]?.message || "Something went wrong");
+  // Step 1: Request password reset code
+  const handleRequestReset = async () => {
+    if (!isLoaded || !signIn) {
+      Alert.alert("Please wait", "Authentication is initializing...");
+      return;
     }
-  };
 
-  const handlePasswordReset = async () => {
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+    if (!email) {
+      Alert.alert("Missing Email", "Please enter your email address.");
       return;
     }
 
     try {
-      const result = await signIn?.attemptFirstFactor({
+      await signIn.create({
         strategy: "reset_password_email_code",
-        code,
-        password,
+        identifier: email,
       });
 
-      if (result?.status === "complete") {
-        Alert.alert("Success", "Password reset successful!");
-        router.replace("/(auth)/login"); // Redirect to login screen
+      Alert.alert("Email Sent", "Check your inbox for a password reset code.");
+      setStep("verify");
+    } catch (err: any) {
+      Alert.alert(
+        "Error",
+        err.errors ? err.errors[0].message : "Something went wrong"
+      );
+    }
+  };
+
+  // Step 2: Verify code and set new password
+  const handleResetPassword = async () => {
+    if (!isLoaded || !signIn) return;
+
+    if (!code || !newPassword || !confirmPassword) {
+      Alert.alert("Missing Fields", "Please fill in all fields.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match.");
+      return;
+    }
+
+    try {
+      const result = await signIn.attemptFirstFactor({
+        strategy: "reset_password_email_code",
+        code,
+        password: newPassword,
+      });
+
+      if (result.status === "complete") {
+        Alert.alert("Success", "Password has been reset successfully!");
+        router.replace("/(auth)/login"); // Redirect to login after reset
+      } else {
+        Alert.alert("Error", "Unexpected state during password reset.");
       }
     } catch (err: any) {
-      Alert.alert("Error", err.errors?.[0]?.message || "Invalid code or password");
+      Alert.alert(
+        "Error",
+        err.errors ? err.errors[0].message : "Invalid code or password."
+      );
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Forgot Password</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          paddingHorizontal: 24,
+          backgroundColor: COLORS.background,
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: COLORS.white,
+            borderRadius: 20,
+            padding: 24,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 6,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 22,
+              fontWeight: "700",
+              marginBottom: 20,
+              textAlign: "center",
+              color: COLORS.primary,
+            }}
+          >
+            Reset Password
+          </Text>
 
-      {stage === "request" ? (
-        <>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            placeholderTextColor="#aaa"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-          />
-          <TouchableOpacity style={styles.button} onPress={handlePasswordResetRequest}>
-            <Text style={styles.buttonText}>Send Reset Code</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter code"
-            placeholderTextColor="#aaa"
-            value={code}
-            onChangeText={setCode}
-          />
-
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="New Password"
-              placeholderTextColor="#aaa"
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons
-                name={showPassword ? "eye" : "eye-off"}
-                size={22}
-                color="#555"
+          {step === "request" ? (
+            <>
+              <Text style={{ color: COLORS.grey }}>Email</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholder="Enter your email"
+                placeholderTextColor="#aaa"
+                style={{
+                  borderWidth: 1,
+                  borderColor: COLORS.grey + "40",
+                  borderRadius: 10,
+                  padding: 12,
+                  marginVertical: 10,
+                }}
               />
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Confirm Password"
-              placeholderTextColor="#aaa"
-              secureTextEntry={!showConfirm}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-            <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
-              <Ionicons
-                name={showConfirm ? "eye" : "eye-off"}
-                size={22}
-                color="#555"
+              <TouchableOpacity
+                onPress={handleRequestReset}
+                style={{
+                  backgroundColor: COLORS.primary,
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  marginTop: 10,
+                }}
+              >
+                <Text
+                  style={{
+                    color: COLORS.white,
+                    textAlign: "center",
+                    fontSize: 16,
+                    fontWeight: "600",
+                  }}
+                >
+                  Send Reset Code
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={{ color: COLORS.grey }}>Verification Code</Text>
+              <TextInput
+                value={code}
+                onChangeText={setCode}
+                keyboardType="number-pad"
+                placeholder="Enter code from email"
+                placeholderTextColor="#aaa"
+                style={{
+                  borderWidth: 1,
+                  borderColor: COLORS.grey + "40",
+                  borderRadius: 10,
+                  padding: 12,
+                  marginVertical: 10,
+                }}
               />
-            </TouchableOpacity>
-          </View>
 
-          <TouchableOpacity style={styles.button} onPress={handlePasswordReset}>
-            <Text style={styles.buttonText}>Reset Password</Text>
+              {/* New Password */}
+              <Text style={{ color: COLORS.grey }}>New Password</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: COLORS.grey + "40",
+                  borderRadius: 10,
+                  marginVertical: 8,
+                  paddingHorizontal: 12,
+                }}
+              >
+                <TextInput
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  secureTextEntry={!showPassword}
+                  placeholder="Enter new password"
+                  placeholderTextColor="#aaa"
+                  style={{ flex: 1, paddingVertical: 10 }}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={22}
+                    color={COLORS.grey}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Confirm Password */}
+              <Text style={{ color: COLORS.grey }}>Confirm Password</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: COLORS.grey + "40",
+                  borderRadius: 10,
+                  marginVertical: 8,
+                  paddingHorizontal: 12,
+                }}
+              >
+                <TextInput
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  placeholder="Confirm new password"
+                  placeholderTextColor="#aaa"
+                  style={{ flex: 1, paddingVertical: 10 }}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye-off" : "eye"}
+                    size={22}
+                    color={COLORS.grey}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleResetPassword}
+                style={{
+                  backgroundColor: COLORS.primary,
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  marginTop: 10,
+                }}
+              >
+                <Text
+                  style={{
+                    color: COLORS.white,
+                    textAlign: "center",
+                    fontSize: 16,
+                    fontWeight: "600",
+                  }}
+                >
+                  Reset Password
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{ marginTop: 20 }}
+          >
+            <Text
+              style={{
+                color: COLORS.primary,
+                textAlign: "center",
+                fontWeight: "600",
+              }}
+            >
+              Back to Login
+            </Text>
           </TouchableOpacity>
-        </>
-      )}
-    </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 30,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
-  },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 15,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingVertical: 10,
-  },
-  button: {
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-});
+export default ResetPasswordScreen;
