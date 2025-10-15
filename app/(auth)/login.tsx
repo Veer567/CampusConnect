@@ -47,7 +47,7 @@ const LoginScreen = () => {
       });
 
       if (signInAttempt.status === "complete") {
-        await setActive({ session: signInAttempt.createdSessionId });
+        await setActive?.({ session: signInAttempt.createdSessionId });
         router.replace("/(tabs)");
       } else {
         Alert.alert("Error", "Unexpected sign-in state");
@@ -55,6 +55,42 @@ const LoginScreen = () => {
     } catch (err: any) {
       Alert.alert(
         "Sign-in failed",
+        err.errors ? err.errors[0].message : "Something went wrong"
+      );
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!isLoaded || !signIn) {
+      Alert.alert("Please wait", "Authentication is initializing...");
+      return;
+    }
+
+    if (!email) {
+      Alert.alert("Missing Email", "Please enter your email address first.");
+      return;
+    }
+
+    try {
+      // Send password reset link
+      const resetAttempt = await signIn.create({
+        strategy: "reset_password_email_code",
+        identifier: email,
+      });
+
+      if (resetAttempt.status === "needs_first_factor") {
+        Alert.alert(
+          "Reset Email Sent",
+          "Check your inbox for a password reset code."
+        );
+        // Optionally, navigate to a Reset Password screen:
+        // router.push("/(auth)/reset-password");
+      } else {
+        Alert.alert("Error", "Unable to send password reset email.");
+      }
+    } catch (err: any) {
+      Alert.alert(
+        "Error",
         err.errors ? err.errors[0].message : "Something went wrong"
       );
     }
@@ -145,6 +181,16 @@ const LoginScreen = () => {
             </TouchableOpacity>
           </View>
 
+          {/* Forgot Password */}
+          <TouchableOpacity
+            onPress={() => router.push("./reset-password")}
+            style={{ alignSelf: "flex-end", marginBottom: 8 }}
+          >
+            <Text style={{ color: COLORS.primary, fontWeight: "500" }}>
+              Forgot Password?
+            </Text>
+          </TouchableOpacity>
+
           {/* Sign In Button */}
           <Pressable
             onPress={handleSignIn}
@@ -152,7 +198,7 @@ const LoginScreen = () => {
               backgroundColor: COLORS.primary,
               paddingVertical: 14,
               borderRadius: 12,
-              marginTop: 16,
+              marginTop: 8,
             }}
           >
             <Text
