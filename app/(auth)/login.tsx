@@ -76,7 +76,7 @@ const LoginScreen = () => {
           <View style={styles.logoContainer}>
             <Ionicons name="lock-closed" size={32} color={COLORS.primary} />
           </View>
-          <Text style={styles.appName}>CampusConnext</Text>
+          <Text style={styles.appName}>CampusConnect</Text>
           <Text style={styles.tagline}>Welcome back!</Text>
         </View>
 
