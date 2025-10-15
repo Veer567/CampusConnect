@@ -25,6 +25,7 @@
     "expo-font": "~13.3.2",
     "expo-haptics": "~14.1.4",
     "expo-image": "~2.4.0",
+    "expo-image-picker": "~17.0.8",
     "expo-linking": "~8.0.8",
     "expo-modules-autolinking": "~3.0.8",
     "expo-router": "~6.0.11",
