@@ -1,11 +1,14 @@
 import { COLORS } from "@/constants/themes";
+import { api } from "@/convex/_generated/api";
 import { styles } from "@/styles/create.styles";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+import { useMutation } from "convex/react";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import * as FileSystem from "expo-file-system/legacy";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -38,6 +41,38 @@ export default function CreateScreen() {
     if (!result.canceled) {
       setSelectedImage(result.assets[0].uri);
       setIsConfirmed(false); // show confirmation screen next
+    }
+  };
+
+  const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
+  const createPost = useMutation(api.posts.createPost);
+
+  const handleShare = async () => {
+    if (!selectedImage) return;
+
+    try {
+      setIsSharing(true);
+      const uploadUrl = await generateUploadUrl();
+
+      const uploadResult = await FileSystem.uploadAsync(
+        uploadUrl,
+        selectedImage,
+        {
+          httpMethod: "POST",
+          mimeType: "image/jpeg",
+        }
+      );
+
+      if (uploadResult.status !== 200) throw new Error("Upload failed");
+
+      const { storageId } = JSON.parse(uploadResult.body);
+      await createPost({ storageId, caption });
+
+      router.push("/(tabs)");
+    } catch (error) {
+      console.log("Error Sharing Post")
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -78,7 +113,7 @@ export default function CreateScreen() {
                   <Ionicons
                     name="arrow-back"
                     size={28}
-                    color={COLORS.primary}
+                    color={COLORS.blue}
                   />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Confirm Image</Text>
@@ -114,7 +149,7 @@ export default function CreateScreen() {
                 >
                   <TouchableOpacity
                     style={{
-                      backgroundColor: COLORS.primary,
+                      backgroundColor: COLORS.blue,
                       borderRadius: 10,
                       paddingVertical: 12,
                       paddingHorizontal: 32,
@@ -182,20 +217,20 @@ export default function CreateScreen() {
                     isSharing && styles.shareButtonDisabled,
                   ]}
                   disabled={isSharing || !selectedImage}
+                  onPress={handleShare}
                 >
                   {isSharing ? (
-                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <ActivityIndicator size="small" color={COLORS.blue} />
                   ) : (
-                    <Text style={styles.shareText}>Share</Text>
+                    <Text style={styles.shareText}>Post</Text>
                   )}
                 </TouchableOpacity>
               </View>
               <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 bounces={false}
-                    keyboardShouldPersistTaps="handled"
-                    contentOffset={{x : 0 , y : 100}}
-                    
+                keyboardShouldPersistTaps="handled"
+                contentOffset={{ x: 0, y: 100 }}
               >
                 <View
                   style={[styles.content, isSharing && styles.contentDisabled]}
