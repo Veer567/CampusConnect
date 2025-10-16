@@ -120,7 +120,7 @@ const ResetPasswordScreen = () => {
               fontWeight: "700",
               marginBottom: 20,
               textAlign: "center",
-              color: COLORS.primary,
+              color: COLORS.blue,
             }}
           >
             Reset Password
@@ -148,7 +148,7 @@ const ResetPasswordScreen = () => {
               <TouchableOpacity
                 onPress={handleRequestReset}
                 style={{
-                  backgroundColor: COLORS.primary,
+                  backgroundColor: COLORS.blue,
                   paddingVertical: 14,
                   borderRadius: 12,
                   marginTop: 10,
@@ -251,7 +251,7 @@ const ResetPasswordScreen = () => {
               <TouchableOpacity
                 onPress={handleResetPassword}
                 style={{
-                  backgroundColor: COLORS.primary,
+                  backgroundColor: COLORS.blue,
                   paddingVertical: 14,
                   borderRadius: 12,
                   marginTop: 10,
@@ -277,7 +277,7 @@ const ResetPasswordScreen = () => {
           >
             <Text
               style={{
-                color: COLORS.primary,
+                color: COLORS.blue,
                 textAlign: "center",
                 fontWeight: "600",
               }}

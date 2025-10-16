@@ -14,19 +14,15 @@ export const styles = StyleSheet.create({
     marginTop: height * 0.12,
   },
   logoContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    backgroundColor: "rgba(74, 222, 128, 0.15)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
+    width: 80,
+    height: 80,
+    resizeMode: 'contain'
   },
   appName: {
     fontSize: 42,
     fontWeight: "700",
     fontFamily: "JetBrainsMono-Medium",
-    color: COLORS.primary,
+    color: COLORS.blue,
     letterSpacing: 0.5,
     marginBottom: 8,
   },

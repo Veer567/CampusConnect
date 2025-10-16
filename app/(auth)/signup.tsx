@@ -1,19 +1,24 @@
+import { COLORS } from "@/constants/themes";
+import { styles } from "@/styles/auth.styles";
 import { useSignUp } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  Pressable,
-  KeyboardAvoidingView,
-  ScrollView,
+  View
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { styles } from "@/styles/auth.styles";
-import { COLORS } from "@/constants/themes";
+
+
+
+
 
 export default function SignupScreen() {
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -98,7 +103,9 @@ export default function SignupScreen() {
       >
         <View style={styles.brandSection}>
           <View style={styles.logoContainer}>
-            <Ionicons name="school" size={32} color={COLORS.primary} />
+             <Image
+                style = {styles.logoContainer}
+                source={require('@/assets/images/education.png')} /> 
           </View>
           <Text style={styles.appName}>CampusConnect</Text>
           <Text style={styles.tagline}>Lets Connect</Text>
@@ -207,7 +214,7 @@ export default function SignupScreen() {
               <Pressable
                 onPress={handleSignUp}
                 style={{
-                  backgroundColor: COLORS.primary,
+                  backgroundColor: COLORS.blue,
                   paddingVertical: 14,
                   borderRadius: 12,
                   marginTop: 16,
@@ -255,7 +262,7 @@ export default function SignupScreen() {
               <Pressable
                 onPress={handleVerifyCode}
                 style={{
-                  backgroundColor: COLORS.primary,
+                  backgroundColor: COLORS.blue,
                   paddingVertical: 14,
                   borderRadius: 12,
                 }}

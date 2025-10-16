@@ -8,6 +8,7 @@ import {
   Pressable,
   KeyboardAvoidingView,
   ScrollView,
+  Image
 } from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
@@ -74,7 +75,10 @@ const LoginScreen = () => {
         {/* Brand Header */}
         <View style={styles.brandSection}>
           <View style={styles.logoContainer}>
-            <Ionicons name="lock-closed" size={32} color={COLORS.primary} />
+            <Image
+              style = {styles.logoContainer}
+              source={require('@/assets/images/education.png')} /> 
+            
           </View>
           <Text style={styles.appName}>CampusConnect</Text>
           <Text style={styles.tagline}>Welcome back!</Text>
@@ -152,7 +156,7 @@ const LoginScreen = () => {
 
             style={{ alignSelf: "flex-end", marginBottom: 8 }}
           >
-            <Text style={{ color: COLORS.primary, fontWeight: "500" }}>
+            <Text style={{ color: COLORS.blue, fontWeight: "500" }}>
               Forgot Password?
             </Text>
           </TouchableOpacity>
@@ -161,7 +165,7 @@ const LoginScreen = () => {
           <Pressable
             onPress={handleSignIn}
             style={{
-              backgroundColor: COLORS.primary,
+              backgroundColor: COLORS.blue,
               paddingVertical: 14,
               borderRadius: 12,
               marginTop: 8,
@@ -190,7 +194,7 @@ const LoginScreen = () => {
           >
             <Text style={{ color: COLORS.grey }}>Don’t have an account? </Text>
             <TouchableOpacity onPress={() => router.push("./signup")}>
-              <Text style={{ color: COLORS.primary, fontWeight: "600" }}>
+              <Text style={{ color: COLORS.blue, fontWeight: "600" }}>
                 Sign Up
               </Text>
             </TouchableOpacity>
