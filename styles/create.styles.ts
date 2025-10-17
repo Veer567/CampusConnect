@@ -110,5 +110,7 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     paddingTop: 8,
     minHeight: 40,
+    borderWidth: 1, // add this
+    borderColor: COLORS.white, // add this
   },
 });
