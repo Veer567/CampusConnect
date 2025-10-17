@@ -3,8 +3,8 @@ import { v } from "convex/values";
 
 export default defineSchema({
   users: defineTable({
-    username: v.string(), //johndoe
-    fullname: v.string(), // John Doe
+    username: v.string(),
+    fullname: v.string(),
     email: v.string(),
     bio: v.optional(v.string()),
     image: v.string(),
@@ -17,10 +17,14 @@ export default defineSchema({
   posts: defineTable({
     userId: v.id("users"),
     imageUrl: v.string(),
-    storageId: v.id("_storage"), // will be needed when we want to delete a post
+    storageId: v.id("_storage"),
     caption: v.optional(v.string()),
     likes: v.number(),
     comments: v.number(),
+    title: v.optional(v.string()), 
+    category: v.optional(v.string()),
+    location: v.optional(v.string()),
+    eventDate: v.optional(v.string()),
   }).index("by_user", ["userId"]),
 
   likes: defineTable({

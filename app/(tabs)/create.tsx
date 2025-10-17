@@ -1,288 +1,369 @@
-import { COLORS } from "@/constants/themes";
-import { api } from "@/convex/_generated/api";
-import { styles } from "@/styles/create.styles";
-import { useUser } from "@clerk/clerk-expo";
-import { Ionicons } from "@expo/vector-icons";
-import { useMutation } from "convex/react";
-import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
-import { useState } from "react";
-import * as FileSystem from "expo-file-system/legacy";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+  SafeAreaView,
+  View,
   Text,
   TextInput,
+  ScrollView,
   TouchableOpacity,
-  View,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  StyleSheet,
+  Animated,
 } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import { useMutation } from "convex/react";
+import { useRouter } from "expo-router";
+import { COLORS } from "@/constants/themes";
+import { api } from "@/convex/_generated/api";
 
+// --- Types and Constants ---
+type Category = { id: number; name: string; icon: string };
+
+const categories: Category[] = [
+  { id: 1, name: "Placements", icon: "👨‍💼" },
+  { id: 2, name: "Workshops", icon: "🛠️" },
+  { id: 3, name: "Hackathon", icon: "🚀" },
+  { id: 4, name: "Festivals", icon: "🎉" },
+  { id: 5, name: "Sports", icon: "🏅" },
+  { id: 6, name: "Other", icon: "✨" },
+];
+
+// --- Main Component ---
 export default function CreateScreen() {
   const router = useRouter();
-  const { user } = useUser();
-  const [caption, setCaption] = useState("");
+
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
-  const [isConfirmed, setIsConfirmed] = useState(false); // ✅ new state for confirmation step
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
+  const [eventDate, setEventDate] = useState("");
 
-  // Image picker
-  const pickImage = async () => {
+  const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
+  const createPost = useMutation(api.posts.createPost);
+
+  // --- Form validation ---
+  const isFormValid = useMemo(() => !!selectedImage && !!title && !!description, [
+    selectedImage,
+    title,
+    description,
+  ]);
+
+  // --- Animated scales for categories ---
+  const categoryScales = useMemo(
+    () => categories.map(() => new Animated.Value(1)),
+    []
+  );
+
+  useEffect(() => {
+    categories.forEach((cat, index) => {
+      Animated.spring(categoryScales[index], {
+        toValue: selectedCategory?.id === cat.id ? 1.1 : 1,
+        useNativeDriver: true,
+        speed: 25,
+      }).start();
+    });
+  }, [selectedCategory, categoryScales]);
+
+  // --- Image picker ---
+  const pickImage = useCallback(async () => {
+    if (isSharing) return;
+
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "images",
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
 
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
-      setIsConfirmed(false); // show confirmation screen next
-    }
-  };
+    if (!result.canceled) setSelectedImage(result.assets[0].uri);
+  }, [isSharing]);
 
-  const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
-  const createPost = useMutation(api.posts.createPost);
-
-  const handleShare = async () => {
-    if (!selectedImage) return;
+  // --- Handle share ---
+  const handleShare = useCallback(async () => {
+    if (!isFormValid || isSharing) return;
 
     try {
       setIsSharing(true);
+
       const uploadUrl = await generateUploadUrl();
+      const uploadResult = await FileSystem.uploadAsync(uploadUrl, selectedImage!, {
+        httpMethod: "POST",
+        mimeType: "image/jpeg",
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        fieldName: "file",
+        headers: { "Content-Type": "image/jpeg" },
+      });
 
-      const uploadResult = await FileSystem.uploadAsync(
-        uploadUrl,
-        selectedImage,
-        {
-          httpMethod: "POST",
-          mimeType: "image/jpeg",
-        }
-      );
-
-      if (uploadResult.status !== 200) throw new Error("Upload failed");
+      if (uploadResult.status !== 200) throw new Error("File upload failed");
 
       const { storageId } = JSON.parse(uploadResult.body);
-      await createPost({ storageId, caption });
+
+      await createPost({
+        storageId,
+        caption: description,
+        category: selectedCategory?.name || "Other",
+        title,
+        location,
+        eventDate,
+      });
 
       router.push("/(tabs)");
     } catch (error) {
-      console.log("Error Sharing Post")
+      console.error("Error sharing post:", error);
     } finally {
       setIsSharing(false);
     }
-  };
+  }, [
+    isFormValid,
+    isSharing,
+    generateUploadUrl,
+    selectedImage,
+    createPost,
+    description,
+    selectedCategory,
+    title,
+    location,
+    eventDate,
+    router,
+  ]);
 
+  // --- Render input helper ---
+  const renderInput = (
+    placeholder: string,
+    value: string,
+    setValue: (text: string) => void,
+    multiline = false,
+    optional = false
+  ) => (
+    <TextInput
+      placeholder={placeholder }
+      placeholderTextColor={COLORS.grey}
+      value={value}
+      onChangeText={setValue}
+      multiline={multiline}
+      style={[styles.input, multiline && styles.multilineInput]}
+      textAlignVertical={multiline ? "top" : "center"}
+      editable={!isSharing}
+    />
+  );
+
+  // --- UI ---
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.container}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 0}
-        >
-          {/* STEP 1: No Image Selected */}
-          {!selectedImage ? (
-            <View style={styles.container}>
-              <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                  <Ionicons name="arrow-back" size={28} color={COLORS.blue} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>New Post</Text>
-                <View style={{ width: 28 }} />
-              </View>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 0}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Header */}
+          <LinearGradient
+            colors={[COLORS.surfaceLight, COLORS.surface]}
+            start={[0, 0]}
+            end={[1, 0]}
+            style={styles.headerContainer}
+          >
+            <TouchableOpacity
+              onPress={() => router.back()}
+              disabled={isSharing}
+              style={styles.headerButton}
+            >
+              <Ionicons name="arrow-back" size={28} color={COLORS.blue} />
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.emptyImageContainer}
-                onPress={pickImage}
-              >
-                <Ionicons name="image-outline" size={48} color={COLORS.grey} />
-                <Text style={styles.emptyImageText}>
-                  Tap to select an Image
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : !isConfirmed ? (
-            /* STEP 2: Confirm Image Screen */
-            <View style={styles.container}>
-              <View style={styles.header}>
-                <TouchableOpacity onPress={() => setSelectedImage(null)}>
-                  <Ionicons
-                    name="arrow-back"
-                    size={28}
-                    color={COLORS.blue}
-                  />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Confirm Image</Text>
-                <View style={{ width: 28 }} />
-              </View>
+            <Text style={styles.headerTitle}>Create Event Post</Text>
 
-              <View
-                style={{
-                  flex: 1,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Image
-                  source={{ uri: selectedImage }}
-                  style={{
-                    width: "80%",
-                    height: 300,
-                    borderRadius: 16,
-                    marginBottom: 40,
-                  }}
-                  contentFit="cover"
-                  transition={200}
-                />
-
-                {/* Confirm / Cancel buttons */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-around",
-                    width: "80%",
-                  }}
+            <TouchableOpacity
+              onPress={handleShare}
+              disabled={isSharing || !isFormValid}
+              style={styles.headerButton}
+            >
+              {isSharing ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <LinearGradient
+                  colors={
+                    !isFormValid
+                      ? [COLORS.grey, COLORS.blue]
+                      : [COLORS.primary, COLORS.secondary]
+                  }
+                  start={[0, 0]}
+                  end={[1, 1]}
+                  style={styles.postButtonGradient}
                 >
-                  <TouchableOpacity
-                    style={{
-                      backgroundColor: COLORS.blue,
-                      borderRadius: 10,
-                      paddingVertical: 12,
-                      paddingHorizontal: 32,
-                    }}
-                    onPress={() => setIsConfirmed(true)} // ✅ move to next step
-                  >
-                    <Text
-                      style={{
-                        color: COLORS.white,
-                        fontSize: 16,
-                        fontWeight: "600",
-                      }}
-                    >
-                      Choose
-                    </Text>
-                  </TouchableOpacity>
+                  <Text style={styles.postButtonText}>Post</Text>
+                </LinearGradient>
+              )}
+            </TouchableOpacity>
+          </LinearGradient>
 
-                  <TouchableOpacity
-                    style={{
-                      backgroundColor: COLORS.grey,
-                      borderRadius: 10,
-                      paddingVertical: 12,
-                      paddingHorizontal: 32,
-                    }}
-                    onPress={() => setSelectedImage(null)} // cancel
-                  >
-                    <Text
-                      style={{
-                        color: COLORS.white,
-                        fontSize: 16,
-                        fontWeight: "600",
-                      }}
-                    >
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          ) : (
-            /* STEP 3: Final Post Creation */
-            <View style={styles.contentContainer}>
-              {/* Header */}
-              <View style={styles.header}>
+          {/* Category */}
+          <Text style={styles.sectionTitle}>Select Event Category</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryScroll}
+            contentContainerStyle={styles.categoryScrollContent}
+          >
+            {categories.map((cat, index) => (
+              <Animated.View
+                key={cat.id}
+                style={{ transform: [{ scale: categoryScales[index] }], marginRight: 12 }}
+              >
                 <TouchableOpacity
-                  onPress={() => {
-                    setSelectedImage(null);
-                    setCaption("");
-                    setIsConfirmed(false);
-                  }}
+                  onPress={() => setSelectedCategory(cat)}
                   disabled={isSharing}
-                >
-                  <Ionicons
-                    name="close-outline"
-                    size={28}
-                    color={isSharing ? COLORS.grey : COLORS.white}
-                  />
-                </TouchableOpacity>
-
-                <Text style={styles.headerTitle}>New Post</Text>
-
-                <TouchableOpacity
                   style={[
-                    styles.shareButton,
-                    isSharing && styles.shareButtonDisabled,
+                    styles.categoryItem,
+                    {
+                      backgroundColor:
+                        selectedCategory?.id === cat.id
+                          ? COLORS.primary
+                          : COLORS.surfaceLight,
+                    },
                   ]}
-                  disabled={isSharing || !selectedImage}
-                  onPress={handleShare}
                 >
-                  {isSharing ? (
-                    <ActivityIndicator size="small" color={COLORS.blue} />
-                  ) : (
-                    <Text style={styles.shareText}>Post</Text>
-                  )}
+                  <Text style={styles.categoryIcon}>{cat.icon}</Text>
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      {
+                        color:
+                          selectedCategory?.id === cat.id
+                            ? COLORS.white
+                            : COLORS.grey,
+                      },
+                    ]}
+                  >
+                    {cat.name}
+                  </Text>
                 </TouchableOpacity>
-              </View>
-              <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                bounces={false}
-                keyboardShouldPersistTaps="handled"
-                contentOffset={{ x: 0, y: 100 }}
-              >
-                <View
-                  style={[styles.content, isSharing && styles.contentDisabled]}
-                >
-                  <View style={styles.imageSection}>
-                    <Image
-                      source={{ uri: selectedImage }}
-                      style={styles.previewImage}
-                      contentFit="cover"
-                      transition={200}
-                    />
+              </Animated.View>
+            ))}
+          </ScrollView>
 
-                    <TouchableOpacity
-                      style={styles.changeImageButton}
-                      onPress={pickImage}
-                      disabled={isSharing}
-                    >
-                      <Ionicons
-                        name="image-outline"
-                        size={20}
-                        color={COLORS.white}
-                      />
-                      <Text style={styles.changeImageText}>Change</Text>
-                    </TouchableOpacity>
-                  </View>
+          {/* Inputs */}
+          <Text style={styles.sectionTitle}> Details</Text>
+          {renderInput(" Title", title, setTitle)}
+          {renderInput("Description", description, setDescription, true)}
+          {renderInput("Location", location, setLocation, false, true)}
+          {renderInput("Date: (YYYY-MM-DD)", eventDate, setEventDate, false, true)}
 
-                  {/* Caption Input */}
-                  <View style={styles.inputSection}>
-                    <View style={styles.captionContainer}>
-                      <Image
-                        source={user?.imageUrl}
-                        style={styles.userAvatar}
-                        contentFit="cover"
-                        transition={200}
-                      />
-                      <TextInput
-                        style={styles.captionInput}
-                        placeholder="Write a caption..."
-                        placeholderTextColor={COLORS.grey}
-                        value={caption}
-                        onChangeText={setCaption}
-                        editable={!isSharing}
-                        multiline
-                      />
-                    </View>
-                  </View>
-                </View>
-              </ScrollView>
-            </View>
-          )}
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </SafeAreaProvider>
+          {/* Image Picker */}
+          <Text style={styles.sectionTitle}> Image</Text>
+          <TouchableOpacity
+            onPress={pickImage}
+            disabled={isSharing}
+            style={styles.imagePicker}
+          >
+            {selectedImage ? (
+              <Image
+                source={{ uri: selectedImage }}
+                style={styles.selectedImage}
+                contentFit="cover"
+                transition={200}
+              />
+            ) : (
+              <>
+                <Ionicons name="image-outline" size={48} color={COLORS.grey} />
+                <Text style={styles.imagePickerText}>Tap to select event image</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+// --- Styles ---
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: COLORS.background },
+  keyboardAvoidingView: { flex: 1 },
+  scrollContent: { padding: 20, paddingBottom: 50 },
+
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 25,
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.white,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: { elevation: 8 },
+    }),
+  },
+  headerButton: { padding: 4 },
+  headerTitle: { color: COLORS.white, fontSize: 20, fontWeight: "bold", letterSpacing: 0.5 },
+  postButtonGradient: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 60,
+    alignItems: "center",
+  },
+  postButtonText: { color: COLORS.white, fontWeight: "600" },
+
+  sectionTitle: { color: COLORS.white, fontSize: 16, fontWeight: "600", marginBottom: 10, marginTop: 10, opacity: 0.8 },
+
+  categoryScroll: { marginBottom: 20 },
+  categoryScrollContent: { paddingVertical: 4 },
+  categoryItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 25,
+    ...Platform.select({
+      ios: { shadowColor: COLORS.background, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 3 },
+      android: { elevation: 4 },
+    }),
+  },
+  categoryIcon: { fontSize: 16, marginRight: 6 },
+  categoryText: { fontWeight: "600" },
+
+  input: {
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    minHeight: 50,
+    color: COLORS.white,
+    backgroundColor: COLORS.surface,
+    fontSize: 16,
+    ...Platform.select({
+      ios: { shadowColor: COLORS.background, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3 },
+      android: { elevation: 4 },
+    }),
+  },
+  multilineInput: { minHeight: 120, textAlignVertical: "top" },
+
+  imagePicker: {
+    height: 250,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: COLORS.grey,
+    backgroundColor: COLORS.surface,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 30,
+  },
+  selectedImage: { width: "100%", height: "100%", borderRadius: 20, borderWidth: 2, borderColor: COLORS.primary },
+  imagePickerText: { color: COLORS.grey, marginTop: 8, fontSize: 14 },
+});
