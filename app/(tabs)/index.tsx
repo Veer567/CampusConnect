@@ -1,22 +1,22 @@
 import { Loader } from "@/components/Loader";
 import Post from "@/components/Posts";
 import { COLORS } from "@/constants/themes";
-
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  Animated,
   FlatList,
+  Platform,
   RefreshControl,
+  SafeAreaView,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
-  ScrollView,
-  Animated,
-  SafeAreaView,
 } from "react-native";
-import { useState, useMemo, useEffect } from "react";
-import { styles } from "../../styles/feed.styles";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { styles } from "../../styles/feed.styles";
 
 // --- Categories ---
 const categories = [
@@ -87,81 +87,110 @@ export default function Index() {
   if (!postsQuery) return <Loader />;
   if (mappedPosts.length === 0) return <NoPostsFound />;
 
-return (
-  <SafeAreaProvider>
-    <SafeAreaView style={[styles.container, { flex: 1 }]}>
-      {/* HEADER */}
-      <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-        <Text style={{ fontSize: 20, color: COLORS.white, fontWeight: "500" }}>
-          Welcome Back <Text style={{ fontWeight: "700" }}>👋</Text>
-        </Text>
-        <Text style={{ fontSize: 14, color: COLORS.grey, marginTop: 2 }}>
-          Discover campus events
-        </Text>
-      </View>
-
-      {/* CATEGORY FILTER */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ paddingVertical: 10, paddingHorizontal: 15 }}
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView
+        style={[
+          styles.container,
+          { flex: 1, backgroundColor: COLORS.background },
+        ]}
       >
-        {categories.map((cat, index) => (
-          <Animated.View
-            key={cat.id}
-            style={{
-              transform: [{ scale: categoryScales[index] }],
-              marginRight: 12,
-            }}
+        {/* HEADER */}
+        <View style={{ paddingHorizontal: 18, paddingVertical: 16 }}>
+          <Text
+            style={{ fontSize: 22, color: COLORS.white, fontWeight: "600" }}
           >
-            <TouchableOpacity
-              onPress={() => setSelectedCategory(cat)}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 20,
-                backgroundColor:
-                  selectedCategory.id === cat.id
-                    ? COLORS.primary
-                    : COLORS.surface,
-              }}
-            >
-              <Text style={{ marginRight: 6 }}>{cat.icon}</Text>
-              <Text
-                style={{
-                  color:
-                    selectedCategory.id === cat.id ? COLORS.white : COLORS.grey,
-                  fontWeight: "600",
-                }}
-              >
-                {cat.name}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ))}
-      </ScrollView>
+            Welcome Back <Text style={{ fontWeight: "700" }}>👋</Text>
+          </Text>
+          <Text style={{ fontSize: 14, color: COLORS.grey, marginTop: 2 }}>
+            Discover campus events
+          </Text>
+        </View>
 
-      {/* POSTS */}
-      <FlatList
-        data={filteredPosts}
-        renderItem={({ item }) => <Post post={item} />}
-        keyExtractor={(item) => item._id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 60 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-          />
-        }
-      />
-    </SafeAreaView>
-  </SafeAreaProvider>
-);
+        {/* CATEGORY FILTER */}
+        <View style={{ marginBottom: 10 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingVertical: 6,
+              alignItems: "center",
+            }}
+            decelerationRate={Platform.OS === "ios" ? "fast" : 0.9}
+            snapToAlignment="start"
+          >
+            {categories.map((cat, index) => {
+              const isActive = selectedCategory.id === cat.id;
+              return (
+                <Animated.View
+                  key={cat.id}
+                  style={{
+                    transform: [{ scale: categoryScales[index] }],
+                    marginRight: 14,
+                    shadowColor: isActive ? COLORS.primary : "transparent",
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: isActive ? 0.4 : 0,
+                    shadowRadius: 6,
+                    elevation: isActive ? 6 : 0,
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={() => setSelectedCategory(cat)}
+                    activeOpacity={0.85}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 24,
+                      backgroundColor: isActive
+                        ? COLORS.primary
+                        : COLORS.surface,
+                      borderWidth: isActive ? 0 : 1,
+                      borderColor: "black",
+                    }}
+                  >
+                    <Text style={{ marginRight: 8, fontSize: 16 }}>
+                      {cat.icon}
+                    </Text>
+                    <Text
+                      style={{
+                        color: isActive ? COLORS.white : COLORS.grey,
+                        fontWeight: "600",
+                        fontSize: 15,
+                      }}
+                    >
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
+          </ScrollView>
+        </View>
 
+        {/* POSTS */}
+        <FlatList
+          data={filteredPosts}
+          renderItem={({ item }) => <Post post={item} />}
+          keyExtractor={(item) => item._id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: 80,
+            paddingHorizontal: 10,
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={COLORS.primary}
+            />
+          }
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
 }
 
 // --- No posts screen ---
