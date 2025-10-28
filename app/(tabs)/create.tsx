@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   Animated,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,7 +23,6 @@ import { useRouter } from "expo-router";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 
-// --- Types and Constants ---
 type Category = { id: number; name: string; icon: string };
 
 const categories: Category[] = [
@@ -34,13 +34,15 @@ const categories: Category[] = [
   { id: 6, name: "Other", icon: "✨" },
 ];
 
-// --- Main Component ---
 export default function CreateScreen() {
   const router = useRouter();
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -49,14 +51,11 @@ export default function CreateScreen() {
   const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
   const createPost = useMutation(api.posts.createPost);
 
-  // --- Form validation ---
-  const isFormValid = useMemo(() => !!selectedImage && !!title && !!description, [
-    selectedImage,
-    title,
-    description,
-  ]);
+  const isFormValid = useMemo(
+    () => !!selectedImage && !!title && !!description,
+    [selectedImage, title, description]
+  );
 
-  // --- Animated scales for categories ---
   const categoryScales = useMemo(
     () => categories.map(() => new Animated.Value(1)),
     []
@@ -72,7 +71,6 @@ export default function CreateScreen() {
     });
   }, [selectedCategory, categoryScales]);
 
-  // --- Image picker ---
   const pickImage = useCallback(async () => {
     if (isSharing) return;
 
@@ -83,10 +81,12 @@ export default function CreateScreen() {
       quality: 0.8,
     });
 
-    if (!result.canceled) setSelectedImage(result.assets[0].uri);
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
+      setShowPreview(true); // Show preview modal
+    }
   }, [isSharing]);
 
-  // --- Handle share ---
   const handleShare = useCallback(async () => {
     if (!isFormValid || isSharing) return;
 
@@ -94,13 +94,17 @@ export default function CreateScreen() {
       setIsSharing(true);
 
       const uploadUrl = await generateUploadUrl();
-      const uploadResult = await FileSystem.uploadAsync(uploadUrl, selectedImage!, {
-        httpMethod: "POST",
-        mimeType: "image/jpeg",
-        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-        fieldName: "file",
-        headers: { "Content-Type": "image/jpeg" },
-      });
+      const uploadResult = await FileSystem.uploadAsync(
+        uploadUrl,
+        selectedImage!,
+        {
+          httpMethod: "POST",
+          mimeType: "image/jpeg",
+          uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+          fieldName: "file",
+          headers: { "Content-Type": "image/jpeg" },
+        }
+      );
 
       if (uploadResult.status !== 200) throw new Error("File upload failed");
 
@@ -114,6 +118,15 @@ export default function CreateScreen() {
         location,
         eventDate,
       });
+
+      // ✅ Clear all input fields after successful post
+      setSelectedImage(null);
+      setSelectedCategory(null);
+      setTitle("");
+      setDescription("");
+      setLocation("");
+      setEventDate("");
+      setShowPreview(false);
 
       router.push("/(tabs)");
     } catch (error) {
@@ -135,7 +148,7 @@ export default function CreateScreen() {
     router,
   ]);
 
-  // --- Render input helper ---
+
   const renderInput = (
     placeholder: string,
     value: string,
@@ -144,7 +157,7 @@ export default function CreateScreen() {
     optional = false
   ) => (
     <TextInput
-      placeholder={placeholder }
+      placeholder={placeholder}
       placeholderTextColor={COLORS.grey}
       value={value}
       onChangeText={setValue}
@@ -155,7 +168,6 @@ export default function CreateScreen() {
     />
   );
 
-  // --- UI ---
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -216,7 +228,10 @@ export default function CreateScreen() {
             {categories.map((cat, index) => (
               <Animated.View
                 key={cat.id}
-                style={{ transform: [{ scale: categoryScales[index] }], marginRight: 12 }}
+                style={{
+                  transform: [{ scale: categoryScales[index] }],
+                  marginRight: 12,
+                }}
               >
                 <TouchableOpacity
                   onPress={() => setSelectedCategory(cat)}
@@ -251,14 +266,18 @@ export default function CreateScreen() {
           </ScrollView>
 
           {/* Inputs */}
-          <Text style={styles.sectionTitle}> Details</Text>
-          {renderInput(" Title", title, setTitle)}
+          <Text style={styles.sectionTitle}>Details</Text>
+          {renderInput("Title", title, setTitle)}
           {renderInput("Description", description, setDescription, true)}
-          {renderInput("Location", location, setLocation, false, true)}
-          {renderInput("Date: (YYYY-MM-DD)", eventDate, setEventDate, false, true)}
+          {renderInput("Location (Optional)", location, setLocation)}
+          {renderInput(
+            "Date: (YYYY-MM-DD) (Optional)",
+            eventDate,
+            setEventDate
+          )}
 
           {/* Image Picker */}
-          <Text style={styles.sectionTitle}> Image</Text>
+          <Text style={styles.sectionTitle}>Image</Text>
           <TouchableOpacity
             onPress={pickImage}
             disabled={isSharing}
@@ -274,17 +293,60 @@ export default function CreateScreen() {
             ) : (
               <>
                 <Ionicons name="image-outline" size={48} color={COLORS.grey} />
-                <Text style={styles.imagePickerText}>Tap to select event image</Text>
+                <Text style={styles.imagePickerText}>
+                  Tap to select event image
+                </Text>
               </>
             )}
           </TouchableOpacity>
+
+          {/* Image Preview Modal */}
+          <Modal visible={showPreview} transparent animationType="fade">
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Image
+                  source={{ uri: selectedImage! }}
+                  style={styles.previewImage}
+                  contentFit="cover"
+                />
+
+                <View style={styles.previewButtons}>
+                  <TouchableOpacity
+                    style={[
+                      styles.previewButton,
+                      { backgroundColor: COLORS.primary },
+                    ]}
+                    onPress={() => setShowPreview(false)}
+                  >
+                    <Text style={styles.previewButtonText}>Use This Image</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.previewButton,
+                      { backgroundColor: COLORS.surfaceLight },
+                    ]}
+                    onPress={() => {
+                      setShowPreview(false);
+                      pickImage();
+                    }}
+                  >
+                    <Text
+                      style={[styles.previewButtonText, { color: COLORS.grey }]}
+                    >
+                      Choose Another
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-// --- Styles ---
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   keyboardAvoidingView: { flex: 1 },
@@ -308,7 +370,12 @@ const styles = StyleSheet.create({
     }),
   },
   headerButton: { padding: 4 },
-  headerTitle: { color: COLORS.white, fontSize: 20, fontWeight: "bold", letterSpacing: 0.5 },
+  headerTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "bold",
+    letterSpacing: 0.5,
+  },
   postButtonGradient: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -318,7 +385,14 @@ const styles = StyleSheet.create({
   },
   postButtonText: { color: COLORS.white, fontWeight: "600" },
 
-  sectionTitle: { color: COLORS.white, fontSize: 16, fontWeight: "600", marginBottom: 10, marginTop: 10, opacity: 0.8 },
+  sectionTitle: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 10,
+    marginTop: 10,
+    opacity: 0.8,
+  },
 
   categoryScroll: { marginBottom: 20 },
   categoryScrollContent: { paddingVertical: 4 },
@@ -329,7 +403,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 25,
     ...Platform.select({
-      ios: { shadowColor: COLORS.background, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.8, shadowRadius: 3 },
+      ios: {
+        shadowColor: COLORS.background,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.8,
+        shadowRadius: 3,
+      },
       android: { elevation: 4 },
     }),
   },
@@ -347,7 +426,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     fontSize: 16,
     ...Platform.select({
-      ios: { shadowColor: COLORS.background, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3 },
+      ios: {
+        shadowColor: COLORS.background,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+      },
       android: { elevation: 4 },
     }),
   },
@@ -364,6 +448,51 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 30,
   },
-  selectedImage: { width: "100%", height: "100%", borderRadius: 20, borderWidth: 2, borderColor: COLORS.primary },
+  selectedImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
   imagePickerText: { color: COLORS.grey, marginTop: 8, fontSize: 14 },
+
+  // 🔥 Preview Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    width: "100%",
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 16,
+    alignItems: "center",
+  },
+  previewImage: {
+    width: "100%",
+    height: 350,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  previewButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    gap: 10,
+  },
+  previewButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  previewButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
