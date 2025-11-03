@@ -1,13 +1,12 @@
 {
   "expo": {
-    "name": "Spotlight",
+    "name": "CampusConnect",
     "slug": "Spotlight",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "spotlight",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
@@ -16,7 +15,15 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "softwareKeyboardLayoutMode": "pan",
+      "edgeToEdgeEnabled": false,
+      "statusBar": {
+        "hidden": false,
+        "backgroundColor": "#ffffff",
+        "translucent": false,
+        "barStyle": "dark-content"
+      },
+      "package": "com.vir567.Spotlight"
     },
     "web": {
       "bundler": "metro",
@@ -34,10 +41,18 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bfeea64c-946c-4d50-8b0c-9e0d0d495f52"
+      }
     }
   }
 }

@@ -10,7 +10,7 @@ export default function TabLayout() {
       headerShown: false,
       tabBarInactiveTintColor: COLORS.grey,
       tabBarStyle: {
-        backgroundColor: "black",
+        backgroundColor: "white",
         borderTopWidth: 0,
         position: "absolute",
         elevation: 0,
@@ -44,7 +44,7 @@ export default function TabLayout() {
         options={{
           title: "Create",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" size={size} color={COLORS.blue} />
+            <Ionicons name="add-circle" size={size} color={COLORS.primary} />
           ),
         }}
       />

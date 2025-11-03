@@ -41,7 +41,7 @@ export default function Post({ post }: PostProps) {
             <Ionicons
               name="ellipsis-horizontal"
               size={20}
-              color={COLORS.white}
+              color={COLORS.text}
             />
           </TouchableOpacity>
           <TouchableOpacity>
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   postUsername: {
-    color: COLORS.white,
+    color: COLORS.text,
     fontWeight: "600",
   },
   postImage: {
@@ -104,12 +104,12 @@ const styles = StyleSheet.create({
   postTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.white,
+    color: COLORS.text,
     marginBottom: 4,
   },
   postContent: {
     fontSize: 14,
-    color: COLORS.white,
+    color: COLORS.text,
     marginBottom: 6,
   },
   postCategory: {

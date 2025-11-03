@@ -3,7 +3,7 @@ import Post from "@/components/Posts";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Animated,
   FlatList,
@@ -17,8 +17,9 @@ import {
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { styles } from "../../styles/feed.styles";
+import { StatusBar } from "expo-status-bar";
 
-// --- Categories ---
+// ── Categories ───────────────────────────────
 const categories = [
   { id: 0, name: "All", icon: "📄" },
   { id: 1, name: "Placements", icon: "👨‍💼" },
@@ -33,11 +34,9 @@ export default function Index() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
 
-  // --- Fetch posts ---
   const postsQuery = useQuery(api.posts.getFeedPosts);
   const posts = postsQuery || [];
 
-  // --- Map posts to match PostProps ---
   const mappedPosts = useMemo(
     () =>
       posts.map((post) => ({
@@ -54,7 +53,6 @@ export default function Index() {
     [posts]
   );
 
-  // --- Animated category button scales ---
   const categoryScales = useMemo(
     () => categories.map(() => new Animated.Value(1)),
     []
@@ -70,7 +68,6 @@ export default function Index() {
     });
   }, [selectedCategory]);
 
-  // --- Filter posts based on selected category ---
   const filteredPosts = useMemo(() => {
     if (selectedCategory.name === "All") return mappedPosts;
     return mappedPosts.filter(
@@ -80,45 +77,31 @@ export default function Index() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 2000);
+    setTimeout(() => setRefreshing(false), 1500);
   };
 
-  // --- Loading / empty states ---
   if (!postsQuery) return <Loader />;
   if (mappedPosts.length === 0) return <NoPostsFound />;
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView
-        style={[
-          styles.container,
-          { flex: 1, backgroundColor: COLORS.background },
-        ]}
-      >
+      <SafeAreaView style={styles.container}>
+         <StatusBar style="dark" />
         {/* HEADER */}
-        <View style={{ paddingHorizontal: 18, paddingVertical: 16 }}>
-          <Text
-            style={{ fontSize: 22, color: COLORS.white, fontWeight: "600" }}
-          >
-            Welcome Back <Text style={{ fontWeight: "700" }}>👋</Text>
+        <View style={styles.header}>
+          <Text style={styles.headerWelcome}>
+            Welcome Back <Text style={{ fontSize: 22 }}>👋</Text>
           </Text>
-          <Text style={{ fontSize: 14, color: COLORS.grey, marginTop: 2 }}>
-            Discover campus events
-          </Text>
+          <Text style={styles.headerSubtitle}>Discover campus events</Text>
         </View>
 
         {/* CATEGORY FILTER */}
-        <View style={{ marginBottom: 10 }}>
+        <View style={styles.filterContainer}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: 16,
-              paddingVertical: 6,
-              alignItems: "center",
-            }}
+            contentContainerStyle={styles.categoryScroll}
             decelerationRate={Platform.OS === "ios" ? "fast" : 0.9}
-            snapToAlignment="start"
           >
             {categories.map((cat, index) => {
               const isActive = selectedCategory.id === cat.id;
@@ -128,38 +111,22 @@ export default function Index() {
                   style={{
                     transform: [{ scale: categoryScales[index] }],
                     marginRight: 14,
-                    shadowColor: isActive ? COLORS.primary : "transparent",
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: isActive ? 0.4 : 0,
-                    shadowRadius: 6,
-                    elevation: isActive ? 6 : 0,
                   }}
                 >
                   <TouchableOpacity
                     onPress={() => setSelectedCategory(cat)}
                     activeOpacity={0.85}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      paddingHorizontal: 16,
-                      paddingVertical: 10,
-                      borderRadius: 24,
-                      backgroundColor: isActive
-                        ? COLORS.primary
-                        : COLORS.surface,
-                      borderWidth: isActive ? 0 : 1,
-                      borderColor: "black",
-                    }}
+                    style={[
+                      styles.categoryButton,
+                      isActive && styles.categoryButtonActive,
+                    ]}
                   >
-                    <Text style={{ marginRight: 8, fontSize: 16 }}>
-                      {cat.icon}
-                    </Text>
+                    <Text style={styles.categoryIcon}>{cat.icon}</Text>
                     <Text
-                      style={{
-                        color: isActive ? COLORS.white : COLORS.grey,
-                        fontWeight: "600",
-                        fontSize: 15,
-                      }}
+                      style={[
+                        styles.categoryText,
+                        isActive && styles.categoryTextActive,
+                      ]}
                     >
                       {cat.name}
                     </Text>
@@ -176,10 +143,7 @@ export default function Index() {
           renderItem={({ item }) => <Post post={item} />}
           keyExtractor={(item) => item._id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: 80,
-            paddingHorizontal: 10,
-          }}
+          contentContainerStyle={styles.postsList}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -193,16 +157,9 @@ export default function Index() {
   );
 }
 
-// --- No posts screen ---
+// ── No Posts Placeholder ─────────────────────
 const NoPostsFound = () => (
-  <View
-    style={{
-      flex: 1,
-      backgroundColor: COLORS.background,
-      justifyContent: "center",
-      alignItems: "center",
-    }}
-  >
-    <Text style={{ fontSize: 20, color: COLORS.primary }}>No posts yet</Text>
+  <View style={styles.emptyContainer}>
+    <Text style={styles.emptyText}>No posts yet</Text>
   </View>
 );

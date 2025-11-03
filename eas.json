@@ -1,0 +1,27 @@
+{
+  "cli": {
+    "version": ">= 3.13.1",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "apk": {
+      "android": {
+        "buildType": "apk" // <-- tells EAS to produce .apk
+      }
+    },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true,
+      "distribution": "store"
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

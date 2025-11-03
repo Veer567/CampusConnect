@@ -1,4 +1,3 @@
-// styles/create.styles.ts
 import { StyleSheet, Dimensions } from "react-native";
 import { COLORS } from "@/constants/themes";
 
@@ -8,109 +7,135 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+    marginBottom: 40,
+    marginTop:30
   },
-  contentContainer: {
-    flex: 1,
-  },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.surface,
+    justifyContent: "center",
+    paddingVertical: 16,
+    backgroundColor: COLORS.surfaceLight,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  backBtn: {
+    position: "absolute",
+    left: 15,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.white,
-  },
-  contentDisabled: {
-    opacity: 0.7,
-  },
-  shareButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    minWidth: 60,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shareButtonDisabled: {
-    opacity: 0.5,
-  },
-  shareText: {
+    fontSize: 20,
+    fontWeight: "700",
     color: COLORS.primary,
+  },
+
+  // Scroll
+  content: { flex: 1 },
+  scrollContent: { padding: 20, paddingBottom: 120 },
+
+  label: {
     fontSize: 16,
     fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: 8,
+    marginTop: 16,
   },
-  shareTextDisabled: {
-    color: COLORS.grey,
+
+  // Category
+  categoryScroll: {
+    flexDirection: "row",
+    gap: 10,
   },
-  emptyImageContainer: {
-    flex: 1,
-    justifyContent: "center",
+  categoryChip: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 30,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  emptyImageText: {
-    color: COLORS.grey,
-    fontSize: 16,
+  categorySelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
-  content: {
-    flex: 1,
+  categoryIcon: { fontSize: 18, marginRight: 6 },
+  categoryText: {
+    fontSize: 15,
+    color: COLORS.text,
   },
-  scrollContent: {
-    flexGrow: 1,
+  categoryTextSelected: {
+    fontSize: 15,
+    color: COLORS.white,
+    fontWeight: "600",
   },
-  imageSection: {
-    width: width,
-    height: width,
+
+  // Inputs
+  card: {
     backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  input: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    fontSize: 16,
+    color: COLORS.text,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  inputMultiline: {
+    height: 80,
+    textAlignVertical: "top",
+  },
+
+  // Image
+  imagePicker: {
+    height: width * 0.5,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  image: { width: "100%", height: "100%", borderRadius: 16 },
+  placeholder: { alignItems: "center" },
+  placeholderText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    marginTop: 6,
+  },
+
+  // FAB
+  fabContainer: {
+    position: "absolute",
+    bottom: 30,
+    right: 25,
+  },
+  fab: {
+    borderRadius: 50,
+    overflow: "hidden",
+    elevation: 5,
+  },
+  fabGradient: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
   },
-  previewImage: {
-    width: "100%",
-    height: "100%",
-  },
-  changeImageButton: {
-    position: "absolute",
-    bottom: 16,
-    right: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  changeImageText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  inputSection: {
-    padding: 16,
-    flex: 1,
-  },
-  captionContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  userAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 12,
-  },
-  captionInput: {
-    flex: 1,
-    color: COLORS.white,
-    fontSize: 16,
-    paddingTop: 8,
-    minHeight: 40,
-    borderWidth: 1, // add this
-    borderColor: COLORS.white, // add this
+  fabDisabled: {
+    opacity: 0.6,
   },
 });

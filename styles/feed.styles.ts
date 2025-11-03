@@ -1,332 +1,159 @@
+import { StyleSheet, Dimensions, Platform } from "react-native";
 import { COLORS } from "@/constants/themes";
-import { Dimensions, Platform, StyleSheet } from "react-native";
 
 const { width } = Dimensions.get("window");
 
 export const styles = StyleSheet.create({
-
-
-  // General Containers
+  // ── Container ───────────────────────────────
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingTop:30
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#0D0D0D",
-  },
-  container4: {
-    paddingHorizontal: 20,
-    paddingVertical: 1,
-    backgroundColor: "#0D0D0D",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 4,
-    marginTop: 1,
-    marginHorizontal: 1,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 40,
+    marginTop: Platform.OS === "android" ? 25 : 0,
   },
 
-  // Header
+  // ── Header ───────────────────────────────
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surface,
+    marginBottom: 10,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontFamily: "JetBrainsMono-Medium",
-    color: COLORS.primary,
+  headerWelcome: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: COLORS.text,
   },
-
-  // Stories
-  storiesContainer: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surface,
-  },
-  storyWrapper: {
-    alignItems: "center",
-    marginHorizontal: 8,
-    width: 72,
-  },
-  storyRing: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    padding: 2,
-    backgroundColor: COLORS.background,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    marginBottom: 4,
-  },
-  noStory: {
-    borderColor: COLORS.grey,
-  },
-  storyAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: COLORS.background,
-  },
-  storyUsername: {
-    fontSize: 11,
-    color: COLORS.white,
-    textAlign: "center",
+  headerSubtitle: {
+    fontSize: 14,
+    color: COLORS.grey,
+    marginTop: 4,
   },
 
-  // Filter / Categories
+  // ── Category Filter ───────────────────────
   filterContainer: {
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.surface,
-    backgroundColor: COLORS.background,
+    marginBottom: 12,
   },
   categoryScroll: {
-    paddingRight: 15,
-    paddingLeft: 15,
+    paddingHorizontal: 5,
+    paddingVertical: 6,
+    alignItems: "center",
   },
   categoryButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 25,
+    marginRight: 12,
     borderWidth: 1,
-    borderColor: COLORS.surface,
+    borderColor: COLORS.border,
   },
   categoryButtonActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
+  categoryIcon: {
+    fontSize: 17,
+    marginRight: 8,
+  },
   categoryText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
   },
   categoryTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "bold",
+    color: COLORS.white,
   },
 
-  // Posts
-  post: {
-    marginBottom: 16,
+  // ── Posts List ───────────────────────────────
+  postsList: {
+    paddingBottom: 100,
   },
-  postContainer: {
+
+  // ── Post Card ───────────────────────────────
+  postCard: {
     backgroundColor: COLORS.surface,
-    padding: 15,
-    marginHorizontal: 15,
+    borderRadius: 20,
     marginVertical: 8,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    overflow: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
   },
   postHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 12,
-  },
-  postHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    padding: 14,
   },
   postAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
   },
   postUsername: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
-    color: COLORS.white,
+    color: COLORS.text,
   },
   postTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
-    color: COLORS.white,
-    marginBottom: 4,
+    color: COLORS.text,
+    marginHorizontal: 14,
+    marginTop: 4,
   },
   postCategory: {
     fontSize: 13,
     fontWeight: "500",
     color: COLORS.primary,
+    marginHorizontal: 14,
     marginBottom: 6,
   },
   postDescription: {
     fontSize: 14,
-    color: "#A1A1A1",
+    color: COLORS.textSecondary,
+    marginHorizontal: 14,
+    lineHeight: 20,
+    marginBottom: 10,
   },
   postImage: {
-    width: width,
-    height: width,
+    width: "100%",
+    height: width * 0.7,
+    borderRadius: 12,
   },
   postActions: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-  },
-  postActionsLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  postInfo: {
-    paddingHorizontal: 12,
   },
   likesText: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.white,
-    marginBottom: 6,
+    color: COLORS.text,
   },
 
-  // Captions
-  captionContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 6,
-  },
-  captionUsername: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.white,
-    marginRight: 6,
-  },
-  captionText: {
-    fontSize: 14,
-    color: COLORS.white,
+  // ── Empty State ───────────────────────────────
+  emptyContainer: {
     flex: 1,
-  },
-
-  // Comments
-  commentsText: {
-    fontSize: 14,
-    color: COLORS.grey,
-    marginBottom: 4,
-  },
-  timeAgo: {
-    fontSize: 12,
-    color: COLORS.grey,
-    marginBottom: 8,
-  },
-  commentsList: {
-    flex: 1,
-  },
-  commentContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.surface,
-  },
-  commentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 12,
-  },
-  commentContent: {
-    flex: 1,
-  },
-  commentUsername: {
-    color: COLORS.white,
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  commentText: {
-    color: COLORS.white,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  commentTime: {
-    color: COLORS.grey,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  commentInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 0.5,
-    borderTopColor: COLORS.surface,
-    backgroundColor: COLORS.background,
-  },
-  input: {
-    flex: 1,
-    color: COLORS.white,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginRight: 12,
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    fontSize: 14,
-  },
-  postButton: {
-    color: COLORS.primary,
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  postButtonDisabled: {
-    opacity: 0.5,
-  },
-
-  // Modal
-  modalContainer: {
-    backgroundColor: COLORS.background,
-    marginBottom: Platform.OS === "ios" ? 44 : 0,
-    flex: 1,
-    marginTop: Platform.OS === "ios" ? 44 : 0,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    height: 56,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.surface,
-  },
-  modalTitle: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  // Texts
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  wave: {
-    fontSize: 20,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#A1A1A1",
-    marginTop: 2,
-  },
-
-  // Centered
-  centered: {
     justifyContent: "center",
     alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 18,
+    color: COLORS.primary,
+    fontWeight: "600",
   },
 });

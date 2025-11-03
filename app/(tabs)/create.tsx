@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import {
   SafeAreaView,
   View,
@@ -9,9 +15,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  StyleSheet,
   Animated,
   Modal,
+  Easing,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,7 +27,10 @@ import * as FileSystem from "expo-file-system/legacy";
 import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
 import { COLORS } from "@/constants/themes";
+import { styles } from "@/styles/create.styles";
 import { api } from "@/convex/_generated/api";
+import { StatusBar } from "expo-status-bar";
+
 
 type Category = { id: number; name: string; icon: string };
 
@@ -61,6 +70,8 @@ export default function CreateScreen() {
     []
   );
 
+  const fabScale = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     categories.forEach((cat, index) => {
       Animated.spring(categoryScales[index], {
@@ -70,6 +81,23 @@ export default function CreateScreen() {
       }).start();
     });
   }, [selectedCategory, categoryScales]);
+
+  const animateFab = () => {
+    Animated.sequence([
+      Animated.timing(fabScale, {
+        toValue: 1.15,
+        duration: 120,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fabScale, {
+        toValue: 1,
+        duration: 120,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const pickImage = useCallback(async () => {
     if (isSharing) return;
@@ -83,12 +111,13 @@ export default function CreateScreen() {
 
     if (!result.canceled) {
       setSelectedImage(result.assets[0].uri);
-      setShowPreview(true); // Show preview modal
+      setShowPreview(true);
     }
   }, [isSharing]);
 
   const handleShare = useCallback(async () => {
     if (!isFormValid || isSharing) return;
+    animateFab();
 
     try {
       setIsSharing(true);
@@ -119,7 +148,6 @@ export default function CreateScreen() {
         eventDate,
       });
 
-      // ✅ Clear all input fields after successful post
       setSelectedImage(null);
       setSelectedCategory(null);
       setTitle("");
@@ -148,115 +176,52 @@ export default function CreateScreen() {
     router,
   ]);
 
-
-  const renderInput = (
-    placeholder: string,
-    value: string,
-    setValue: (text: string) => void,
-    multiline = false,
-    optional = false
-  ) => (
-    <TextInput
-      placeholder={placeholder}
-      placeholderTextColor={COLORS.grey}
-      value={value}
-      onChangeText={setValue}
-      multiline={multiline}
-      style={[styles.input, multiline && styles.multilineInput]}
-      textAlignVertical={multiline ? "top" : "center"}
-      editable={!isSharing}
-    />
-  );
-
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="dark" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={26} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create Event</Text>
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoidingView}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 0}
+        style={styles.content}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Header */}
-          <LinearGradient
-            colors={[COLORS.surfaceLight, COLORS.surface]}
-            start={[0, 0]}
-            end={[1, 0]}
-            style={styles.headerContainer}
-          >
-            <TouchableOpacity
-              onPress={() => router.back()}
-              disabled={isSharing}
-              style={styles.headerButton}
-            >
-              <Ionicons name="arrow-back" size={28} color={COLORS.blue} />
-            </TouchableOpacity>
-
-            <Text style={styles.headerTitle}>Create Event Post</Text>
-
-            <TouchableOpacity
-              onPress={handleShare}
-              disabled={isSharing || !isFormValid}
-              style={styles.headerButton}
-            >
-              {isSharing ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <LinearGradient
-                  colors={
-                    !isFormValid
-                      ? [COLORS.grey, COLORS.blue]
-                      : [COLORS.primary, COLORS.secondary]
-                  }
-                  start={[0, 0]}
-                  end={[1, 1]}
-                  style={styles.postButtonGradient}
-                >
-                  <Text style={styles.postButtonText}>Post</Text>
-                </LinearGradient>
-              )}
-            </TouchableOpacity>
-          </LinearGradient>
-
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Category */}
-          <Text style={styles.sectionTitle}>Select Event Category</Text>
+          <Text style={styles.label}>Category</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={styles.categoryScroll}
-            contentContainerStyle={styles.categoryScrollContent}
+            contentContainerStyle={styles.categoryScroll}
           >
             {categories.map((cat, index) => (
               <Animated.View
                 key={cat.id}
-                style={{
-                  transform: [{ scale: categoryScales[index] }],
-                  marginRight: 12,
-                }}
+                style={{ transform: [{ scale: categoryScales[index] }] }}
               >
                 <TouchableOpacity
-                  onPress={() => setSelectedCategory(cat)}
-                  disabled={isSharing}
                   style={[
-                    styles.categoryItem,
-                    {
-                      backgroundColor:
-                        selectedCategory?.id === cat.id
-                          ? COLORS.primary
-                          : COLORS.surfaceLight,
-                    },
+                    styles.categoryChip,
+                    selectedCategory?.id === cat.id && styles.categorySelected,
                   ]}
+                  onPress={() => setSelectedCategory(cat)}
                 >
                   <Text style={styles.categoryIcon}>{cat.icon}</Text>
                   <Text
-                    style={[
-                      styles.categoryText,
-                      {
-                        color:
-                          selectedCategory?.id === cat.id
-                            ? COLORS.white
-                            : COLORS.grey,
-                      },
-                    ]}
+                    style={
+                      selectedCategory?.id === cat.id
+                        ? styles.categoryTextSelected
+                        : styles.categoryText
+                    }
                   >
                     {cat.name}
                   </Text>
@@ -266,233 +231,79 @@ export default function CreateScreen() {
           </ScrollView>
 
           {/* Inputs */}
-          <Text style={styles.sectionTitle}>Details</Text>
-          {renderInput("Title", title, setTitle)}
-          {renderInput("Description", description, setDescription, true)}
-          {renderInput("Location (Optional)", location, setLocation)}
-          {renderInput(
-            "Date: (YYYY-MM-DD) (Optional)",
-            eventDate,
-            setEventDate
-          )}
+          <Text style={styles.label}>Event Details</Text>
+          <View style={styles.card}>
+            <TextInput
+              placeholder="Event Title"
+              value={title}
+              onChangeText={setTitle}
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="Description"
+              value={description}
+              onChangeText={setDescription}
+              style={[styles.input, styles.inputMultiline]}
+              multiline
+            />
+            <TextInput
+              placeholder="Location"
+              value={location}
+              onChangeText={setLocation}
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="Date (YYYY-MM-DD)"
+              value={eventDate}
+              onChangeText={setEventDate}
+              style={styles.input}
+            />
+          </View>
 
           {/* Image Picker */}
-          <Text style={styles.sectionTitle}>Image</Text>
-          <TouchableOpacity
-            onPress={pickImage}
-            disabled={isSharing}
-            style={styles.imagePicker}
-          >
+          <Text style={styles.label}>Event Image</Text>
+          <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
             {selectedImage ? (
               <Image
                 source={{ uri: selectedImage }}
-                style={styles.selectedImage}
+                style={styles.image}
                 contentFit="cover"
-                transition={200}
               />
             ) : (
-              <>
-                <Ionicons name="image-outline" size={48} color={COLORS.grey} />
-                <Text style={styles.imagePickerText}>
-                  Tap to select event image
-                </Text>
-              </>
+              <View style={styles.placeholder}>
+                <Ionicons
+                  name="image-outline"
+                  size={48}
+                  color={COLORS.textSecondary}
+                />
+                <Text style={styles.placeholderText}>Tap to select image</Text>
+              </View>
             )}
           </TouchableOpacity>
-
-          {/* Image Preview Modal */}
-          <Modal visible={showPreview} transparent animationType="fade">
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Image
-                  source={{ uri: selectedImage! }}
-                  style={styles.previewImage}
-                  contentFit="cover"
-                />
-
-                <View style={styles.previewButtons}>
-                  <TouchableOpacity
-                    style={[
-                      styles.previewButton,
-                      { backgroundColor: COLORS.primary },
-                    ]}
-                    onPress={() => setShowPreview(false)}
-                  >
-                    <Text style={styles.previewButtonText}>Use This Image</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.previewButton,
-                      { backgroundColor: COLORS.surfaceLight },
-                    ]}
-                    onPress={() => {
-                      setShowPreview(false);
-                      pickImage();
-                    }}
-                  >
-                    <Text
-                      style={[styles.previewButtonText, { color: COLORS.grey }]}
-                    >
-                      Choose Another
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </Modal>
         </ScrollView>
+
+        {/* Floating Action Button */}
+        <View style={styles.fabContainer}>
+          <Animated.View style={{ transform: [{ scale: fabScale }] }}>
+            <TouchableOpacity
+              disabled={!isFormValid || isSharing}
+              onPress={handleShare}
+              style={[styles.fab, !isFormValid && styles.fabDisabled]}
+            >
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.secondary]}
+                style={styles.fabGradient}
+              >
+                {isSharing ? (
+                  <ActivityIndicator color={COLORS.white} />
+                ) : (
+                  <Ionicons name="send" size={26} color={COLORS.white} />
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background },
-  keyboardAvoidingView: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 50 },
-
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 25,
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.white,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: { elevation: 8 },
-    }),
-  },
-  headerButton: { padding: 4 },
-  headerTitle: {
-    color: COLORS.white,
-    fontSize: 20,
-    fontWeight: "bold",
-    letterSpacing: 0.5,
-  },
-  postButtonGradient: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    minWidth: 60,
-    alignItems: "center",
-  },
-  postButtonText: { color: COLORS.white, fontWeight: "600" },
-
-  sectionTitle: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 10,
-    marginTop: 10,
-    opacity: 0.8,
-  },
-
-  categoryScroll: { marginBottom: 20 },
-  categoryScrollContent: { paddingVertical: 4 },
-  categoryItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.background,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.8,
-        shadowRadius: 3,
-      },
-      android: { elevation: 4 },
-    }),
-  },
-  categoryIcon: { fontSize: 16, marginRight: 6 },
-  categoryText: { fontWeight: "600" },
-
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    minHeight: 50,
-    color: COLORS.white,
-    backgroundColor: COLORS.surface,
-    fontSize: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.background,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
-      },
-      android: { elevation: 4 },
-    }),
-  },
-  multilineInput: { minHeight: 120, textAlignVertical: "top" },
-
-  imagePicker: {
-    height: 250,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: COLORS.grey,
-    backgroundColor: COLORS.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 30,
-  },
-  selectedImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  imagePickerText: { color: COLORS.grey, marginTop: 8, fontSize: 14 },
-
-  // 🔥 Preview Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalContent: {
-    width: "100%",
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    padding: 16,
-    alignItems: "center",
-  },
-  previewImage: {
-    width: "100%",
-    height: 350,
-    borderRadius: 16,
-    marginBottom: 20,
-  },
-  previewButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    gap: 10,
-  },
-  previewButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  previewButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
