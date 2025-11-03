@@ -17,6 +17,7 @@
       },
       "softwareKeyboardLayoutMode": "pan",
       "edgeToEdgeEnabled": false,
+      
       "statusBar": {
         "hidden": false,
         "backgroundColor": "#ffffff",

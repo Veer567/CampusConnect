@@ -8,7 +8,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
     marginBottom: 40,
-    marginTop:30
+    marginTop: 30,
   },
 
   // Header
@@ -44,33 +44,43 @@ export const styles = StyleSheet.create({
   },
 
   // Category
-  categoryScroll: {
-    flexDirection: "row",
-    gap: 10,
+  filterContainer: {
+    marginBottom: 12,
   },
-  categoryChip: {
+  categoryScroll: {
+    paddingHorizontal: 5,
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  categoryButton: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 25,
+    marginRight: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 30,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
   },
-  categorySelected: {
+  categoryButtonActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
+    marginRight: 10,
+    marginHorizontal: 9,
   },
-  categoryIcon: { fontSize: 18, marginRight: 6 },
+  categoryIcon: {
+    fontSize: 17,
+    marginRight: 8,
+  },
   categoryText: {
     fontSize: 15,
-    color: COLORS.text,
-  },
-  categoryTextSelected: {
-    fontSize: 15,
-    color: COLORS.white,
     fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  categoryTextActive: {
+    color: COLORS.white,
   },
 
   // Inputs

@@ -178,14 +178,14 @@ export default function CreateScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style="dark" backgroundColor="#121112ff" />
 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={26} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Event</Text>
+        <Text style={styles.headerTitle}>Create Post</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -210,8 +210,9 @@ export default function CreateScreen() {
               >
                 <TouchableOpacity
                   style={[
-                    styles.categoryChip,
-                    selectedCategory?.id === cat.id && styles.categorySelected,
+                    styles.categoryButton,
+                    selectedCategory?.id === cat.id &&
+                      styles.categoryButtonActive,
                   ]}
                   onPress={() => setSelectedCategory(cat)}
                 >
@@ -219,7 +220,7 @@ export default function CreateScreen() {
                   <Text
                     style={
                       selectedCategory?.id === cat.id
-                        ? styles.categoryTextSelected
+                        ? styles.categoryTextActive
                         : styles.categoryText
                     }
                   >

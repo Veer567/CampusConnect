@@ -86,7 +86,7 @@ export default function Index() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-         <StatusBar style="dark" />
+        <StatusBar style="dark" backgroundColor="#121112ff" />
         {/* HEADER */}
         <View style={styles.header}>
           <Text style={styles.headerWelcome}>

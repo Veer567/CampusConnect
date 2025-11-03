@@ -44,7 +44,7 @@ export default function Bookmarks() {
   return (
     <LinearGradient colors={["#fdfdfd", "#f6f9ff"]} style={styles.gradient}>
       <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" />
+         <StatusBar style="dark" backgroundColor="#121112ff" />
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerText}>Bookmarks</Text>

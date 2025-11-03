@@ -21,6 +21,7 @@ interface PostProps {
 export default function Post({ post }: PostProps) {
   return (
     <View style={styles.container}>
+      <View></View>
       {/* Post Header */}
       <View style={styles.postHeader}>
         <Link href="/(tabs)/notifications">

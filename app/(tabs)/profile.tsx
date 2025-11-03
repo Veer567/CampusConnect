@@ -31,7 +31,7 @@ export default function Profile() {
 
   return (
     <SafeAreaView style = {{flex: 1}}>
-      <StatusBar style="dark" />
+       <StatusBar style="dark" backgroundColor="#121112ff" />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>

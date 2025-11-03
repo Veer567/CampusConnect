@@ -28,7 +28,7 @@ export default function NotificationScreen() {
       style={styles.gradient}
     >
       <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" />
+         <StatusBar style="dark" backgroundColor="#121112ff" />
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Notifications</Text>
