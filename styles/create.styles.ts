@@ -1,81 +1,87 @@
-import { StyleSheet, Dimensions } from "react-native";
+import { StyleSheet, Dimensions, Platform } from "react-native";
 import { COLORS } from "@/constants/themes";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
+
+// ✅ Responsive scaling helpers
+const wp = (percentage: number) => (width * percentage) / 100;
+const hp = (percentage: number) => (height * percentage) / 100;
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    marginBottom: 40,
-    marginTop: 30,
   },
 
-  // Header
+  // 🟦 Header (blue gradient background from screen)
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    backgroundColor: COLORS.surfaceLight,
-    borderBottomWidth: 1,
+    paddingTop: Platform.OS === "android" ? hp(3) : hp(5),
+    paddingBottom: hp(3),
+    paddingHorizontal: wp(5),
+    borderBottomWidth: 0,
     borderBottomColor: COLORS.border,
+   
   },
   backBtn: {
     position: "absolute",
-    left: 15,
+    left: wp(5),
+    top: Platform.OS === "android" ? hp(3.5) : hp(5),
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: wp(5.2),
     fontWeight: "700",
-    color: COLORS.primary,
+    color: COLORS.white,
+    marginTop: Platform.OS === "android" ? hp(3) : hp(4),
   },
 
-  // Scroll
-  content: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 120 },
+  // 🧾 Scrollable Content
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: wp(5),
+    paddingTop: hp(2),
+    paddingBottom: hp(12),
+  },
 
+  // 🏷️ Labels
   label: {
-    fontSize: 16,
+    fontSize: wp(4.2),
     fontWeight: "600",
     color: COLORS.text,
-    marginBottom: 8,
-    marginTop: 16,
+    marginBottom: hp(1),
+    marginTop: hp(2),
   },
 
-  // Category
-  filterContainer: {
-    marginBottom: 12,
-  },
+  // 🎯 Category Section
   categoryScroll: {
-    paddingHorizontal: 5,
-    paddingVertical: 6,
-    alignItems: "center",
+    paddingVertical: hp(1),
   },
   categoryButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    marginRight: 12,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.2),
+    borderRadius: wp(6),
+    marginRight: wp(3),
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   categoryButtonActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
-    marginRight: 10,
-    marginHorizontal: 9,
   },
   categoryIcon: {
-    fontSize: 17,
-    marginRight: 8,
+    fontSize: wp(4.5),
+    marginRight: wp(1.5),
   },
   categoryText: {
-    fontSize: 15,
+    fontSize: wp(3.8),
     fontWeight: "600",
     color: COLORS.textSecondary,
   },
@@ -83,65 +89,71 @@ export const styles = StyleSheet.create({
     color: COLORS.white,
   },
 
-  // Inputs
+  // 🧩 Input Card
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: wp(4),
+    padding: wp(4.5),
+    marginTop: hp(1),
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   input: {
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
-    fontSize: 16,
+    fontSize: wp(4),
     color: COLORS.text,
-    paddingVertical: 10,
-    marginBottom: 12,
+    paddingVertical: hp(1),
+    marginBottom: hp(1.5),
   },
   inputMultiline: {
-    height: 80,
+    height: hp(10),
     textAlignVertical: "top",
   },
 
-  // Image
+  // 🖼️ Image Picker
   imagePicker: {
-    height: width * 0.5,
+    height: width > 400 ? hp(28) : hp(24),
     backgroundColor: COLORS.surfaceLight,
-    borderRadius: 16,
+    borderRadius: wp(4),
     borderWidth: 1,
     borderColor: COLORS.border,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: hp(1.5),
   },
-  image: { width: "100%", height: "100%", borderRadius: 16 },
-  placeholder: { alignItems: "center" },
+  image: {
+    width: "100%",
+    height: "100%",
+    borderRadius: wp(4),
+  },
+  placeholder: {
+    alignItems: "center",
+  },
   placeholderText: {
     color: COLORS.textSecondary,
-    fontSize: 14,
-    marginTop: 6,
+    fontSize: wp(3.6),
+    marginTop: hp(0.8),
   },
 
-  // FAB
+  // 🚀 Floating Action Button
   fabContainer: {
     position: "absolute",
-    bottom: 30,
-    right: 25,
+    bottom: Platform.OS === "android" ? hp(9) : hp(6),
+    right: wp(6),
   },
   fab: {
     borderRadius: 50,
     overflow: "hidden",
-    elevation: 5,
+    elevation: 6,
   },
   fabGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: wp(15),
+    height: wp(15),
+    borderRadius: wp(7.5),
     justifyContent: "center",
     alignItems: "center",
   },

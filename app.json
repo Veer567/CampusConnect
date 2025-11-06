@@ -3,7 +3,7 @@
     "name": "CampusConnect",
     "slug": "Spotlight",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/splash/splash 2.png",
     "scheme": "spotlight",
     "userInterfaceStyle": "automatic",

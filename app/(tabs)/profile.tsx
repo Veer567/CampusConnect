@@ -1,23 +1,31 @@
+import { COLORS } from "@/constants/themes";
+import { useAuth } from "@clerk/clerk-expo";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import React from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  ScrollView,
   Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
-import { useAuth } from "@clerk/clerk-expo";
-import { useRouter } from "expo-router";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { COLORS } from "@/constants/themes";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 export default function Profile() {
   const { signOut } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions(); // updates on rotate
 
   const handleSignOut = async () => {
     try {
@@ -30,149 +38,220 @@ export default function Profile() {
   };
 
   return (
-    <SafeAreaView style = {{flex: 1}}>
-       <StatusBar style="dark" backgroundColor="#121112ff" />
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Image
-            source={{ uri: "https://i.pravatar.cc/300" }}
-            style={styles.avatar}
-          />
-          <TouchableOpacity style={styles.editIcon}>
-            <Ionicons name="create-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-
-          <Text style={styles.name}>Alex Johnson</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Year 3</Text>
-          </View>
-
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>3</Text>
-              <Text style={styles.statLabel}>Followers</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>2</Text>
-              <Text style={styles.statLabel}>Following</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Info Section */}
-        <View style={styles.infoBox}>
-          <View style={styles.infoItem}>
-            <Ionicons name="mail-outline" size={18} color={COLORS.primary} />
-            <Text style={styles.infoText}>alex.johnson@university.edu</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Ionicons name="school-outline" size={18} color={COLORS.primary} />
-            <Text style={styles.infoText}>Computer Science</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Ionicons
-              name="calendar-outline"
-              size={18}
-              color={COLORS.primary}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar style="dark" backgroundColor="#121112ff" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContainer,
+            { flexGrow: 1, paddingBottom: insets.bottom + 60 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Image
+              source={{ uri: "https://i.pravatar.cc/300" }}
+              style={[
+                styles.avatar,
+                {
+                  width: Math.min(width, height) * 0.28, // proportional to the smaller side
+                  height: Math.min(width, height) * 0.28,
+                  borderRadius: (Math.min(width, height) * 0.28) / 2,
+                },
+              ]}
+              resizeMode="cover"
             />
-            <Text style={styles.infoText}>Joined September 2025</Text>
-          </View>
-          <TouchableOpacity style={styles.linkItem}>
-            <Ionicons name="link-outline" size={18} color={COLORS.blue} />
-            <Text style={[styles.infoText, { color: COLORS.blue }]}>
-              View Resume
+
+            <TouchableOpacity
+              style={[
+                styles.editIcon,
+                { right: width * 0.35, top: width * 0.23 },
+              ]}
+            >
+              <Ionicons name="create-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+
+            <Text
+              style={[
+                styles.name,
+                {
+                  fontSize: Math.min(width, height) * 0.055, // proportional to smaller side
+                },
+              ]}
+            >
+              Alex Johnson
             </Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Interests */}
-        <View style={{ marginTop: 18 }}>
-          <Text style={styles.sectionTitle}>Interests</Text>
-          <View style={styles.tagsContainer}>
-            {["Web Development", "AI/ML", "Competitive Programming"].map(
-              (interest, idx) => (
-                <View key={idx} style={styles.tag}>
-                  <Text style={styles.tagText}>{interest}</Text>
+            <View
+              style={[
+                styles.badge,
+                {
+                  paddingHorizontal: Math.min(width, height) * 0.03,
+                  paddingVertical: Math.min(width, height) * 0.007,
+                  borderRadius: Math.min(width, height) * 0.02,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  { fontSize: Math.min(width, height) * 0.035 },
+                ]}
+              >
+                Year 3
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.statsRow,
+                {
+                  gap: Math.min(width, height) * 0.1,
+                  marginTop: Math.min(width, height) * 0.02,
+                },
+              ]}
+            >
+              {[
+                { label: "Followers", value: "3" },
+                { label: "Following", value: "2" },
+              ].map((stat, i) => (
+                <View key={i} style={styles.stat}>
+                  <Text
+                    style={[
+                      styles.statValue,
+                      { fontSize: Math.min(width, height) * 0.045 },
+                    ]}
+                  >
+                    {stat.value}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.statLabel,
+                      { fontSize: Math.min(width, height) * 0.032 },
+                    ]}
+                  >
+                    {stat.label}
+                  </Text>
                 </View>
-              )
-            )}
-          </View>
-        </View>
-
-        {/* Activity Stats */}
-        <View style={{ marginTop: 18 }}>
-          <Text style={styles.sectionTitle}>Activity Stats</Text>
-          <View style={styles.activityContainer}>
-            <View style={styles.activityCard}>
-              <Text style={styles.activityValue}>12</Text>
-              <Text style={styles.activityLabel}>Posts</Text>
-            </View>
-            <View style={styles.activityCard}>
-              <Text style={styles.activityValue}>45</Text>
-              <Text style={styles.activityLabel}>Likes</Text>
-            </View>
-            <View style={styles.activityCard}>
-              <Text style={styles.activityValue}>8</Text>
-              <Text style={styles.activityLabel}>Bookmarks</Text>
+              ))}
             </View>
           </View>
-        </View>
 
-        {/* Buttons */}
-        <TouchableOpacity style={styles.editProfileBtn}>
-          <MaterialIcons name="edit" size={18} color="#fff" />
-          <Text style={styles.editProfileText}>Edit Profile</Text>
-        </TouchableOpacity>
+          {/* Info Section */}
+          <View style={styles.infoBox}>
+            <View style={styles.infoItem}>
+              <Ionicons name="mail-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.infoText}>alex.johnson@university.edu</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Ionicons
+                name="school-outline"
+                size={18}
+                color={COLORS.primary}
+              />
+              <Text style={styles.infoText}>Computer Science</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Ionicons
+                name="calendar-outline"
+                size={18}
+                color={COLORS.primary}
+              />
+              <Text style={styles.infoText}>Joined September 2025</Text>
+            </View>
+            <TouchableOpacity style={styles.linkItem}>
+              <Ionicons name="link-outline" size={18} color={COLORS.blue} />
+              <Text style={[styles.infoText, { color: COLORS.blue }]}>
+                View Resume
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        <TouchableOpacity onPress={handleSignOut} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Log Out</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          {/* Interests */}
+          <View style={{ marginTop: 20 }}>
+            <Text style={styles.sectionTitle}>Interests</Text>
+            <View style={styles.tagsContainer}>
+              {["Web Development", "AI/ML", "Competitive Programming"].map(
+                (interest, idx) => (
+                  <View key={idx} style={styles.tag}>
+                    <Text style={styles.tagText}>{interest}</Text>
+                  </View>
+                )
+              )}
+            </View>
+          </View>
+
+          {/* Activity Stats */}
+          <View style={{ marginTop: 20 }}>
+            <Text style={styles.sectionTitle}>Activity Stats</Text>
+            <View style={styles.activityContainer}>
+              {[
+                { label: "Posts", value: "12" },
+                { label: "Likes", value: "45" },
+                { label: "Bookmarks", value: "8" },
+              ].map((item, i) => (
+                <View key={i} style={styles.activityCard}>
+                  <Text style={styles.activityValue}>{item.value}</Text>
+                  <Text style={styles.activityLabel}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Buttons */}
+          <TouchableOpacity style={styles.editProfileBtn}>
+            <MaterialIcons name="edit" size={18} color="#fff" />
+            <Text style={styles.editProfileText}>Edit Profile</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleSignOut} style={styles.logoutBtn}>
+            <Text style={styles.logoutText}>Log Out</Text>
+          </TouchableOpacity>
+
+          {/* Spacer to ensure bottom visibility */}
+          <View style={{ height: insets.bottom + 20 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
-    padding: 18,
+  },
+  scrollContainer: {
+    paddingHorizontal: 18,
   },
   header: {
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 20,
-    paddingVertical: 24,
+    paddingVertical: 20,
     marginBottom: 10,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 3,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: COLORS.primary,
   },
   editIcon: {
     position: "absolute",
-    right: "40%",
-    top: 90,
     backgroundColor: COLORS.primary,
-    borderRadius: 15,
+    borderRadius: 20,
     padding: 6,
     shadowColor: COLORS.primary,
-    shadowOpacity: 0.2,
-    elevation: 3,
+    shadowOpacity: 0.25,
+    elevation: 4,
   },
   name: {
-    fontSize: 22,
     fontWeight: "700",
     color: COLORS.primary,
-    marginTop: 12,
+    marginTop: 10,
   },
   badge: {
     backgroundColor: COLORS.secondary,
@@ -193,13 +272,11 @@ const styles = StyleSheet.create({
   },
   stat: { alignItems: "center" },
   statValue: {
-    fontSize: 18,
     color: COLORS.primary,
     fontWeight: "700",
   },
   statLabel: {
     color: COLORS.grey,
-    fontSize: 14,
   },
   infoBox: {
     backgroundColor: "#fff",
@@ -225,6 +302,7 @@ const styles = StyleSheet.create({
   infoText: {
     color: "#333",
     fontSize: 15,
+    flexShrink: 1,
   },
   sectionTitle: {
     color: COLORS.primary,
@@ -306,5 +384,15 @@ const styles = StyleSheet.create({
     color: "red",
     fontWeight: "600",
     fontSize: 16,
+  },
+  avatar: {
+    borderWidth: 3,
+    borderColor: COLORS.primary,
+    // width, height, borderRadius are dynamically set based on screen width
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4, // adds soft shadow on Android
   },
 });

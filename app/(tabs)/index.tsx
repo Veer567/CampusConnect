@@ -14,12 +14,15 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Dimensions,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { styles } from "../../styles/feed.styles";
+import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
+import { styles } from "@/styles/feed.styles";
 
-// ── Categories ───────────────────────────────
+const { height } = Dimensions.get("window");
+
 const categories = [
   { id: 0, name: "All", icon: "📄" },
   { id: 1, name: "Placements", icon: "👨‍💼" },
@@ -63,7 +66,6 @@ export default function Index() {
       Animated.spring(categoryScales[index], {
         toValue: selectedCategory.id === cat.id ? 1.1 : 1,
         useNativeDriver: true,
-        speed: 25,
       }).start();
     });
   }, [selectedCategory]);
@@ -85,74 +87,88 @@ export default function Index() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" backgroundColor="#121112ff" />
-        {/* HEADER */}
-        <View style={styles.header}>
-          <Text style={styles.headerWelcome}>
-            Welcome Back <Text style={{ fontSize: 22 }}>👋</Text>
-          </Text>
-          <Text style={styles.headerSubtitle}>Discover campus events</Text>
-        </View>
+      <LinearGradient
+        colors={["#EFF6FF", "#FFFFFF"]}
+        style={{ flex: 1 }}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <SafeAreaView style={styles.container}>
+          <StatusBar style="light" backgroundColor={COLORS.primary} />
 
-        {/* CATEGORY FILTER */}
-        <View style={styles.filterContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryScroll}
-            decelerationRate={Platform.OS === "ios" ? "fast" : 0.9}
+          {/* Header with rounded bottom */}
+          <LinearGradient
+            colors={[COLORS.primary, COLORS.secondary]}
+            style={styles.header}
           >
-            {categories.map((cat, index) => {
-              const isActive = selectedCategory.id === cat.id;
-              return (
-                <Animated.View
-                  key={cat.id}
-                  style={{
-                    transform: [{ scale: categoryScales[index] }],
-                    marginRight: 14,
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={() => setSelectedCategory(cat)}
-                    activeOpacity={0.85}
-                    style={[
-                      styles.categoryButton,
-                      isActive && styles.categoryButtonActive,
-                    ]}
+            <View style={styles.headerContent}>
+              <Text style={styles.headerWelcome}>
+                Welcome Back <Text style={{ fontSize: 24 }}>👋</Text>
+              </Text>
+              <Text style={styles.headerSubtitle}>
+                Discover the latest campus events
+              </Text>
+            </View>
+          </LinearGradient>
+
+          {/* Categories */}
+          <View style={styles.categoryContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryScroll}
+            >
+              {categories.map((cat, index) => {
+                const isActive = selectedCategory.id === cat.id;
+                return (
+                  <Animated.View
+                    key={cat.id}
+                    style={{ transform: [{ scale: categoryScales[index] }] }}
                   >
-                    <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                    <Text
+                    <TouchableOpacity
+                      onPress={() => setSelectedCategory(cat)}
+                      activeOpacity={0.85}
                       style={[
-                        styles.categoryText,
-                        isActive && styles.categoryTextActive,
+                        styles.categoryButton,
+                        isActive && styles.categoryButtonActive,
                       ]}
                     >
-                      {cat.name}
-                    </Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })}
-          </ScrollView>
-        </View>
+                      <Text style={styles.categoryIcon}>{cat.icon}</Text>
+                      <Text
+                        style={[
+                          styles.categoryText,
+                          isActive && styles.categoryTextActive,
+                        ]}
+                      >
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })}
+            </ScrollView>
+          </View>
 
-        {/* POSTS */}
-        <FlatList
-          data={filteredPosts}
-          renderItem={({ item }) => <Post post={item} />}
-          keyExtractor={(item) => item._id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.postsList}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={COLORS.primary}
-            />
-          }
-        />
-      </SafeAreaView>
+          {/* Feed */}
+          <FlatList
+            data={filteredPosts}
+            renderItem={({ item }) => <Post post={item} />}
+            keyExtractor={(item) => item._id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.postsList,
+              { minHeight: height * 0.5 },
+            ]}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={COLORS.primary}
+              />
+            }
+          />
+        </SafeAreaView>
+      </LinearGradient>
     </SafeAreaProvider>
   );
 }

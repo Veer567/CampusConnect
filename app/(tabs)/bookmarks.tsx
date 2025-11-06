@@ -7,11 +7,18 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  Dimensions,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/themes";
 import { StatusBar } from "expo-status-bar";
+import AppHeader from "@/components/AppHeader";
+
+const { width, height } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
+const hp = (p: number) => (height * p) / 100;
 
 export default function Bookmarks() {
   const bookmarks = [
@@ -42,19 +49,21 @@ export default function Bookmarks() {
   ];
 
   return (
-    <LinearGradient colors={["#fdfdfd", "#f6f9ff"]} style={styles.gradient}>
+    <LinearGradient
+      colors={["#EFF6FF", "#FFFFFF"]}
+      style={{ flex: 1 }}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
       <SafeAreaView style={styles.container}>
-         <StatusBar style="dark" backgroundColor="#121112ff" />
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerText}>Bookmarks</Text>
-          <Ionicons name="bookmark" size={24} color={COLORS.primary} />
-        </View>
+        <StatusBar style="light" backgroundColor={COLORS.primary} />
 
-        {/* List */}
+        <AppHeader title="Bookmarks" rightIcon="bookmark" />
+
+        {/* Scrollable List */}
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 80 }}
+          contentContainerStyle={styles.scrollContent}
         >
           {bookmarks.length > 0 ? (
             bookmarks.map((item) => (
@@ -68,7 +77,7 @@ export default function Bookmarks() {
                     <Ionicons
                       name="calendar-outline"
                       size={16}
-                      color={COLORS.grey}
+                      color={COLORS.textSecondary}
                     />
                     <Text style={styles.infoText}>{item.date}</Text>
                   </View>
@@ -77,18 +86,25 @@ export default function Bookmarks() {
                     <Ionicons
                       name="location-outline"
                       size={16}
-                      color={COLORS.grey}
+                      color={COLORS.textSecondary}
                     />
                     <Text style={styles.infoText}>{item.location}</Text>
                   </View>
 
                   <View style={styles.actions}>
-                    <TouchableOpacity style={styles.shareButton}>
-                      <Ionicons name="share-outline" size={18} color="#fff" />
-                      <Text style={styles.shareText}>Share</Text>
+                    <TouchableOpacity activeOpacity={0.85}>
+                      <LinearGradient
+                        colors={[COLORS.primary, COLORS.secondary]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.shareButton}
+                      >
+                        <Ionicons name="share-outline" size={18} color="#fff" />
+                        <Text style={styles.shareText}>Share</Text>
+                      </LinearGradient>
                     </TouchableOpacity>
 
-                    <TouchableOpacity>
+                    <TouchableOpacity activeOpacity={0.7}>
                       <Ionicons
                         name="bookmark"
                         size={22}
@@ -112,95 +128,106 @@ export default function Bookmarks() {
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-
-  },
   container: {
     flex: 1,
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    marginTop:30,
-    backgroundColor: 'transparent',
-
-
   },
+
+  // HEADER
   header: {
+    width: "100%",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
-    marginTop: 20,
-    
+    paddingVertical: hp(3),
+    paddingHorizontal: wp(5),
+
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    marginBottom: hp(2),
   },
   headerText: {
-    color: COLORS.primary,
-    fontSize: 24,
+    fontSize: wp(5.2),
     fontWeight: "700",
+    color: COLORS.white,
     letterSpacing: 0.4,
   },
+
+  // SCROLL CONTENT
+  scrollContent: {
+    paddingHorizontal: wp(5),
+    paddingBottom: hp(10),
+  },
+
+  // CARD
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    marginBottom: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: wp(4),
+    marginBottom: hp(2),
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
     overflow: "hidden",
     borderWidth: 0.5,
-    borderColor: "#ececec",
+    borderColor: "#f0f0f0",
+    marginTop : hp(2),
   },
   image: {
     width: "100%",
-    height: 160,
+    height: hp(23),
+    borderTopLeftRadius: wp(4),
+    borderTopRightRadius: wp(4),
   },
   cardContent: {
-    padding: 16,
+    padding: wp(4),
   },
   title: {
-    fontSize: 18,
+    fontSize: wp(4.5),
     fontWeight: "700",
     color: COLORS.primary,
-    marginBottom: 6,
+    marginBottom: hp(0.5),
   },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 2,
+    marginVertical: hp(0.3),
   },
   infoText: {
-    color: COLORS.grey,
-    fontSize: 14,
-    marginLeft: 6,
+    color: COLORS.textSecondary,
+    fontSize: wp(3.5),
+    marginLeft: wp(1.5),
   },
   actions: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 10,
+    marginTop: hp(1.5),
   },
   shareButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1),
+    borderRadius: wp(3),
   },
   shareText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: wp(3.5),
     fontWeight: "600",
-    marginLeft: 6,
+    marginLeft: wp(2),
   },
+
+  // EMPTY STATE
   emptyContainer: {
     alignItems: "center",
-    marginTop: 120,
+    marginTop: hp(15),
   },
   emptyText: {
-    color: COLORS.grey,
-    fontSize: 16,
-    marginTop: 12,
+    color: COLORS.textSecondary,
+    fontSize: wp(4),
+    marginTop: hp(2),
   },
 });

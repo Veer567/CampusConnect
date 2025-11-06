@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,11 +7,18 @@ import {
   Animated,
   TouchableOpacity,
   SafeAreaView,
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/themes";
 import { StatusBar } from "expo-status-bar";
+import { useFocusEffect } from "expo-router";
+import AppHeader from "@/components/AppHeader";
+
+const { width, height } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
+const hp = (p: number) => (height * p) / 100;
 
 const notifications = [
   { id: "1", text: "Your post received 12 new likes ❤️", icon: "heart" },
@@ -22,82 +29,92 @@ const notifications = [
 ];
 
 export default function NotificationScreen() {
+  const fadeAnims = useRef(
+    notifications.map(() => new Animated.Value(0))
+  ).current;
+  const scaleAnims = useRef(
+    notifications.map(() => new Animated.Value(0.95))
+  ).current;
+
+  // Animate on every screen focus
+  useFocusEffect(
+    useCallback(() => {
+      fadeAnims.forEach((fadeAnim, index) => {
+        fadeAnim.setValue(0);
+        scaleAnims[index].setValue(0.95);
+
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 600,
+            delay: index * 120,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scaleAnims[index], {
+            toValue: 1,
+            friction: 6,
+            delay: index * 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    }, [])
+  );
+
   return (
     <LinearGradient
-      colors={[COLORS.background, COLORS.surfaceLight]}
-      style={styles.gradient}
+      colors={["#EFF6FF", "#FFFFFF"]}
+      style={{ flex: 1 }}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container}>
-         <StatusBar style="dark" backgroundColor="#121112ff" />
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Notifications</Text>
-          <Ionicons name="notifications" size={26} color={COLORS.primary} />
-        </View>
+        <StatusBar style="light" backgroundColor={COLORS.primary} />
+
+        {/* Shared Header */}
+        <AppHeader title="Notifications" rightIcon="notifications" />
 
         {/* Notification List */}
         <FlatList
           data={notifications}
           keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
-          renderItem={({ item, index }) => {
-            const fadeAnim = new Animated.Value(0);
-            const scaleAnim = new Animated.Value(0.95);
-
-            // Entry Animation
-            Animated.timing(fadeAnim, {
-              toValue: 1,
-              duration: 600,
-              delay: index * 120,
-              useNativeDriver: true,
-            }).start();
-
-            Animated.spring(scaleAnim, {
-              toValue: 1,
-              friction: 6,
-              delay: index * 100,
-              useNativeDriver: true,
-            }).start();
-
-            return (
-              <Animated.View
-                style={[
-                  styles.cardContainer,
-                  {
-                    opacity: fadeAnim,
-                    transform: [{ scale: scaleAnim }],
-                  },
-                ]}
+          renderItem={({ item, index }) => (
+            <Animated.View
+              style={{
+                opacity: fadeAnims[index],
+                transform: [{ scale: scaleAnims[index] }],
+              }}
+            >
+              <LinearGradient
+                colors={["#FFFFFF", "#F9FAFB"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.card}
               >
-                <LinearGradient
-                  colors={["#ffffff", "#f9fafb"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.card}
-                >
-                  <View style={styles.iconContainer}>
-                    <Ionicons
-                      name={item.icon as any}
-                      size={22}
-                      color={COLORS.primary}
-                    />
-                  </View>
+                <View style={styles.iconContainer}>
+                  <Ionicons
+                    name={item.icon as any}
+                    size={22}
+                    color={COLORS.primary}
+                  />
+                </View>
 
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.text}>{item.text}</Text>
-                  </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.text}>{item.text}</Text>
+                </View>
 
-                  <TouchableOpacity style={styles.optionsBtn}>
-                    <MaterialIcons
-                      name="more-vert"
-                      size={20}
-                      color={COLORS.grey}
-                    />
-                  </TouchableOpacity>
-                </LinearGradient>
-              </Animated.View>
-            );
-          }}
+                <TouchableOpacity style={styles.optionsBtn}>
+                  <MaterialIcons
+                    name="more-vert"
+                    size={20}
+                    color={COLORS.grey}
+                  />
+                </TouchableOpacity>
+              </LinearGradient>
+            </Animated.View>
+          )}
         />
       </SafeAreaView>
     </LinearGradient>
@@ -105,64 +122,45 @@ export default function NotificationScreen() {
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    marginTop:30
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 18,
-    paddingTop: 10,
-  },
-  title: {
-    fontSize: 24,
-    color: COLORS.primary,
-    fontWeight: "700",
-    letterSpacing: 0.3,
   },
   list: {
-    paddingBottom: 80,
-  },
-  cardContainer: {
-    marginBottom: 14,
+    paddingHorizontal: wp(5),
+    paddingBottom: hp(12),
+    paddingTop: hp(1),
   },
   card: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: wp(4),
+    padding: wp(4),
+    marginBottom: hp(1.5),
     borderWidth: 0.8,
     borderColor: "#E5E7EB",
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
   iconContainer: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(37, 179, 211, 0.12)",
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    backgroundColor: "rgba(14, 165, 233, 0.12)",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
+    marginRight: wp(3.5),
   },
   text: {
-    color: "#222",
-    fontSize: 15,
-    lineHeight: 21,
+    color: COLORS.text,
+    fontSize: wp(3.8),
+    lineHeight: wp(5),
     fontWeight: "500",
   },
   optionsBtn: {
-    paddingHorizontal: 6,
+    paddingHorizontal: wp(1.5),
   },
 });
