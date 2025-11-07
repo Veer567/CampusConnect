@@ -1,36 +1,36 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  TextInput,
-  ScrollView,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Animated,
-  Easing,
-  Dimensions,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import AppHeader from "@/components/AppHeader";
+import { COLORS } from "@/constants/themes";
+import { api } from "@/convex/_generated/api";
+import { styles } from "@/styles/create.styles";
 import { Ionicons } from "@expo/vector-icons";
+import { useMutation } from "convex/react";
+import * as FileSystem from "expo-file-system/legacy";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system/legacy";
-import { useMutation } from "convex/react";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { COLORS } from "@/constants/themes";
-import { styles } from "@/styles/create.styles";
-import { api } from "@/convex/_generated/api";
 import { StatusBar } from "expo-status-bar";
-import AppHeader from "@/components/AppHeader";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Easing,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const { height } = Dimensions.get("window");
 
@@ -181,7 +181,7 @@ const handleShare = useCallback(async () => {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" backgroundColor={COLORS.surface} />
+        
 
         <AppHeader title="Create Post" showBackButton onBackPress={() => router.back()} />
 

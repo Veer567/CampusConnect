@@ -3,12 +3,13 @@
     "name": "CampusConnect",
     "slug": "Spotlight",
     "version": "1.0.0",
-    "orientation": "default",
+    "orientation": "portrait",
     "icon": "./assets/splash/splash 2.png",
     "scheme": "spotlight",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vir567.Spotlight"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,12 +18,11 @@
       },
       "softwareKeyboardLayoutMode": "pan",
       "edgeToEdgeEnabled": false,
-      
       "statusBar": {
         "hidden": false,
-        "backgroundColor": "#ffffff",
-        "translucent": false,
-        "barStyle": "dark-content"
+        "backgroundColor": "black",
+        "translucent": true,
+        "barStyle": "light-content"
       },
       "package": "com.vir567.Spotlight"
     },

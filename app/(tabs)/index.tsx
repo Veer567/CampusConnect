@@ -20,6 +20,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { styles } from "@/styles/feed.styles";
+import AppHeader from "@/components/AppHeader";
 
 const { height } = Dimensions.get("window");
 
@@ -94,22 +95,9 @@ export default function Index() {
         end={{ x: 1, y: 1 }}
       >
         <SafeAreaView style={styles.container}>
-          <StatusBar style="light" backgroundColor={COLORS.primary} />
 
-          {/* Header with rounded bottom */}
-          <LinearGradient
-            colors={[COLORS.primary, COLORS.secondary]}
-            style={styles.header}
-          >
-            <View style={styles.headerContent}>
-              <Text style={styles.headerWelcome}>
-                Welcome Back <Text style={{ fontSize: 24 }}>👋</Text>
-              </Text>
-              <Text style={styles.headerSubtitle}>
-                Discover the latest campus events
-              </Text>
-            </View>
-          </LinearGradient>
+      <AppHeader title="Campus Connect 🎓" alignLeft />
+
 
           {/* Categories */}
           <View style={styles.categoryContainer}>

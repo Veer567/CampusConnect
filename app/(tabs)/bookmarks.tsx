@@ -56,7 +56,7 @@ export default function Bookmarks() {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container}>
-        <StatusBar style="light" backgroundColor={COLORS.primary} />
+       
 
         <AppHeader title="Bookmarks" rightIcon="bookmark" />
 

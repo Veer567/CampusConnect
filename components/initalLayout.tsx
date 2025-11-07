@@ -23,5 +23,5 @@ export default function InitalLayout({ children }: InitalLayoutProps) {
     }
   }, [isLoaded, isSignedIn, segments]);
 
-  return <>{children}</>; // 👈 render children safely
+  return <>{children}</>; 
 }

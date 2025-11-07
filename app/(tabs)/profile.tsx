@@ -1,3 +1,4 @@
+import AppHeader from "@/components/AppHeader";
 import { COLORS } from "@/constants/themes";
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -39,7 +40,7 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" backgroundColor="#121112ff" />
+      <StatusBar style="dark" backgroundColor= 'transparent' />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
@@ -51,6 +52,8 @@ export default function Profile() {
           ]}
           showsVerticalScrollIndicator={false}
         >
+       
+            
           {/* Header */}
           <View style={styles.header}>
             <Image
@@ -224,6 +227,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
+    
   },
   scrollContainer: {
     paddingHorizontal: 18,

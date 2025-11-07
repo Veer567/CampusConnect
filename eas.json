@@ -6,8 +6,16 @@
   "build": {
     "apk": {
       "android": {
-        "buildType": "apk" // <-- tells EAS to produce .apk
+        "buildType": "apk"
       }
+    },
+    "android": {
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "ios": {
+      "distribution": "store"
     },
     "development": {
       "developmentClient": true,

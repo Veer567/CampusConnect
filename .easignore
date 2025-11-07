@@ -1,5 +1,6 @@
-android/.gradle
 node_modules
 .expo
+.eas
 .git
-y
+android
+ios

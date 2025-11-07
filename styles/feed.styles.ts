@@ -39,7 +39,7 @@ export const styles = StyleSheet.create({
 
   // CATEGORY
   categoryContainer: {
-    marginTop: hp(-1.5),
+    marginTop: hp(1),
     marginBottom: hp(1.5),
   },
   categoryScroll: {

@@ -69,7 +69,7 @@ export default function NotificationScreen() {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container}>
-        <StatusBar style="light" backgroundColor={COLORS.primary} />
+       
 
         {/* Shared Header */}
         <AppHeader title="Notifications" rightIcon="notifications" />

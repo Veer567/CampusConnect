@@ -1,9 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Tabs, router } from "expo-router";
 import React from "react";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { COLORS } from "../../constants/themes";
-import {TouchableOpacity, View } from "react-native";
-import { StyleSheet } from "react-native";
 
 export default function TabLayout() {
   return (
@@ -27,8 +26,8 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home", 
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+          tabBarIcon: ({ color, size , focused}) => (
+            <Ionicons name="home" size= {focused ? 28 : 24} color={color} />
           ),
         }}
       />
@@ -47,10 +46,10 @@ export default function TabLayout() {
       
         name="create"
         options={{
-          title: "Create",
+          title: "create",
           tabBarIcon: () => (
             <View style={styles.createButtonWrapper}>
-              <TouchableOpacity  activeOpacity={0.7} style={styles.createButton}>
+              <TouchableOpacity  activeOpacity={0.7} style={styles.createButton}  onPress={() => router.push("/create")}>
                 <Ionicons name="add-circle" size={50} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
@@ -90,7 +89,7 @@ const styles = StyleSheet.create({
   createButton: {
     width: 50,
     height: 50,
-    borderRadius: 55 / 2,
+    borderRadius: 50 / 2,
     backgroundColor: COLORS.surface,
     justifyContent: "center",
     alignItems: "center",

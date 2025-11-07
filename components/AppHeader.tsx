@@ -1,15 +1,16 @@
+// AppHeader.tsx
+import { COLORS } from "@/constants/themes";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
   Dimensions,
   Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS } from "@/constants/themes";
 
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
@@ -21,6 +22,7 @@ interface HeaderProps {
   rightIcon?: string;
   onBackPress?: () => void;
   onRightPress?: () => void;
+  alignLeft?: boolean; // ✅ new prop
 }
 
 export default function AppHeader({
@@ -29,6 +31,7 @@ export default function AppHeader({
   rightIcon,
   onBackPress,
   onRightPress,
+  alignLeft = false, // default = false, so old screens stay same
 }: HeaderProps) {
   return (
     <LinearGradient
@@ -46,7 +49,30 @@ export default function AppHeader({
           <View style={styles.placeholder} />
         )}
 
-        <Text style={styles.title}>{title}</Text>
+        {/* ✅ Title alignment controlled by prop */}
+        <View
+          style={[
+            styles.titleContainer,
+            alignLeft && { alignItems: "flex-start", flex: 1 },
+          ]}
+        >
+          <Text
+        style={[
+       styles.title,
+         alignLeft && {
+        textAlign: "left",
+        alignSelf: "flex-start",
+        marginLeft: wp(-7.5), // ✅ moves closer to left edge
+        fontFamily: "Poppins_700Bold",
+        fontSize: wp(6.2),
+        letterSpacing: 0.3,
+    },
+  ]}
+>
+  {title}
+</Text>
+
+        </View>
 
         {rightIcon ? (
           <TouchableOpacity onPress={onRightPress} style={styles.iconButton}>
@@ -63,20 +89,24 @@ export default function AppHeader({
 const styles = StyleSheet.create({
   header: {
     width: "100%",
-    height: hp(10), // consistent header height across screens
-
+    height: hp(6.5),
     justifyContent: "center",
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 3,
+  
   },
   headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: wp(5),
-    marginTop: Platform.OS === "android" ? hp(3) : hp(0.5),
+    marginTop: Platform.OS === "android" ? hp(1) : hp(0.5),
+  },
+  titleContainer: {
+    flex: 1,
+    alignItems: "center", // default center
   },
   title: {
     color: COLORS.white,
