@@ -11,22 +11,13 @@ export default function RootLayout() {
   return (
     <ClerkAndConvexProvider>
       <SafeAreaProvider>
-        {/* -------------------------------------------------
-            1. StatusBar – NOT translucent on iOS
-            2. Valid hex colour (or use `transparent` + view)
-           ------------------------------------------------- */}
+     
         <StatusBar style="dark" translucent={false} backgroundColor="#141313ff" />
 
-        {/* -------------------------------------------------
-            2. InitalLayout must fill the screen
-           ------------------------------------------------- */}
         <InitalLayout >
           <Slot />
         </InitalLayout>
 
-        {/* -------------------------------------------------
-            3. Toast **inside** SafeAreaProvider → proper insets
-           ------------------------------------------------- */}
         <Toast />
       </SafeAreaProvider>
     </ClerkAndConvexProvider>

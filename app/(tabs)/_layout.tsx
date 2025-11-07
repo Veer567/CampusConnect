@@ -2,6 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
 import { COLORS } from "../../constants/themes";
+import {TouchableOpacity, View } from "react-native";
+import { StyleSheet } from "react-native";
 
 export default function TabLayout() {
   return (
@@ -34,26 +36,36 @@ export default function TabLayout() {
         name="bookmarks"
         options={{
           title: "Bookmarks",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bookmark" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name="bookmark" 
+            size={focused ? 28 : 24}
+             color={color} />
           ),
         }}
       />
       <Tabs.Screen
+      
         name="create"
         options={{
           title: "Create",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" size={size} color={COLORS.primary} />
+          tabBarIcon: () => (
+            <View style={styles.createButtonWrapper}>
+              <TouchableOpacity  activeOpacity={0.7} style={styles.createButton}>
+                <Ionicons name="add-circle" size={50} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
           ),
+
         }}
       />
       <Tabs.Screen
         name="notifications"
         options={{
           title: "Notifications",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name="notifications" 
+            size={focused ? 28 : 24}
+            color={color} />
           ),
         }}
       />
@@ -61,11 +73,32 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+          tabBarIcon: ({ color, size , focused }) => (
+            <Ionicons name="person" size={focused ? 28 : 24} color={color} />
           ),
         }}
       />
     </Tabs>
   );
 }
+const styles = StyleSheet.create({
+  createButtonWrapper: {
+    position: "absolute",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  createButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 55 / 2,
+    backgroundColor: COLORS.surface,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+});
+

@@ -173,6 +173,7 @@ const handleShare = useCallback(async () => {
 
 
   return (
+    <View style={{ flex: 1, backgroundColor: COLORS.surface }}> 
     <LinearGradient
       colors={["#EFF6FF", "#FFFFFF"]}
       style={{ flex: 1 }}
@@ -180,7 +181,7 @@ const handleShare = useCallback(async () => {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container}>
-        <StatusBar style="light" backgroundColor={COLORS.primary} />
+        <StatusBar style="dark" backgroundColor={COLORS.surface} />
 
         <AppHeader title="Create Post" showBackButton onBackPress={() => router.back()} />
 
@@ -313,5 +314,6 @@ const handleShare = useCallback(async () => {
         </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
+    </View>
   );
 }
