@@ -1,3 +1,4 @@
+// Import necessary dependencies and UI components
 import React from "react";
 import {
   View,
@@ -16,11 +17,14 @@ import { COLORS } from "@/constants/themes";
 import { StatusBar } from "expo-status-bar";
 import AppHeader from "@/components/AppHeader";
 
+// Get screen width and height for responsive styling
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
 
+// Main Bookmarks Screen component
 export default function Bookmarks() {
+  // Sample bookmarked items (mock data)
   const bookmarks = [
     {
       id: 1,
@@ -49,6 +53,7 @@ export default function Bookmarks() {
   ];
 
   return (
+    // Background gradient for a soft, modern appearance
     <LinearGradient
       colors={["#EFF6FF", "#FFFFFF"]}
       style={{ flex: 1 }}
@@ -56,23 +61,28 @@ export default function Bookmarks() {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container}>
-       
-
+        {/* App Header with title and bookmark icon */}
         <AppHeader title="Bookmarks" rightIcon="bookmark" />
 
-        {/* Scrollable List */}
+        {/* Scrollable list of bookmarks */}
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
+          {/* Check if there are bookmarks to display */}
           {bookmarks.length > 0 ? (
             bookmarks.map((item) => (
+              // Each bookmark card
               <View key={item.id} style={styles.card}>
+                {/* Event image */}
                 <Image source={{ uri: item.image }} style={styles.image} />
 
+                {/* Card content section */}
                 <View style={styles.cardContent}>
+                  {/* Event title */}
                   <Text style={styles.title}>{item.title}</Text>
 
+                  {/* Event date */}
                   <View style={styles.infoRow}>
                     <Ionicons
                       name="calendar-outline"
@@ -82,6 +92,7 @@ export default function Bookmarks() {
                     <Text style={styles.infoText}>{item.date}</Text>
                   </View>
 
+                  {/* Event location */}
                   <View style={styles.infoRow}>
                     <Ionicons
                       name="location-outline"
@@ -91,7 +102,9 @@ export default function Bookmarks() {
                     <Text style={styles.infoText}>{item.location}</Text>
                   </View>
 
+                  {/* Action buttons: Share and Remove Bookmark */}
                   <View style={styles.actions}>
+                    {/* Share button with gradient background */}
                     <TouchableOpacity activeOpacity={0.85}>
                       <LinearGradient
                         colors={[COLORS.primary, COLORS.secondary]}
@@ -104,6 +117,7 @@ export default function Bookmarks() {
                       </LinearGradient>
                     </TouchableOpacity>
 
+                    {/* Bookmark toggle button */}
                     <TouchableOpacity activeOpacity={0.7}>
                       <Ionicons
                         name="bookmark"
@@ -116,6 +130,7 @@ export default function Bookmarks() {
               </View>
             ))
           ) : (
+            // Empty state when there are no bookmarks
             <View style={styles.emptyContainer}>
               <Ionicons name="bookmark-outline" size={64} color={COLORS.grey} />
               <Text style={styles.emptyText}>No bookmarks yet</Text>
@@ -127,40 +142,19 @@ export default function Bookmarks() {
   );
 }
 
+// Styles for layout and components
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
 
-  // HEADER
-  header: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: hp(3),
-    paddingHorizontal: wp(5),
-
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    marginBottom: hp(2),
-  },
-  headerText: {
-    fontSize: wp(5.2),
-    fontWeight: "700",
-    color: COLORS.white,
-    letterSpacing: 0.4,
-  },
-
-  // SCROLL CONTENT
+  // Scrollable content padding
   scrollContent: {
     paddingHorizontal: wp(5),
     paddingBottom: hp(10),
   },
 
-  // CARD
+  // Card container for each bookmarked event
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: wp(4),
@@ -173,39 +167,53 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 0.5,
     borderColor: "#f0f0f0",
-    marginTop : hp(2),
+    marginTop: hp(2),
   },
+
+  // Image at the top of the card
   image: {
     width: "100%",
     height: hp(23),
     borderTopLeftRadius: wp(4),
     borderTopRightRadius: wp(4),
   },
+
+  // Card content container
   cardContent: {
     padding: wp(4),
   },
+
+  // Event title
   title: {
     fontSize: wp(4.5),
     fontWeight: "700",
     color: COLORS.primary,
     marginBottom: hp(0.5),
   },
+
+  // Info row (icon + text)
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
     marginVertical: hp(0.3),
   },
+
+  // Text inside info rows (date, location)
   infoText: {
     color: COLORS.textSecondary,
     fontSize: wp(3.5),
     marginLeft: wp(1.5),
   },
+
+  // Action row for Share and Bookmark buttons
   actions: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: hp(1.5),
   },
+
+  // Share button styling
   shareButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -213,6 +221,8 @@ const styles = StyleSheet.create({
     paddingVertical: hp(1),
     borderRadius: wp(3),
   },
+
+  // Text label on share button
   shareText: {
     color: "#fff",
     fontSize: wp(3.5),
@@ -220,11 +230,13 @@ const styles = StyleSheet.create({
     marginLeft: wp(2),
   },
 
-  // EMPTY STATE
+  // Empty state container
   emptyContainer: {
     alignItems: "center",
     marginTop: hp(15),
   },
+
+  // Empty state message text
   emptyText: {
     color: COLORS.textSecondary,
     fontSize: wp(4),

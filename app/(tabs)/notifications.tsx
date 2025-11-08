@@ -1,3 +1,4 @@
+// Import necessary libraries and components
 import React, { useRef, useCallback } from "react";
 import {
   View,
@@ -12,14 +13,15 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/themes";
-import { StatusBar } from "expo-status-bar";
 import { useFocusEffect } from "expo-router";
 import AppHeader from "@/components/AppHeader";
 
+// Get screen dimensions for responsive layout
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
 
+// Mock data for notifications
 const notifications = [
   { id: "1", text: "Your post received 12 new likes ❤️", icon: "heart" },
   { id: "2", text: "You have a new follower 🎉", icon: "person-add" },
@@ -28,7 +30,9 @@ const notifications = [
   { id: "5", text: "Your post was shared 3 times 🔁", icon: "share-social" },
 ];
 
+// Main Notifications Screen
 export default function NotificationScreen() {
+  // Create animation refs for fade and scale effects per item
   const fadeAnims = useRef(
     notifications.map(() => new Animated.Value(0))
   ).current;
@@ -36,18 +40,19 @@ export default function NotificationScreen() {
     notifications.map(() => new Animated.Value(0.95))
   ).current;
 
-  // Animate on every screen focus
+  // Animate notifications whenever the screen is focused
   useFocusEffect(
     useCallback(() => {
       fadeAnims.forEach((fadeAnim, index) => {
         fadeAnim.setValue(0);
         scaleAnims[index].setValue(0.95);
 
+        // Parallel animation for smooth fade + scale entrance
         Animated.parallel([
           Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 600,
-            delay: index * 120,
+            delay: index * 120, // staggered delay for cascade effect
             useNativeDriver: true,
           }),
           Animated.spring(scaleAnims[index], {
@@ -62,6 +67,7 @@ export default function NotificationScreen() {
   );
 
   return (
+    // Gradient background for modern look
     <LinearGradient
       colors={["#EFF6FF", "#FFFFFF"]}
       style={{ flex: 1 }}
@@ -69,12 +75,10 @@ export default function NotificationScreen() {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container}>
-       
-
-        {/* Shared Header */}
+        {/* App header with title and icon */}
         <AppHeader title="Notifications" rightIcon="notifications" />
 
-        {/* Notification List */}
+        {/* List of notifications with animations */}
         <FlatList
           data={notifications}
           keyExtractor={(item) => item.id}
@@ -87,12 +91,14 @@ export default function NotificationScreen() {
                 transform: [{ scale: scaleAnims[index] }],
               }}
             >
+              {/* Notification card */}
               <LinearGradient
                 colors={["#FFFFFF", "#F9FAFB"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.card}
               >
+                {/* Icon section */}
                 <View style={styles.iconContainer}>
                   <Ionicons
                     name={item.icon as any}
@@ -101,10 +107,12 @@ export default function NotificationScreen() {
                   />
                 </View>
 
+                {/* Text content */}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.text}>{item.text}</Text>
                 </View>
 
+                {/* Options menu button */}
                 <TouchableOpacity style={styles.optionsBtn}>
                   <MaterialIcons
                     name="more-vert"
@@ -121,6 +129,7 @@ export default function NotificationScreen() {
   );
 }
 
+// Styles for layout and UI elements
 const styles = StyleSheet.create({
   container: {
     flex: 1,

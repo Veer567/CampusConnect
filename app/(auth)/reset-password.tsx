@@ -1,3 +1,4 @@
+// Import necessary libraries and UI components
 import React, { useState } from "react";
 import {
   View,
@@ -14,19 +15,22 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/themes";
 
+// Component for resetting password using Clerk authentication
 const ResetPasswordScreen = () => {
+  // Clerk hooks for authentication
   const { isLoaded, signIn } = useSignIn();
   const router = useRouter();
 
+  // State variables to manage form data and UI
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [step, setStep] = useState<"request" | "verify">("request");
+  const [step, setStep] = useState<"request" | "verify">("request"); // Determines the current stage of the process
 
-  // Step 1: Request password reset code
+  // Step 1: Request a password reset code via email
   const handleRequestReset = async () => {
     if (!isLoaded || !signIn) {
       Alert.alert("Please wait", "Authentication is initializing...");
@@ -39,13 +43,14 @@ const ResetPasswordScreen = () => {
     }
 
     try {
+      // Request Clerk to send a reset code to the provided email
       await signIn.create({
         strategy: "reset_password_email_code",
         identifier: email,
       });
 
       Alert.alert("Email Sent", "Check your inbox for a password reset code.");
-      setStep("verify");
+      setStep("verify"); // Move to verification step
     } catch (err: any) {
       Alert.alert(
         "Error",
@@ -54,10 +59,11 @@ const ResetPasswordScreen = () => {
     }
   };
 
-  // Step 2: Verify code and set new password
+  // Step 2: Verify the reset code and update the user's password
   const handleResetPassword = async () => {
     if (!isLoaded || !signIn) return;
 
+    // Validate input fields before processing
     if (!code || !newPassword || !confirmPassword) {
       Alert.alert("Missing Fields", "Please fill in all fields.");
       return;
@@ -69,19 +75,22 @@ const ResetPasswordScreen = () => {
     }
 
     try {
+      // Attempt to reset password using Clerk’s email code strategy
       const result = await signIn.attemptFirstFactor({
         strategy: "reset_password_email_code",
         code,
         password: newPassword,
       });
 
+      // On success, navigate user to login screen
       if (result.status === "complete") {
         Alert.alert("Success", "Password has been reset successfully!");
-        router.replace("/(auth)/login"); // Redirect to login after reset
+        router.replace("/(auth)/login");
       } else {
         Alert.alert("Error", "Unexpected state during password reset.");
       }
     } catch (err: any) {
+      // Handle invalid or expired reset code
       Alert.alert(
         "Error",
         err.errors ? err.errors[0].message : "Invalid code or password."
@@ -89,6 +98,7 @@ const ResetPasswordScreen = () => {
     }
   };
 
+  // Main render section
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -102,6 +112,7 @@ const ResetPasswordScreen = () => {
           backgroundColor: COLORS.background,
         }}
       >
+        {/* Card container for password reset UI */}
         <View
           style={{
             backgroundColor: COLORS.white,
@@ -114,6 +125,7 @@ const ResetPasswordScreen = () => {
             elevation: 6,
           }}
         >
+          {/* Header */}
           <Text
             style={{
               fontSize: 22,
@@ -126,8 +138,10 @@ const ResetPasswordScreen = () => {
             Reset Password
           </Text>
 
+          {/* Step 1: Request Reset Code */}
           {step === "request" ? (
             <>
+              {/* Email input */}
               <Text style={{ color: COLORS.grey }}>Email</Text>
               <TextInput
                 value={email}
@@ -145,6 +159,7 @@ const ResetPasswordScreen = () => {
                 }}
               />
 
+              {/* Send Reset Code Button */}
               <TouchableOpacity
                 onPress={handleRequestReset}
                 style={{
@@ -167,7 +182,9 @@ const ResetPasswordScreen = () => {
               </TouchableOpacity>
             </>
           ) : (
+            /* Step 2: Verify Code & Reset Password */
             <>
+              {/* Verification code input */}
               <Text style={{ color: COLORS.grey }}>Verification Code</Text>
               <TextInput
                 value={code}
@@ -184,7 +201,7 @@ const ResetPasswordScreen = () => {
                 }}
               />
 
-              {/* New Password */}
+              {/* New Password Input with Eye Icon Toggle */}
               <Text style={{ color: COLORS.grey }}>New Password</Text>
               <View
                 style={{
@@ -216,7 +233,7 @@ const ResetPasswordScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              {/* Confirm Password */}
+              {/* Confirm Password Input with Eye Icon Toggle */}
               <Text style={{ color: COLORS.grey }}>Confirm Password</Text>
               <View
                 style={{
@@ -248,6 +265,7 @@ const ResetPasswordScreen = () => {
                 </TouchableOpacity>
               </View>
 
+              {/* Reset Password Button */}
               <TouchableOpacity
                 onPress={handleResetPassword}
                 style={{
@@ -271,6 +289,7 @@ const ResetPasswordScreen = () => {
             </>
           )}
 
+          {/* Back to Login Button */}
           <TouchableOpacity
             onPress={() => router.back()}
             style={{ marginTop: 20 }}
@@ -291,4 +310,5 @@ const ResetPasswordScreen = () => {
   );
 };
 
+// Export the screen as default
 export default ResetPasswordScreen;

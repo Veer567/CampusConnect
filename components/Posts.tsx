@@ -1,9 +1,11 @@
+// Post.tsx  
+// A reusable Post component displaying a feed item with user info, title, image, metadata, and interactions.
+
 import React from "react";
 import {
   View,
   Text,
   Image,
-  TouchableOpacity,
   StyleSheet,
   Dimensions,
 } from "react-native";
@@ -11,6 +13,7 @@ import { COLORS } from "@/constants/themes";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
+// Define props for post structure
 interface PostProps {
   post: {
     _id: string;
@@ -33,8 +36,9 @@ const wp = (p: number) => (width * p) / 100;
 export default function Post({ post }: PostProps) {
   return (
     <View style={styles.card}>
-      {/* Header */}
+      {/* ─── Header Section ───────────────────── */}
       <View style={styles.header}>
+        {/* Author Info */}
         <View style={styles.userInfo}>
           {post.author.image ? (
             <Image
@@ -43,18 +47,20 @@ export default function Post({ post }: PostProps) {
               resizeMode="cover"
             />
           ) : (
+            // Placeholder if user has no avatar
             <View
               style={[styles.avatar, { backgroundColor: COLORS.grey + "30" }]}
             />
           )}
 
+          {/* Username and post time */}
           <View>
             <Text style={styles.username}>{post.author.username}</Text>
             <Text style={styles.timeAgo}>2d ago</Text>
           </View>
         </View>
 
-        {/* Gradient Category Badge */}
+        {/* Category Badge with Gradient Background */}
         <LinearGradient
           colors={[COLORS.primary, COLORS.secondary]}
           start={{ x: 0, y: 0 }}
@@ -66,13 +72,13 @@ export default function Post({ post }: PostProps) {
         </LinearGradient>
       </View>
 
-      {/* Title & Content */}
+      {/* ─── Post Content ───────────────────── */}
       <Text style={styles.title}>{post.title}</Text>
       <Text style={styles.description} numberOfLines={3}>
         {post.content}
       </Text>
 
-      {/* Image */}
+      {/* ─── Image Section ───────────────────── */}
       {post.imageUrl && (
         <Image
           source={{ uri: post.imageUrl }}
@@ -81,7 +87,7 @@ export default function Post({ post }: PostProps) {
         />
       )}
 
-      {/* Date & Location */}
+      {/* ─── Event Metadata ───────────────────── */}
       {(post.eventDate || post.location) && (
         <View style={styles.metaRow}>
           {post.eventDate && (
@@ -107,8 +113,9 @@ export default function Post({ post }: PostProps) {
         </View>
       )}
 
-      {/* Stats Row */}
+      {/* ─── Interaction Section ───────────────────── */}
       <View style={styles.actions}>
+        {/* Likes */}
         <View style={styles.actionItem}>
           <Ionicons
             name="heart-outline"
@@ -117,6 +124,8 @@ export default function Post({ post }: PostProps) {
           />
           <Text style={styles.actionText}>234</Text>
         </View>
+
+        {/* Comments */}
         <View style={styles.actionItem}>
           <Ionicons
             name="chatbubble-outline"
@@ -130,6 +139,7 @@ export default function Post({ post }: PostProps) {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
@@ -144,7 +154,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
-  // HEADER
+  // Header
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -171,7 +181,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
 
-  // GRADIENT CATEGORY BADGE
+  // Category badge
   categoryBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -186,7 +196,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 
-  // TITLE & DESCRIPTION
+  // Title and description
   title: {
     fontSize: wp(4.5),
     fontWeight: "700",
@@ -200,7 +210,7 @@ const styles = StyleSheet.create({
     marginBottom: wp(3),
   },
 
-  // IMAGE
+  // Image
   image: {
     width: "100%",
     height: wp(55),
@@ -208,7 +218,7 @@ const styles = StyleSheet.create({
     marginBottom: wp(3),
   },
 
-  // META INFO
+  // Metadata (date/location)
   metaRow: {
     flexDirection: "row",
     marginBottom: wp(3),
@@ -225,7 +235,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
 
-  // ACTIONS
+  // Interaction actions
   actions: {
     flexDirection: "row",
     justifyContent: "flex-start",

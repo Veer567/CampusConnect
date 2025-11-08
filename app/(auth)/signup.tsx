@@ -1,3 +1,4 @@
+// Import core dependencies and UI components
 import { COLORS } from "@/constants/themes";
 import { styles } from "@/styles/auth.styles";
 import { useSignUp } from "@clerk/clerk-expo";
@@ -16,28 +17,30 @@ import {
   View
 } from "react-native";
 
-
-
-
-
+// Main component for user registration
 export default function SignupScreen() {
+  // Clerk authentication hook
   const { isLoaded, signUp, setActive } = useSignUp();
   const router = useRouter();
 
+  // Form state management
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [code, setCode] = useState("");
-  const [isCodeSent, setIsCodeSent] = useState(false);
+  const [isCodeSent, setIsCodeSent] = useState(false); // Controls UI between sign-up and verification
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Restrict users to institutional email domain
   const isAllowedEmail = (email: string) =>
     email.endsWith("@marwadiuniversity.ac.in");
 
+  // Handles user registration
   const handleSignUp = async () => {
     if (!isLoaded || !signUp) return;
 
+    // Validate institutional email
     if (!isAllowedEmail(email)) {
       Alert.alert(
         "Access Denied",
@@ -46,13 +49,16 @@ export default function SignupScreen() {
       return;
     }
 
+    // Validate password confirmation
     if (password !== confirmPassword) {
       Alert.alert("Password Mismatch", "Passwords do not match.");
       return;
     }
 
     try {
+      // Create a new user in Clerk
       await signUp.create({ emailAddress: email, password });
+      // Trigger email verification code
       await signUp.prepareEmailAddressVerification();
       setIsCodeSent(true);
       Alert.alert(
@@ -60,6 +66,7 @@ export default function SignupScreen() {
         "A verification code has been sent to your Marwadi University inbox."
       );
     } catch (err: any) {
+      // Display relevant error message if sign-up fails
       Alert.alert(
         "Sign-up failed",
         err.errors ? err.errors[0].message : "Something went wrong"
@@ -67,6 +74,7 @@ export default function SignupScreen() {
     }
   };
 
+  // Handles email verification process
   const handleVerifyCode = async () => {
     if (!signUp) return;
 
@@ -76,7 +84,9 @@ export default function SignupScreen() {
     }
 
     try {
+      // Verify code entered by user
       const result = await signUp.attemptEmailAddressVerification({ code });
+      // On success, activate session and navigate to main app
       if (result.status === "complete" && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
         router.replace("/(tabs)");
@@ -84,6 +94,7 @@ export default function SignupScreen() {
         Alert.alert("Verification failed", "Invalid or expired code.");
       }
     } catch (err: any) {
+      // Handle invalid or expired verification codes
       Alert.alert(
         "Verification failed",
         err.errors ? err.errors[0].message : "Something went wrong"
@@ -91,6 +102,7 @@ export default function SignupScreen() {
     }
   };
 
+  // UI rendering section
   return (
     <KeyboardAvoidingView style={styles.container} behavior="height">
       <ScrollView
@@ -101,6 +113,7 @@ export default function SignupScreen() {
           backgroundColor: COLORS.background,
         }}
       >
+        {/* App branding section */}
         <View style={styles.brandSection}>
           <View style={styles.logoContainer}>
              <Image
@@ -111,6 +124,7 @@ export default function SignupScreen() {
           <Text style={styles.tagline}>Lets Connect</Text>
         </View>
 
+        {/* Sign-up / Verification form container */}
         <View
           style={{
             marginTop: 40,
@@ -124,13 +138,15 @@ export default function SignupScreen() {
             elevation: 6,
           }}
         >
+          {/* Conditional rendering between Sign Up and Verification steps */}
           {!isCodeSent ? (
             <>
+              {/* Sign-up section */}
               <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 16 }}>
                 Create Account
               </Text>
 
-              {/* Email */}
+              {/* Email field */}
               <Text style={{ color: COLORS.grey }}>Email</Text>
               <TextInput
                 value={email}
@@ -148,7 +164,7 @@ export default function SignupScreen() {
                 }}
               />
 
-              {/* Password */}
+              {/* Password field with visibility toggle */}
               <Text style={{ color: COLORS.grey }}>Password</Text>
               <View
                 style={{
@@ -178,7 +194,7 @@ export default function SignupScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Confirm Password */}
+              {/* Confirm password field with visibility toggle */}
               <Text style={{ color: COLORS.grey }}>Confirm Password</Text>
               <View
                 style={{
@@ -210,7 +226,7 @@ export default function SignupScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Sign Up Button */}
+              {/* Sign-up button */}
               <Pressable
                 onPress={handleSignUp}
                 style={{
@@ -233,6 +249,7 @@ export default function SignupScreen() {
               </Pressable>
             </>
           ) : (
+            /* Verification code input section */
             <>
               <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 16 }}>
                 Verify Your Email
@@ -241,6 +258,7 @@ export default function SignupScreen() {
                 Enter the 6-digit code sent to your email:
               </Text>
 
+              {/* Code input field */}
               <TextInput
                 value={code}
                 onChangeText={setCode}
@@ -259,6 +277,7 @@ export default function SignupScreen() {
                 }}
               />
 
+              {/* Verify code button */}
               <Pressable
                 onPress={handleVerifyCode}
                 style={{

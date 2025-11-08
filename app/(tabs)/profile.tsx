@@ -1,3 +1,4 @@
+// Import necessary libraries and components
 import AppHeader from "@/components/AppHeader";
 import { COLORS } from "@/constants/themes";
 import { useAuth } from "@clerk/clerk-expo";
@@ -22,12 +23,14 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+// Main Profile screen component
 export default function Profile() {
   const { signOut } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions(); // updates on rotate
+  const { width, height } = useWindowDimensions(); // dynamic screen adaptation
 
+  // Handle logout logic
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -40,7 +43,10 @@ export default function Profile() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" backgroundColor= 'transparent' />
+      {/* Status bar setup */}
+      <StatusBar style="dark" backgroundColor="transparent" />
+
+      {/* Keyboard handling for iOS */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
@@ -52,16 +58,15 @@ export default function Profile() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-       
-            
-          {/* Header */}
+          {/* Profile Header Section */}
           <View style={styles.header}>
+            {/* User Avatar */}
             <Image
               source={{ uri: "https://i.pravatar.cc/300" }}
               style={[
                 styles.avatar,
                 {
-                  width: Math.min(width, height) * 0.28, // proportional to the smaller side
+                  width: Math.min(width, height) * 0.28,
                   height: Math.min(width, height) * 0.28,
                   borderRadius: (Math.min(width, height) * 0.28) / 2,
                 },
@@ -69,6 +74,7 @@ export default function Profile() {
               resizeMode="cover"
             />
 
+            {/* Edit Icon positioned dynamically */}
             <TouchableOpacity
               style={[
                 styles.editIcon,
@@ -78,17 +84,19 @@ export default function Profile() {
               <Ionicons name="create-outline" size={18} color="#fff" />
             </TouchableOpacity>
 
+            {/* User Name */}
             <Text
               style={[
                 styles.name,
                 {
-                  fontSize: Math.min(width, height) * 0.055, // proportional to smaller side
+                  fontSize: Math.min(width, height) * 0.055,
                 },
               ]}
             >
               Alex Johnson
             </Text>
 
+            {/* Academic Year Badge */}
             <View
               style={[
                 styles.badge,
@@ -109,6 +117,7 @@ export default function Profile() {
               </Text>
             </View>
 
+            {/* Follower / Following Stats */}
             <View
               style={[
                 styles.statsRow,
@@ -144,7 +153,7 @@ export default function Profile() {
             </View>
           </View>
 
-          {/* Info Section */}
+          {/* Information Section */}
           <View style={styles.infoBox}>
             <View style={styles.infoItem}>
               <Ionicons name="mail-outline" size={18} color={COLORS.primary} />
@@ -174,7 +183,7 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
 
-          {/* Interests */}
+          {/* User Interests Section */}
           <View style={{ marginTop: 20 }}>
             <Text style={styles.sectionTitle}>Interests</Text>
             <View style={styles.tagsContainer}>
@@ -188,7 +197,7 @@ export default function Profile() {
             </View>
           </View>
 
-          {/* Activity Stats */}
+          {/* Activity Summary Section */}
           <View style={{ marginTop: 20 }}>
             <Text style={styles.sectionTitle}>Activity Stats</Text>
             <View style={styles.activityContainer}>
@@ -205,17 +214,18 @@ export default function Profile() {
             </View>
           </View>
 
-          {/* Buttons */}
+          {/* Edit Profile Button */}
           <TouchableOpacity style={styles.editProfileBtn}>
             <MaterialIcons name="edit" size={18} color="#fff" />
             <Text style={styles.editProfileText}>Edit Profile</Text>
           </TouchableOpacity>
 
+          {/* Logout Button */}
           <TouchableOpacity onPress={handleSignOut} style={styles.logoutBtn}>
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
 
-          {/* Spacer to ensure bottom visibility */}
+          {/* Spacer for safe bottom padding */}
           <View style={{ height: insets.bottom + 20 }} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -223,11 +233,11 @@ export default function Profile() {
   );
 }
 
+// Styles for Profile screen layout
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
-    
   },
   scrollContainer: {
     paddingHorizontal: 18,
@@ -392,11 +402,10 @@ const styles = StyleSheet.create({
   avatar: {
     borderWidth: 3,
     borderColor: COLORS.primary,
-    // width, height, borderRadius are dynamically set based on screen width
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4, // adds soft shadow on Android
+    elevation: 4,
   },
 });
