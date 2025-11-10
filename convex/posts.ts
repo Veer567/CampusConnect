@@ -4,6 +4,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
+import { use } from "react";
 
 /*───────────────────────────────────────────────
  🔹 Generate a temporary upload URL for images
@@ -108,3 +109,53 @@ export const getFeedPosts = query({
     return postsWithInfo;
   },
 });
+
+
+export const toggleLikePost = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthenticatedUser(ctx);
+
+    const existing = await ctx.db
+      .query("likes")
+      .withIndex("by_user_and_post", (q) =>
+        q.eq("userId", currentUser._id).eq("postId", args.postId)
+      )
+      .first();
+
+    const post = await ctx.db.get(args.postId);
+    if (!post) throw new Error("Post not found");
+
+    if (existing) {
+      // Unlike the post
+      await ctx.db.delete(existing._id);
+      await ctx.db.patch(args.postId, { likes: Math.max(0, post.likes - 1) });
+      return false;
+    } else {
+      // Like the post
+      await ctx.db.insert("likes", {
+        userId: currentUser._id,
+        postId: args.postId,
+      });
+      await ctx.db.patch(args.postId, { likes: (post.likes || 0) + 1 });
+
+      // Send notification to post owner (if not self)
+      if (currentUser._id !== post.userId) {
+        await ctx.db.insert("notifications", {
+          receiverId: post.userId,
+          senderId: currentUser._id,
+          type: "like",
+          postId: args.postId,
+         createdAt: Date.now(),
+
+          
+        });
+      }
+
+      return true;
+    }
+  },
+});
+
+
+

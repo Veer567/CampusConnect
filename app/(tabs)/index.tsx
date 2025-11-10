@@ -46,21 +46,28 @@ export default function Index() {
   const posts = postsQuery || [];
 
   // Transform raw API data into UI-friendly format
-  const mappedPosts = useMemo(
-    () =>
-      posts.map((post) => ({
-        _id: post._id,
-        title: post.title || "",
-        content: post.caption || "",
-        category: post.category || "Other",
-        imageUrl: post.imageUrl,
-        author: {
-          username: post.author.username,
-          image: post.author.image,
-        },
-      })),
-    [posts]
-  );
+const mappedPosts = useMemo(
+  () =>
+    posts.map((post) => ({
+      _id: post._id,
+      title: post.title || "Untitled",
+      content: post.caption || "",
+      category: post.category || "Other",
+      imageUrl: post.imageUrl ?? undefined,
+      author: {
+        username: post.author.username || "Anonymous",
+        image: post.author.image ?? "",
+      },
+      likes: Array.isArray(post.likes) ? post.likes.length : 0,
+      comments: Array.isArray(post.comments) ? post.comments.length : 0, // ← This fixes it
+      _creationTime: post._creationTime,
+      isLiked: !!post.isLiked,
+      isBookmarked: !!post.isBookmarked,
+      location: post.location ?? undefined,
+      eventDate: post.eventDate ?? undefined,
+    })),
+  [posts]
+);
 
   // Create animated scaling for category buttons when selected
   const categoryScales = useMemo(

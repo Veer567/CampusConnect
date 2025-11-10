@@ -1,26 +1,34 @@
 // Post.tsx  
 // A reusable Post component displaying a feed item with user info, title, image, metadata, and interactions.
 
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
   Image,
   StyleSheet,
   Dimensions,
+  TouchableOpacity,
 } from "react-native";
 import { COLORS } from "@/constants/themes";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
-// Define props for post structure
 interface PostProps {
   post: {
-    _id: string;
+    _id: Id<"posts">;
     title: string;
     content: string;
     category: string;
     imageUrl?: string;
+    isLiked?: boolean;
+    isBookmarked?: boolean;
+    likes: number;
+    comments: number;
+    _creationTime: number;
     author: {
       username: string;
       image?: string;
@@ -34,37 +42,52 @@ const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 
 export default function Post({ post }: PostProps) {
+  const [isLiked, setIsLiked] = useState(post.isLiked ?? false);
+  const [likesCount, setLikesCount] = useState(post.likes ?? 0);
+
+  const toggleLike = useMutation(api.posts.toggleLikePost);
+
+const handleLike = useCallback(async () => {
+  try {
+    const newIsLiked = await toggleLike({ postId: post._id });
+
+    setIsLiked(newIsLiked);
+
+    setLikesCount((prevCount) => {
+      if (newIsLiked && prevCount >= 0) {
+        // user just liked → increment
+        return prevCount + 1;
+      } else if (!newIsLiked && prevCount > 0) {
+        // user just unliked → decrement (avoid negative)
+        return prevCount - 1;
+      } else {
+        // prevent negative or undefined values
+        return Math.max(0, prevCount);
+      }
+    });
+  } catch (error) {
+    console.error("Error toggling like:", error);
+  }
+}, [toggleLike, post._id]);
+
   return (
     <View style={styles.card}>
-      {/* ─── Header Section ───────────────────── */}
+      {/* Header */}
       <View style={styles.header}>
-        {/* Author Info */}
         <View style={styles.userInfo}>
           {post.author.image ? (
-            <Image
-              source={{ uri: post.author.image }}
-              style={styles.avatar}
-              resizeMode="cover"
-            />
+            <Image source={{ uri: post.author.image }} style={styles.avatar} />
           ) : (
-            // Placeholder if user has no avatar
-            <View
-              style={[styles.avatar, { backgroundColor: COLORS.grey + "30" }]}
-            />
+            <View style={[styles.avatar, { backgroundColor: COLORS.grey + "30" }]} />
           )}
-
-          {/* Username and post time */}
           <View>
             <Text style={styles.username}>{post.author.username}</Text>
             <Text style={styles.timeAgo}>2d ago</Text>
           </View>
         </View>
 
-        {/* Category Badge with Gradient Background */}
         <LinearGradient
           colors={[COLORS.primary, COLORS.secondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
           style={styles.categoryBadge}
         >
           <Ionicons name="bookmark-outline" size={12} color={COLORS.white} />
@@ -72,72 +95,55 @@ export default function Post({ post }: PostProps) {
         </LinearGradient>
       </View>
 
-      {/* ─── Post Content ───────────────────── */}
+      {/* Content */}
       <Text style={styles.title}>{post.title}</Text>
       <Text style={styles.description} numberOfLines={3}>
         {post.content}
       </Text>
 
-      {/* ─── Image Section ───────────────────── */}
-      {post.imageUrl && (
-        <Image
-          source={{ uri: post.imageUrl }}
-          style={styles.image}
-          resizeMode="cover"
-        />
-      )}
+      {post.imageUrl && <Image source={{ uri: post.imageUrl }} style={styles.image} />}
 
-      {/* ─── Event Metadata ───────────────────── */}
       {(post.eventDate || post.location) && (
         <View style={styles.metaRow}>
           {post.eventDate && (
             <View style={styles.metaItem}>
-              <Ionicons
-                name="calendar-outline"
-                size={16}
-                color={COLORS.textSecondary}
-              />
+              <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
               <Text style={styles.metaText}>{post.eventDate}</Text>
             </View>
           )}
           {post.location && (
             <View style={styles.metaItem}>
-              <Ionicons
-                name="location-outline"
-                size={16}
-                color={COLORS.textSecondary}
-              />
+              <Ionicons name="location-outline" size={16} color={COLORS.textSecondary} />
               <Text style={styles.metaText}>{post.location}</Text>
             </View>
           )}
         </View>
       )}
 
-      {/* ─── Interaction Section ───────────────────── */}
+      {/* Actions */}
       <View style={styles.actions}>
-        {/* Likes */}
-        <View style={styles.actionItem}>
+        {/* ❤️ Like */}
+        <TouchableOpacity onPress={handleLike} style={styles.actionItem}>
           <Ionicons
-            name="heart-outline"
-            size={18}
-            color={COLORS.textSecondary}
+            name={isLiked ? "heart" : "heart-outline"}
+            size={isLiked ? 22: 20}
+            color={isLiked ? COLORS.red : COLORS.textSecondary}
           />
-          <Text style={styles.actionText}>234</Text>
-        </View>
+          <Text style={styles.actionText}>{likesCount}</Text>
+        </TouchableOpacity>
 
-        {/* Comments */}
+        {/* 💬 Comments */}
         <View style={styles.actionItem}>
-          <Ionicons
-            name="chatbubble-outline"
-            size={18}
-            color={COLORS.textSecondary}
-          />
-          <Text style={styles.actionText}>46</Text>
+          <Ionicons name="chatbubble-outline" size={18} color={COLORS.textSecondary} />
+          <Text style={styles.actionText}>{post.comments ?? 0}</Text>
         </View>
       </View>
     </View>
   );
 }
+
+// (styles unchanged)
+
 
 // ─── Styles ───────────────────────────────────────────
 const styles = StyleSheet.create({
