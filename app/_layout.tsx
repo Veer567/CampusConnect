@@ -19,15 +19,18 @@ export default function RootLayout() {
   );
 
   return (
+    
     <ClerkAndConvexProvider>
+      
       <SafeAreaProvider>
-   
-        {!shouldHideStatusBar && (
-          <CustomStatusBar
-            colors={[COLORS.primary, COLORS.secondary]}
-            style="light"
+      
+          {!shouldHideStatusBar && (
+            <CustomStatusBar
+              colors={[COLORS.primary, COLORS.secondary]}
+              style="light"
           />
         )}
+      
 
         <InitalLayout>
           <Slot />

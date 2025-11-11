@@ -1,38 +1,34 @@
-// Post.tsx  
-// A reusable Post component displaying a feed item with user info, title, image, metadata, and interactions.
-
-import React, { useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-} from "react-native";
+// Post.tsx
 import { COLORS } from "@/constants/themes";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { Ionicons } from "@expo/vector-icons";
+import { useMutation } from "convex/react";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  Dimensions,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Toast from "react-native-toast-message";
+import CommentsModal from "./CommentsModal";
 
 interface PostProps {
   post: {
     _id: Id<"posts">;
     title: string;
-    content: string;
-    category: string;
+    caption?: string;
+    category?: string;
     imageUrl?: string;
     isLiked?: boolean;
-    isBookmarked?: boolean;
     likes: number;
+    createdAt?: string;
     comments: number;
-    _creationTime: number;
-    author: {
-      username: string;
-      image?: string;
-    };
+    author: { username: string; image?: string };
     eventDate?: string;
     location?: string;
   };
@@ -42,33 +38,53 @@ const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 
 export default function Post({ post }: PostProps) {
-  const [isLiked, setIsLiked] = useState(post.isLiked ?? false);
-  const [likesCount, setLikesCount] = useState(post.likes ?? 0);
-
   const toggleLike = useMutation(api.posts.toggleLikePost);
 
-const handleLike = useCallback(async () => {
-  try {
-    const newIsLiked = await toggleLike({ postId: post._id });
+  const [isLiked, setIsLiked] = useState(post.isLiked ?? false);
+  const [likesCount, setLikesCount] = useState(post.likes ?? 0);
+  const [commentsCount, setCommentsCount] = useState(post.comments ?? 0);
+  const [showComments, setShowComments] = useState(false);
 
-    setIsLiked(newIsLiked);
+  // 👇 keep local UI in sync with backend updates
+  useEffect(() => {
+    setIsLiked(post.isLiked ?? false);
+    setLikesCount(post.likes ?? 0);
+  }, [post.isLiked, post.likes]);
 
-    setLikesCount((prevCount) => {
-      if (newIsLiked && prevCount >= 0) {
-        // user just liked → increment
-        return prevCount + 1;
-      } else if (!newIsLiked && prevCount > 0) {
-        // user just unliked → decrement (avoid negative)
-        return prevCount - 1;
-      } else {
-        // prevent negative or undefined values
-        return Math.max(0, prevCount);
+  const handleLike = useCallback(async () => {
+    try {
+      const optimisticLiked = !isLiked;
+      setIsLiked(optimisticLiked);
+      setLikesCount((prev) =>
+        optimisticLiked ? prev + 1 : Math.max(0, prev - 1)
+      );
+
+      const result = await toggleLike({ postId: post._id });
+
+      // 👇 If backend returns false, undo optimistic UI change
+      if (result === false) {
+        setIsLiked(isLiked);
+        setLikesCount(post.likes ?? 0);
+
+        Toast.show({
+          type: "info",
+          text1: "You can’t like your own post 😅",
+          text2: "That’s a bit too much self-love!",
+          position: "bottom",
+          visibilityTime: 2000,
+        });
       }
-    });
-  } catch (error) {
-    console.error("Error toggling like:", error);
-  }
-}, [toggleLike, post._id]);
+    } catch (error: any) {
+      // 👇 If backend throws error (e.g. self-like restriction)
+      if (error.message?.includes("own post")) {
+        // revert optimistic UI
+        setIsLiked(isLiked);
+        setLikesCount(post.likes ?? 0);
+        return;
+      }
+      console.error("Error toggling like:", error);
+    }
+  }, [isLiked, post._id, toggleLike, post.likes]);
 
   return (
     <View style={styles.card}>
@@ -78,7 +94,9 @@ const handleLike = useCallback(async () => {
           {post.author.image ? (
             <Image source={{ uri: post.author.image }} style={styles.avatar} />
           ) : (
-            <View style={[styles.avatar, { backgroundColor: COLORS.grey + "30" }]} />
+            <View
+              style={[styles.avatar, { backgroundColor: COLORS.grey + "30" }]}
+            />
           )}
           <View>
             <Text style={styles.username}>{post.author.username}</Text>
@@ -86,34 +104,47 @@ const handleLike = useCallback(async () => {
           </View>
         </View>
 
-        <LinearGradient
-          colors={[COLORS.primary, COLORS.secondary]}
-          style={styles.categoryBadge}
-        >
-          <Ionicons name="bookmark-outline" size={12} color={COLORS.white} />
-          <Text style={styles.categoryText}>{post.category}</Text>
-        </LinearGradient>
+        {post.category && (
+          <LinearGradient
+            colors={[COLORS.primary, COLORS.secondary]}
+            style={styles.categoryBadge}
+          >
+            <Ionicons name="bookmark-outline" size={12} color={COLORS.white} />
+            <Text style={styles.categoryText}>{post.category}</Text>
+          </LinearGradient>
+        )}
       </View>
 
-      {/* Content */}
       <Text style={styles.title}>{post.title}</Text>
-      <Text style={styles.description} numberOfLines={3}>
-        {post.content}
-      </Text>
+      {post.caption && (
+        <Text style={styles.description} numberOfLines={3}>
+          {post.caption}
+        </Text>
+      )}
 
-      {post.imageUrl && <Image source={{ uri: post.imageUrl }} style={styles.image} />}
+      {post.imageUrl && (
+        <Image source={{ uri: post.imageUrl }} style={styles.image} />
+      )}
 
       {(post.eventDate || post.location) && (
         <View style={styles.metaRow}>
           {post.eventDate && (
             <View style={styles.metaItem}>
-              <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={COLORS.textSecondary}
+              />
               <Text style={styles.metaText}>{post.eventDate}</Text>
             </View>
           )}
           {post.location && (
             <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={16} color={COLORS.textSecondary} />
+              <Ionicons
+                name="location-outline"
+                size={16}
+                color={COLORS.textSecondary}
+              />
               <Text style={styles.metaText}>{post.location}</Text>
             </View>
           )}
@@ -126,24 +157,40 @@ const handleLike = useCallback(async () => {
         <TouchableOpacity onPress={handleLike} style={styles.actionItem}>
           <Ionicons
             name={isLiked ? "heart" : "heart-outline"}
-            size={isLiked ? 22: 20}
+            size={isLiked ? 22 : 20}
             color={isLiked ? COLORS.red : COLORS.textSecondary}
           />
           <Text style={styles.actionText}>{likesCount}</Text>
         </TouchableOpacity>
 
         {/* 💬 Comments */}
-        <View style={styles.actionItem}>
-          <Ionicons name="chatbubble-outline" size={18} color={COLORS.textSecondary} />
-          <Text style={styles.actionText}>{post.comments ?? 0}</Text>
-        </View>
+        <TouchableOpacity
+          onPress={() => setShowComments(true)}
+          style={styles.actionItem}
+        >
+          <Ionicons
+            name="chatbubble-outline"
+            size={20}
+            color={COLORS.textSecondary}
+          />
+          <Text style={styles.actionText}>{commentsCount}</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.timeAgo}>2 hours ago</Text>
       </View>
+
+      {/* Comments Modal */}
+      <CommentsModal
+        postId={post._id}
+        visible={showComments}
+        onClose={() => setShowComments(false)}
+        onCommentAdded={() => setCommentsCount((prev) => prev + 1)}
+      />
     </View>
   );
 }
 
-// (styles unchanged)
-
+// (Your same styles here)
 
 // ─── Styles ───────────────────────────────────────────
 const styles = StyleSheet.create({

@@ -1,4 +1,5 @@
-// Import essential dependencies and components
+// ✅ Only relevant changes marked with comments
+
 import { Loader } from "@/components/Loader";
 import Post from "@/components/Posts";
 import { COLORS } from "@/constants/themes";
@@ -21,10 +22,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { styles } from "@/styles/feed.styles";
 import AppHeader from "@/components/AppHeader";
 
-// Get device height for dynamic layout calculations
 const { height } = Dimensions.get("window");
 
-// List of categories for filtering posts
 const categories = [
   { id: 0, name: "All", icon: "📄" },
   { id: 1, name: "Placements", icon: "👨‍💼" },
@@ -35,47 +34,43 @@ const categories = [
   { id: 6, name: "Other", icon: "✨" },
 ];
 
-// Main Feed Screen Component
 export default function Index() {
-  // State management for UI and category filters
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
 
-  // Fetch posts from the backend using Convex API
+  // ✅ Reactive Convex query
   const postsQuery = useQuery(api.posts.getFeedPosts);
   const posts = postsQuery || [];
 
-  // Transform raw API data into UI-friendly format
-const mappedPosts = useMemo(
-  () =>
-    posts.map((post) => ({
-      _id: post._id,
-      title: post.title || "Untitled",
-      content: post.caption || "",
-      category: post.category || "Other",
-      imageUrl: post.imageUrl ?? undefined,
-      author: {
-        username: post.author.username || "Anonymous",
-        image: post.author.image ?? "",
-      },
-      likes: Array.isArray(post.likes) ? post.likes.length : 0,
-      comments: Array.isArray(post.comments) ? post.comments.length : 0, // ← This fixes it
-      _creationTime: post._creationTime,
-      isLiked: !!post.isLiked,
-      isBookmarked: !!post.isBookmarked,
-      location: post.location ?? undefined,
-      eventDate: post.eventDate ?? undefined,
-    })),
-  [posts]
-);
+  // ✅ Simple mapping (no array length logic)
+  const mappedPosts = useMemo(
+    () =>
+      posts.map((post) => ({
+        _id: post._id,
+        title: post.title || "Untitled",
+        content: post.caption || "",
+        category: post.category || "Other",
+        imageUrl: post.imageUrl ?? undefined,
+        author: {
+          username: post.author.username || "Anonymous",
+          image: post.author.image ?? "",
+        },
+        likes: post.likes ?? 0,
+        comments: post.comments ?? 0,
+        _creationTime: post._creationTime,
+        isLiked: !!post.isLiked,
+        isBookmarked: !!post.isBookmarked,
+        location: post.location ?? undefined,
+        eventDate: post.eventDate ?? undefined,
+      })),
+    [posts]
+  );
 
-  // Create animated scaling for category buttons when selected
   const categoryScales = useMemo(
     () => categories.map(() => new Animated.Value(1)),
     []
   );
 
-  // Animate category selection changes smoothly
   useEffect(() => {
     categories.forEach((cat, index) => {
       Animated.spring(categoryScales[index], {
@@ -85,7 +80,6 @@ const mappedPosts = useMemo(
     });
   }, [selectedCategory]);
 
-  // Filter posts based on selected category
   const filteredPosts = useMemo(() => {
     if (selectedCategory.name === "All") return mappedPosts;
     return mappedPosts.filter(
@@ -93,22 +87,16 @@ const mappedPosts = useMemo(
     );
   }, [mappedPosts, selectedCategory]);
 
-  // Handle pull-to-refresh interaction
   const onRefresh = () => {
     setRefreshing(true);
-    // Simulate network refresh delay
     setTimeout(() => setRefreshing(false), 1500);
   };
 
-  // Show loading indicator while posts are being fetched
   if (!postsQuery) return <Loader />;
-  // Display empty state when there are no posts
   if (mappedPosts.length === 0) return <NoPostsFound />;
 
-  // Main feed UI layout
   return (
     <SafeAreaProvider>
-      {/* Background gradient for a smooth appearance */}
       <LinearGradient
         colors={["#EFF6FF", "#FFFFFF"]}
         style={{ flex: 1 }}
@@ -116,16 +104,11 @@ const mappedPosts = useMemo(
         end={{ x: 1, y: 1 }}
       >
         <SafeAreaView style={styles.container}>
-          {/* Header with app title */}
           <AppHeader title="Campus Connect 🎓" alignLeft />
 
-          {/* Horizontal category filter bar */}
+          {/* Categories */}
           <View style={styles.categoryContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryScroll}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {categories.map((cat, index) => {
                 const isActive = selectedCategory.id === cat.id;
                 return (
@@ -133,7 +116,6 @@ const mappedPosts = useMemo(
                     key={cat.id}
                     style={{ transform: [{ scale: categoryScales[index] }] }}
                   >
-                    {/* Category button */}
                     <TouchableOpacity
                       onPress={() => setSelectedCategory(cat)}
                       activeOpacity={0.85}
@@ -158,7 +140,7 @@ const mappedPosts = useMemo(
             </ScrollView>
           </View>
 
-          {/* Feed Section */}
+          {/* Posts Feed */}
           <FlatList
             data={filteredPosts}
             renderItem={({ item }) => <Post post={item} />}
@@ -168,7 +150,6 @@ const mappedPosts = useMemo(
               styles.postsList,
               { minHeight: height * 0.5 },
             ]}
-            // Enable pull-to-refresh functionality
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -183,7 +164,6 @@ const mappedPosts = useMemo(
   );
 }
 
-// Component displayed when there are no posts in the feed
 const NoPostsFound = () => (
   <View style={styles.emptyContainer}>
     <Text style={styles.emptyText}>No posts yet</Text>

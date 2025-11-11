@@ -1,5 +1,5 @@
-// schema.ts  
-// This Convex schema defines all database tables, their fields, and indexes  
+// schema.ts
+// This Convex schema defines all database tables, their fields, and indexes
 // for the CampusConnect social platform — including users, posts, likes, comments, follows, notifications, and bookmarks.
 
 import { defineSchema, defineTable } from "convex/server";
@@ -28,12 +28,13 @@ export default defineSchema({
   ───────────────────────────────*/
   posts: defineTable({
     userId: v.id("users"),
+    userClerkId: v.optional(v.string()), // ✅ make optional
     imageUrl: v.string(),
-    storageId: v.id("_storage"), // link to Convex file storage
+    storageId: v.id("_storage"),
     caption: v.optional(v.string()),
     likes: v.number(),
     comments: v.number(),
-    title: v.optional(v.string()), 
+    title: v.optional(v.string()),
     category: v.optional(v.string()),
     location: v.optional(v.string()),
     eventDate: v.optional(v.string()),
@@ -46,6 +47,7 @@ export default defineSchema({
   likes: defineTable({
     userId: v.id("users"),
     postId: v.id("posts"),
+    createdAt: v.optional(v.number()), // ✅ optional for old records
   })
     .index("by_post", ["postId"])
     .index("by_user_and_post", ["userId", "postId"]),

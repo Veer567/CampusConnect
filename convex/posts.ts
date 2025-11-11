@@ -28,6 +28,7 @@ export const createPost = mutation({
     category: v.optional(v.string()),
     location: v.optional(v.string()),
     eventDate: v.optional(v.string()),
+    
   },
   handler: async (ctx, args) => {
     // Ensure the user is authenticated
@@ -40,6 +41,7 @@ export const createPost = mutation({
     // Insert the new post record into the "posts" table
     const postId = await ctx.db.insert("posts", {
       userId: currentUser._id,
+      userClerkId: currentUser.clerkId, // ✅ Add this
       imageUrl,
       storageId: args.storageId,
       caption: args.caption || "",
@@ -115,47 +117,58 @@ export const toggleLikePost = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
     const currentUser = await getAuthenticatedUser(ctx);
+    const post = await ctx.db.get(args.postId);
 
-    const existing = await ctx.db
+    if (!post) throw new Error("Post not found");
+
+    // 🚫 Prevent user from liking their own post
+    if (post.userClerkId === currentUser.clerkId) {
+      return false;
+
+    }
+
+    // ✅ Check if already liked
+    const existingLike = await ctx.db
       .query("likes")
       .withIndex("by_user_and_post", (q) =>
         q.eq("userId", currentUser._id).eq("postId", args.postId)
       )
       .first();
 
-    const post = await ctx.db.get(args.postId);
-    if (!post) throw new Error("Post not found");
-
-    if (existing) {
+    if (existingLike) {
       // Unlike the post
-      await ctx.db.delete(existing._id);
-      await ctx.db.patch(args.postId, { likes: Math.max(0, post.likes - 1) });
-      return false;
-    } else {
-      // Like the post
-      await ctx.db.insert("likes", {
-        userId: currentUser._id,
-        postId: args.postId,
+      await ctx.db.delete(existingLike._id);
+      await ctx.db.patch(args.postId, {
+        likes: Math.max(0, post.likes - 1),
       });
-      await ctx.db.patch(args.postId, { likes: (post.likes || 0) + 1 });
-
-      // Send notification to post owner (if not self)
-      if (currentUser._id !== post.userId) {
-        await ctx.db.insert("notifications", {
-          receiverId: post.userId,
-          senderId: currentUser._id,
-          type: "like",
-          postId: args.postId,
-         createdAt: Date.now(),
-
-          
-        });
-      }
-
-      return true;
+      return false;
     }
+
+    // ✅ Like the post
+    await ctx.db.insert("likes", {
+      userId: currentUser._id,
+      postId: args.postId,
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.patch(args.postId, {
+      likes: (post.likes ?? 0) + 1,
+    });
+
+    // ✅ Notify post owner (not self — already prevented)
+    await ctx.db.insert("notifications", {
+      receiverId: post.userId,
+      senderId: currentUser._id,
+      type: "like",
+      postId: args.postId,
+      createdAt: Date.now(),
+    });
+
+    return true;
   },
 });
+
+
 
 
 
