@@ -1,13 +1,17 @@
 // ✅ Only relevant changes marked with comments
 
+import AppHeader from "@/components/AppHeader";
 import { Loader } from "@/components/Loader";
 import Post from "@/components/Posts";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
+import { styles } from "@/styles/feed.styles";
 import { useQuery } from "convex/react";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Animated,
+  Dimensions,
   FlatList,
   RefreshControl,
   SafeAreaView,
@@ -15,12 +19,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import { styles } from "@/styles/feed.styles";
-import AppHeader from "@/components/AppHeader";
 
 const { height } = Dimensions.get("window");
 
@@ -42,13 +42,25 @@ export default function Index() {
   const postsQuery = useQuery(api.posts.getFeedPosts);
   const posts = postsQuery || [];
 
+  // ✅ Local state to remove posts immediately when deleted
+  const [feedPosts, setFeedPosts] = useState(posts);
+
+  useEffect(() => {
+    if (
+      posts.length !== feedPosts.length ||
+      posts[0]?._id !== feedPosts[0]?._id
+    ) {
+      setFeedPosts(posts);
+    }
+  }, [posts]);
+
   // ✅ Simple mapping (no array length logic)
   const mappedPosts = useMemo(
     () =>
-      posts.map((post) => ({
+      feedPosts.map((post) => ({
         _id: post._id,
         title: post.title || "Untitled",
-        content: post.caption || "",
+        caption: post.caption || "",
         category: post.category || "Other",
         imageUrl: post.imageUrl ?? undefined,
         author: {
@@ -62,8 +74,9 @@ export default function Index() {
         isBookmarked: !!post.isBookmarked,
         location: post.location ?? undefined,
         eventDate: post.eventDate ?? undefined,
+        isOwner: post.isOwner ?? false, // ✅ Add this so Post sees it
       })),
-    [posts]
+    [feedPosts]
   );
 
   const categoryScales = useMemo(
@@ -143,7 +156,17 @@ export default function Index() {
           {/* Posts Feed */}
           <FlatList
             data={filteredPosts}
-            renderItem={({ item }) => <Post post={item} />}
+            renderItem={({ item }) => (
+              <Post
+                post={item}
+                // ✅ Remove post instantly after deletion
+                onDeleted={(deletedId) =>
+                  setFeedPosts((prev) =>
+                    prev.filter((p) => p._id !== deletedId)
+                  )
+                }
+              />
+            )}
             keyExtractor={(item) => item._id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[

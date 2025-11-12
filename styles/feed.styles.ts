@@ -41,6 +41,7 @@ export const styles = StyleSheet.create({
   categoryContainer: {
     marginTop: hp(1),
     marginBottom: hp(1.5),
+    marginHorizontal: wp(2),
   },
   categoryScroll: {
     paddingHorizontal: wp(4),
@@ -62,6 +63,9 @@ export const styles = StyleSheet.create({
   categoryButtonActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
+    marginTop: hp(0.2),
+    marginBottom: hp(0.2),
+    marginHorizontal: wp(2),
   },
   categoryIcon: {
     fontSize: wp(4.3),

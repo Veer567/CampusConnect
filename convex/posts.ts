@@ -1,10 +1,9 @@
-// posts.ts  
+// posts.ts
 // Convex backend logic for handling post creation, media upload, and fetching feed posts with user metadata.
 
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
-import { use } from "react";
 
 /*───────────────────────────────────────────────
  🔹 Generate a temporary upload URL for images
@@ -28,7 +27,6 @@ export const createPost = mutation({
     category: v.optional(v.string()),
     location: v.optional(v.string()),
     eventDate: v.optional(v.string()),
-    
   },
   handler: async (ctx, args) => {
     // Ensure the user is authenticated
@@ -94,9 +92,13 @@ export const getFeedPosts = query({
           )
           .first();
 
+        // Add isOwner flag
+        const isOwner = post.userId === currentUser._id;
+
         // Return post along with author and user interaction flags
         return {
           ...post,
+          _creationTime: post._creationTime, // ✅ keep it at root level
           author: {
             _id: postAuthor?._id,
             username: postAuthor?.username,
@@ -104,6 +106,7 @@ export const getFeedPosts = query({
           },
           isLiked: !!like,
           isBookmarked: !!bookmark,
+          isOwner,
         };
       })
     );
@@ -111,7 +114,6 @@ export const getFeedPosts = query({
     return postsWithInfo;
   },
 });
-
 
 export const toggleLikePost = mutation({
   args: { postId: v.id("posts") },
@@ -124,7 +126,6 @@ export const toggleLikePost = mutation({
     // 🚫 Prevent user from liking their own post
     if (post.userClerkId === currentUser.clerkId) {
       return false;
-
     }
 
     // ✅ Check if already liked
@@ -168,7 +169,57 @@ export const toggleLikePost = mutation({
   },
 });
 
+export const deletePost = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    const currentUser = await getAuthenticatedUser(ctx);
 
+    const post = await ctx.db.get(args.postId);
 
+    if (!post) throw new Error("Post not found");
 
+    // verify user is the owner of the post
+    if (post.userId !== currentUser._id) throw new Error("Unauthorized");
 
+    // Delete associated likes
+    const likes = await ctx.db
+      .query("likes")
+      .withIndex("by_post", (q) => q.eq("postId", args.postId))
+      .collect();
+
+    for (const like of likes) {
+      await ctx.db.delete(like._id);
+    }
+
+    // Delete associated comments
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_post", (q) => q.eq("postId", args.postId))
+      .collect();
+
+    for (const comment of comments) {
+      await ctx.db.delete(comment._id);
+    }
+
+    // Delete associated bookmarks
+    const bookmarks = await ctx.db
+      .query("bookmarks")
+      .withIndex("by_post", (q) => q.eq("postId", args.postId))
+      .collect();
+
+    for (const bookmark of bookmarks) {
+      await ctx.db.delete(bookmark._id);
+    }
+
+    // delete storage file
+    await ctx.storage.delete(post.storageId);
+
+    // delete post
+    await ctx.db.delete(args.postId);
+
+    // Decrement user's post count
+    await ctx.db.patch(currentUser._id, {
+      posts: Math.max(0, (currentUser.posts || 1) - 1),
+    });
+  },
+});

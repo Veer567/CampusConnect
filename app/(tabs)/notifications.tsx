@@ -1,5 +1,5 @@
-// Import necessary libraries and components
-import React, { useRef, useCallback } from "react";
+// NotificationScreen.tsx
+import React, { useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,65 +9,145 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Dimensions,
+  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/themes";
 import { useFocusEffect } from "expo-router";
 import AppHeader from "@/components/AppHeader";
+import { formatDistanceToNow } from "date-fns";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
-// Get screen dimensions for responsive layout
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
 
-// Mock data for notifications
-const notifications = [
-  { id: "1", text: "Your post received 12 new likes ❤️", icon: "heart" },
-  { id: "2", text: "You have a new follower 🎉", icon: "person-add" },
-  { id: "3", text: "Weekly summary: 5 new comments 💬", icon: "chatbubble" },
-  { id: "4", text: "New feature update available ⚡", icon: "flash" },
-  { id: "5", text: "Your post was shared 3 times 🔁", icon: "share-social" },
-];
+// map notification type -> ionicon name
+const ICON_MAP: Record<string, string> = {
+  like: "heart",
+  comment: "chatbubble",
+  follow: "person-add",
+  bookmark: "bookmark",
+};
 
-// Main Notifications Screen
 export default function NotificationScreen() {
-  // Create animation refs for fade and scale effects per item
-  const fadeAnims = useRef(
-    notifications.map(() => new Animated.Value(0))
-  ).current;
-  const scaleAnims = useRef(
-    notifications.map(() => new Animated.Value(0.95))
-  ).current;
+  // Subscribe to server query — convex will keep this live
+  const notifications = useQuery(api.notifications.getNotifcations) ?? [];
 
-  // Animate notifications whenever the screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      fadeAnims.forEach((fadeAnim, index) => {
-        fadeAnim.setValue(0);
-        scaleAnims[index].setValue(0.95);
+  // Animated values: create one Animated.Value per current notification
+  const animsRef = useRef<{
+    fade: Animated.Value[];
+    scale: Animated.Value[];
+  } | null>(null);
 
-        // Parallel animation for smooth fade + scale entrance
+  // (re)create animation arrays when notifications length changes
+  useEffect(() => {
+    const len = notifications.length;
+    const fades = notifications.map(() => new Animated.Value(0));
+    const scales = notifications.map(() => new Animated.Value(0.97));
+    animsRef.current = { fade: fades, scale: scales };
+
+    // run entrance animation with small stagger
+    Animated.stagger(
+      90,
+      fades.map((fade, i) =>
         Animated.parallel([
-          Animated.timing(fadeAnim, {
+          Animated.timing(fade, {
             toValue: 1,
-            duration: 600,
-            delay: index * 120, // staggered delay for cascade effect
+            duration: 420,
+            delay: i * 50,
             useNativeDriver: true,
           }),
-          Animated.spring(scaleAnims[index], {
+          Animated.spring(scales[i], {
             toValue: 1,
-            friction: 6,
-            delay: index * 100,
+            friction: 8,
             useNativeDriver: true,
           }),
-        ]).start();
-      });
-    }, [])
-  );
+        ])
+      )
+    ).start();
+  }, [notifications.length]);
+
+  // helper render item
+  const renderItem = ({ item, index }: { item: any; index: number }) => {
+    const fade =
+      animsRef.current?.fade?.[index] ?? new Animated.Value(1 /* immediate */);
+    const scale =
+      animsRef.current?.scale?.[index] ??
+      new Animated.Value(1 /* immediate */);
+
+    const iconName = ICON_MAP[item.type] ?? "notifications";
+
+    // build primary text like: "Aviral liked your post" or "Aviral commented: Nice!"
+    const senderName = item.senderId?.username ?? "Someone";
+    let primaryText = "";
+    if (item.type === "like") primaryText = `${senderName} liked your post`;
+    else if (item.type === "follow") primaryText = `${senderName} started following you`;
+    else if (item.type === "bookmark") primaryText = `${senderName} bookmarked your post`;
+    else if (item.type === "comment") primaryText = `${senderName} commented: ${item.comment ?? ""}`;
+    else primaryText = `${senderName} • ${item.type}`;
+
+    // optional preview: post text snippet
+    const postPreview = item.post?.content
+      ? item.post.content.length > 80
+        ? item.post.content.slice(0, 80) + "…"
+        : item.post.content
+      : null;
+
+    // time formatting
+    const createdAt = item.createdAt ? new Date(item.createdAt) : null;
+    const timeText = createdAt ? formatDistanceToNow(createdAt, { addSuffix: true }) : "";
+
+    return (
+      <Animated.View style={{ opacity: fade, transform: [{ scale }] }}>
+        <LinearGradient
+          colors={["#FFFFFF", "#F9FAFB"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.card}
+        >
+          {/* Avatar / icon */}
+          <View style={styles.iconContainer}>
+            {item.senderId?.image ? (
+              <Image
+                source={{ uri: item.senderId.image }}
+                style={styles.avatar}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons name={iconName as any} size={20} color={COLORS.primary} />
+            )}
+          </View>
+
+          {/* Text */}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.text}>{primaryText}</Text>
+            {postPreview ? (
+              <Text numberOfLines={1} style={styles.postPreview}>
+                {postPreview}
+              </Text>
+            ) : null}
+            <Text style={styles.timeText}>{timeText}</Text>
+          </View>
+
+          {/* Options or navigation */}
+          <TouchableOpacity
+            style={styles.optionsBtn}
+            onPress={() => {
+              // TODO: open options (mute, delete, go to post, etc.)
+              // example: navigation.navigate('Post', { postId: item.post?._id })
+            }}
+          >
+            <MaterialIcons name="more-vert" size={20} color={COLORS.grey} />
+          </TouchableOpacity>
+        </LinearGradient>
+      </Animated.View>
+    );
+  };
 
   return (
-    // Gradient background for modern look
     <LinearGradient
       colors={["#EFF6FF", "#FFFFFF"]}
       style={{ flex: 1 }}
@@ -75,61 +155,27 @@ export default function NotificationScreen() {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container}>
-        {/* App header with title and icon */}
         <AppHeader title="Notifications" rightIcon="notifications" />
 
-        {/* List of notifications with animations */}
-        <FlatList
-          data={notifications}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.list}
-          renderItem={({ item, index }) => (
-            <Animated.View
-              style={{
-                opacity: fadeAnims[index],
-                transform: [{ scale: scaleAnims[index] }],
-              }}
-            >
-              {/* Notification card */}
-              <LinearGradient
-                colors={["#FFFFFF", "#F9FAFB"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.card}
-              >
-                {/* Icon section */}
-                <View style={styles.iconContainer}>
-                  <Ionicons
-                    name={item.icon as any}
-                    size={22}
-                    color={COLORS.primary}
-                  />
-                </View>
-
-                {/* Text content */}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.text}>{item.text}</Text>
-                </View>
-
-                {/* Options menu button */}
-                <TouchableOpacity style={styles.optionsBtn}>
-                  <MaterialIcons
-                    name="more-vert"
-                    size={20}
-                    color={COLORS.grey}
-                  />
-                </TouchableOpacity>
-              </LinearGradient>
-            </Animated.View>
-          )}
-        />
+        {notifications.length === 0 ? (
+          <View style={styles.empty}>
+            <Ionicons name="notifications-outline" size={48} color={COLORS.grey} />
+            <Text style={{ marginTop: 12, color: COLORS.grey }}>No notifications yet</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={notifications}
+            keyExtractor={(i) => i._id ?? i._id ?? Math.random().toString()}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.list}
+            renderItem={renderItem}
+          />
+        )}
       </SafeAreaView>
     </LinearGradient>
   );
 }
 
-// Styles for layout and UI elements
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -162,14 +208,34 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: wp(3.5),
+    overflow: "hidden",
+  },
+  avatar: {
+    width: "100%",
+    height: "100%",
   },
   text: {
     color: COLORS.text,
     fontSize: wp(3.8),
     lineHeight: wp(5),
-    fontWeight: "500",
+    fontWeight: "600",
+  },
+  postPreview: {
+    color: COLORS.grey,
+    fontSize: wp(3.4),
+    marginTop: 4,
+  },
+  timeText: {
+    color: COLORS.grey,
+    fontSize: wp(3.2),
+    marginTop: 6,
   },
   optionsBtn: {
     paddingHorizontal: wp(1.5),
+  },
+  empty: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
