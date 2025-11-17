@@ -1,4 +1,3 @@
-// components/post/Post.tsx
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -18,12 +17,11 @@ import {
 } from "react-native";
 
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
+import { useRouter } from "expo-router";
 import ActionSheet, { ActionSheetRef } from "react-native-actions-sheet";
 import Toast from "react-native-toast-message";
 import CommentsModal from "./CommentsModal";
 import PostDetailsModal from "./PostDetailsModal";
-import { useRouter } from "expo-router";
-
 
 interface PostData {
   _id: Id<"posts">;
@@ -39,6 +37,7 @@ interface PostData {
   location?: string;
   isOwner?: boolean;
   _creationTime?: number;
+  tags?: string[];
 }
 
 interface PostProps {
@@ -72,7 +71,6 @@ export default function Post({ post, onDeleted }: PostProps) {
   const deletePostMutation = useMutation(api.posts.deletePost);
   const [timeAgo, setTimeAgo] = useState("");
   const [showDetails, setShowDetails] = useState(false);
-
 
   const bookmarks = useQuery(api.bookmark.getBookmarks);
 
@@ -167,8 +165,15 @@ export default function Post({ post, onDeleted }: PostProps) {
   };
 
   const handleEdit = () => {
-    Toast.show({ type: "info", text1: "Edit coming soon", position: "bottom" });
-  };
+  actionSheetRef.current?.hide();
+
+  router.push({
+    pathname: "/edit-post",
+    params: {
+      postId: post._id,
+    },
+  });
+};
 
   // ─── Time ago ─────────────────────────────────
   useEffect(() => {
@@ -267,6 +272,17 @@ export default function Post({ post, onDeleted }: PostProps) {
           )}
         </Text>
       )}
+      
+      {/* TAGS */}
+      {post.tags && post.tags.length > 0 && (
+        <View style={styles.tagsContainer}>
+          {post.tags.map((tag, i) => (
+            <View key={i} style={styles.tagChip}>
+              <Text style={styles.tagText}>#{tag}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {post.imageUrl && (
         <Image source={{ uri: post.imageUrl }} style={styles.image} />
@@ -340,24 +356,7 @@ export default function Post({ post, onDeleted }: PostProps) {
         onCommentAdded={() => setCommentsCount((c) => c + 1)}
       />
 
-      <PostDetailsModal
-        visible={showDetails}
-        onClose={() => setShowDetails(false)}
-        post={{
-          title: post.title,
-          caption: post.caption,
-          imageUrl: post.imageUrl,
-          eventDate: post.eventDate,
-          location: post.location,
-          likes: likesCount,
-          comments: commentsCount,
-          isLiked,
-          isBookmarked,
-          handleLike,
-          handleBookmark,
-          openComments: () => setShowComments(true),
-        }}
-      />
+
 
       {/* Action sheet */}
       <ActionSheet ref={actionSheetRef} gestureEnabled>
@@ -368,7 +367,7 @@ export default function Post({ post, onDeleted }: PostProps) {
             style={styles.sheetOption}
             onPress={() => {
               handleEdit();
-              actionSheetRef.current?.hide();
+             
             }}
           >
             <Ionicons name="create-outline" size={20} color={COLORS.primary} />
@@ -505,4 +504,26 @@ const styles = StyleSheet.create({
   },
   sheetText: { fontSize: wp(3.8), color: COLORS.text, fontWeight: "500" },
   readMore: { color: COLORS.primary, fontWeight: "600" },
+
+  tagsContainer: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  marginBottom: wp(3),
+  gap: wp(2),
+},
+
+tagChip: {
+  backgroundColor: "#eef4ff",
+  paddingHorizontal: wp(2.5),
+  paddingVertical: wp(1),
+  borderRadius: wp(5),
+  borderWidth: 1,
+  borderColor: COLORS.secondary + "40",
+},
+
+tagText: {
+  fontSize: wp(3.2),
+  fontWeight: "600",
+  color: COLORS.primary,
+},
 });

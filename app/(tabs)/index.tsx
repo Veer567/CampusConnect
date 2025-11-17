@@ -9,6 +9,9 @@ import { styles } from "@/styles/feed.styles";
 import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo, useState } from "react";
+import SearchModal from "../../components/SearchModal";
+
+import { router } from "expo-router";
 import {
   Animated,
   Dimensions,
@@ -37,6 +40,21 @@ const categories = [
 export default function Index() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const users = useQuery(api.users.searchUsers, { q: query || "" });
+  const postsSearch = useQuery(api.posts.searchPosts, { q: query || "" });
+
+  // Ensure posts returned to SearchModal always have required fields (e.g. title as string)
+  const results = {
+    users: users || [],
+    posts: (postsSearch || []).map((p) => ({
+      ...p,
+      title: p.title ?? "Untitled",
+      tags: p.tags ?? [],
+    })),
+  };
 
   // ✅ Correct: directly use Convex reactive query (NO LOCAL COPY)
   const posts = useQuery(api.posts.getFeedPosts) || [];
@@ -63,6 +81,7 @@ export default function Index() {
         location: post.location ?? undefined,
         eventDate: post.eventDate ?? undefined,
         isOwner: post.isOwner ?? false,
+        tags: post.tags ?? [],
       })),
     [posts]
   );
@@ -94,7 +113,12 @@ export default function Index() {
         end={{ x: 1, y: 1 }}
       >
         <SafeAreaView style={styles.container}>
-          <AppHeader title="Campus Connect 🎓" alignLeft />
+          <AppHeader
+            title="Campus Connect 🎓"
+            alignLeft
+            rightIcon="search"
+            onRightPress={() => setSearchVisible(true)}
+          />
 
           {/* Categories */}
           <View style={styles.categoryContainer}>
@@ -150,6 +174,23 @@ export default function Index() {
           />
         </SafeAreaView>
       </LinearGradient>
+      <SearchModal
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+        query={query}
+        setQuery={setQuery}
+        results={results}
+        onUserPress={(u) => {
+          setSearchVisible(false);
+          router.push(`/other-profile?userId=${u._id}`);
+        }}
+        onPostPress={(p) => {
+          setSearchVisible(false);
+          router.push(`/post-details?postId=${p._id}` as any);
+
+          // Navigate to your post details (if you have screen)
+        }}
+      />
     </SafeAreaProvider>
   );
 }

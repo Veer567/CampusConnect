@@ -10,7 +10,6 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import React, {
   useCallback,
   useEffect,
@@ -79,6 +78,9 @@ export default function CreateScreen() {
     []
   );
   const fabScale = useRef(new Animated.Value(1)).current;
+
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
 
   // Animate category selection for visual feedback
   useEffect(() => {
@@ -165,6 +167,7 @@ export default function CreateScreen() {
         title,
         location,
         eventDate,
+        tags: tags.map((t) => t.toLowerCase()),
       });
     } catch (error) {
       console.error("Error sharing post:", error);
@@ -182,6 +185,21 @@ export default function CreateScreen() {
     eventDate,
     router,
   ]);
+
+  const handleAddTag = () => {
+    if (!tagInput.trim()) return;
+
+    const formatted = tagInput.trim().toLowerCase();
+
+    if (tags.includes(formatted)) return;
+
+    setTags([...tags, formatted]);
+    setTagInput("");
+  };
+
+  const removeTag = (tag: string) => {
+    setTags(tags.filter((t) => t !== tag));
+  };
 
   // Screen UI layout
   return (
@@ -282,6 +300,68 @@ export default function CreateScreen() {
                   style={styles.input}
                   placeholderTextColor={COLORS.textSecondary}
                 />
+              </View>
+              <Text style={styles.label}>Tags (#)</Text>
+
+              <View style={{ marginBottom: 12 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    borderWidth: 1,
+                    borderColor: "#ccc",
+                    borderRadius: 10,
+                    paddingHorizontal: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  <TextInput
+                    placeholder="Add tags (press enter)..."
+                    value={tagInput}
+                    onChangeText={setTagInput}
+                    onSubmitEditing={handleAddTag}
+                    style={{ flex: 1, paddingVertical: 10 }}
+                  />
+                  <TouchableOpacity onPress={handleAddTag}>
+                    <Ionicons
+                      name="add-circle"
+                      size={22}
+                      color={COLORS.primary}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Render tags */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginTop: 10 }}
+                >
+                  {tags.map((tag) => (
+                    <TouchableOpacity
+                      key={tag}
+                      onPress={() => removeTag(tag)}
+                      style={{
+                        backgroundColor: COLORS.secondary,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 20,
+                        marginRight: 8,
+                        flexDirection: "row",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text style={{ color: "white", fontWeight: "600" }}>
+                        #{tag}
+                      </Text>
+                      <Ionicons
+                        name="close-circle"
+                        size={16}
+                        color="white"
+                        style={{ marginLeft: 6 }}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
 
               {/* Image Picker Section */}

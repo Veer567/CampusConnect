@@ -2,9 +2,9 @@
 // Convex backend logic for handling post creation, media upload, and fetching feed posts with user metadata.
 
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
-import { Id } from "./_generated/dataModel";
 
 /*───────────────────────────────────────────────
  🔹 Generate a temporary upload URL for images
@@ -28,6 +28,7 @@ export const createPost = mutation({
     category: v.optional(v.string()),
     location: v.optional(v.string()),
     eventDate: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     // Ensure the user is authenticated
@@ -50,6 +51,7 @@ export const createPost = mutation({
       eventDate: args.eventDate,
       likes: 0,
       comments: 0,
+      tags: args.tags || [],
     });
 
     // Update user's total post count
@@ -92,6 +94,7 @@ export const getFeedPosts = query({
         if (!postAuthor) {
           return {
             ...post,
+            tags: post.tags ?? [],
             author: {
               _id: { __tableName: "users" } as Id<"users">, // ✅ Correct
               username: "Unknown User",
@@ -119,6 +122,7 @@ export const getFeedPosts = query({
 
         return {
           ...post,
+          tags: post.tags ?? [],
           author: {
             _id: postAuthor._id,
             username: postAuthor.username,
@@ -259,7 +263,68 @@ export const getPostsByUser = query({
       .query("posts")
       .withIndex("by_user", (q) => q.eq("userId", args.userId || user._id))
       .collect();
+    return posts.map((p) => ({
+      ...p,
+      tags: p.tags || [],
+    }));
+  },
+});
 
-    return posts;
+export const searchPosts = query({
+  args: { q: v.string() },
+  handler: async (ctx, { q }) => {
+    const posts = await ctx.db.query("posts").collect();
+
+    const trimmed = q.trim().toLowerCase();
+    const isHashtag = trimmed.startsWith("#");
+
+    // If searching tag (#...)
+    if (isHashtag) {
+      const tagQuery = trimmed.replace("#", ""); // remove #
+
+      return posts.filter((p) =>
+        p.tags?.some(
+          (tag) => tag.toLowerCase().startsWith(tagQuery) // tag match
+        )
+      );
+    }
+
+    // Normal search
+    return posts.filter(
+      (p) =>
+        p.title?.toLowerCase().includes(trimmed) ||
+        p.caption?.toLowerCase().includes(trimmed) ||
+        p.category?.toLowerCase().includes(trimmed) ||
+        p.tags?.some((tag) => tag.toLowerCase().includes(trimmed))
+    );
+  },
+});
+export const editPost = mutation({
+  args: {
+    postId: v.id("posts"),
+    title: v.optional(v.string()),
+    caption: v.optional(v.string()),
+    category: v.optional(v.string()),
+    location: v.optional(v.string()),
+    eventDate: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    const post = await ctx.db.get(args.postId);
+
+    if (!post) throw new Error("Post not found");
+    if (post.userId !== user._id) throw new Error("Unauthorized");
+
+    await ctx.db.patch(args.postId, {
+      title: args.title ?? post.title,
+      caption: args.caption ?? post.caption,
+      category: args.category ?? post.category,
+      location: args.location ?? post.location,
+      eventDate: args.eventDate ?? post.eventDate,
+      tags: args.tags ?? post.tags, // keep tags updated
+    });
+
+    return true;
   },
 });

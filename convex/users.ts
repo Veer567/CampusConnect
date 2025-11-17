@@ -248,3 +248,12 @@ export const updateProfilePicture = mutation({
   },
 });
 
+export const searchUsers = query({
+  args: { q: v.string() },
+  handler: async (ctx, { q }) => {
+    const users = await ctx.db.query("users").collect();
+    return users.filter((u) =>
+      u.fullname.toLowerCase().includes(q.toLowerCase())
+    );
+  },
+});
