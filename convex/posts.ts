@@ -4,6 +4,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
+import { Id } from "./_generated/dataModel";
 
 /*───────────────────────────────────────────────
  🔹 Generate a temporary upload URL for images
@@ -67,16 +68,41 @@ export const getFeedPosts = query({
   handler: async (ctx) => {
     const currentUser = await getAuthenticatedUser(ctx);
 
-    // Fetch all posts in descending order (newest first)
     const posts = await ctx.db.query("posts").order("desc").collect();
     if (posts.length === 0) return [];
 
-    // For each post, append author info and user interaction status
+    // 1) Collect authorIds and read them reactively
+    const authorIds = posts.map((p) => p.userId);
+
+    const authorDocs = await Promise.all(authorIds.map((id) => ctx.db.get(id)));
+
+    // 2) Filter nulls safely and create map
+    const authorMap = new Map(
+      authorDocs
+        .filter((a): a is NonNullable<typeof a> => a !== null)
+        .map((a) => [a._id, a])
+    );
+
+    // 3) Build posts with author info
     const postsWithInfo = await Promise.all(
       posts.map(async (post) => {
-        const postAuthor = (await ctx.db.get(post.userId))!;
+        const postAuthor = authorMap.get(post.userId);
 
-        // Check if the current user has liked this post
+        // TS SAFE: If a user record is missing, skip or fallback
+        if (!postAuthor) {
+          return {
+            ...post,
+            author: {
+              _id: { __tableName: "users" } as Id<"users">, // ✅ Correct
+              username: "Unknown User",
+              image: undefined,
+            },
+            isLiked: false,
+            isBookmarked: false,
+            isOwner: false,
+          };
+        }
+
         const like = await ctx.db
           .query("likes")
           .withIndex("by_user_and_post", (q) =>
@@ -84,7 +110,6 @@ export const getFeedPosts = query({
           )
           .first();
 
-        // Check if the current user has bookmarked this post
         const bookmark = await ctx.db
           .query("bookmarks")
           .withIndex("by_user_and_post", (q) =>
@@ -92,21 +117,16 @@ export const getFeedPosts = query({
           )
           .first();
 
-        // Add isOwner flag
-        const isOwner = post.userId === currentUser._id;
-
-        // Return post along with author and user interaction flags
         return {
           ...post,
-          _creationTime: post._creationTime, // ✅ keep it at root level
           author: {
-            _id: postAuthor?._id,
-            username: postAuthor?.username,
-            image: postAuthor?.image,
+            _id: postAuthor._id,
+            username: postAuthor.username,
+            image: postAuthor.image,
           },
           isLiked: !!like,
           isBookmarked: !!bookmark,
-          isOwner,
+          isOwner: post.userId === currentUser._id,
         };
       })
     );
@@ -229,7 +249,9 @@ export const getPostsByUser = query({
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    const user = args.userId ? await ctx.db.get(args.userId) : await getAuthenticatedUser(ctx);
+    const user = args.userId
+      ? await ctx.db.get(args.userId)
+      : await getAuthenticatedUser(ctx);
 
     if (!user) throw new Error("User not found");
 

@@ -1,4 +1,4 @@
-// ✅ Only relevant changes marked with comments
+// FEED SCREEN — FULL FIXED VERSION
 
 import AppHeader from "@/components/AppHeader";
 import { Loader } from "@/components/Loader";
@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { styles } from "@/styles/feed.styles";
 import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -38,32 +38,20 @@ export default function Index() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
 
-  // ✅ Reactive Convex query
-  const postsQuery = useQuery(api.posts.getFeedPosts);
-  const posts = postsQuery || [];
+  // ✅ Correct: directly use Convex reactive query (NO LOCAL COPY)
+  const posts = useQuery(api.posts.getFeedPosts) || [];
 
-  // ✅ Local state to remove posts immediately when deleted
-  const [feedPosts, setFeedPosts] = useState(posts);
-
-  useEffect(() => {
-    if (
-      posts.length !== feedPosts.length ||
-      posts[0]?._id !== feedPosts[0]?._id
-    ) {
-      setFeedPosts(posts);
-    }
-  }, [posts]);
-
-  // ✅ Simple mapping (no array length logic)
+  // ✅ Map posts — include author._id so new cache-buster works
   const mappedPosts = useMemo(
     () =>
-      feedPosts.map((post) => ({
+      posts.map((post) => ({
         _id: post._id,
         title: post.title || "Untitled",
         caption: post.caption || "",
         category: post.category || "Other",
         imageUrl: post.imageUrl ?? undefined,
         author: {
+          _id: post.author._id, // 🔥 IMPORTANT FOR CACHE-BUSTER
           username: post.author.username || "Anonymous",
           image: post.author.image ?? "",
         },
@@ -74,24 +62,13 @@ export default function Index() {
         isBookmarked: !!post.isBookmarked,
         location: post.location ?? undefined,
         eventDate: post.eventDate ?? undefined,
-        isOwner: post.isOwner ?? false, // ✅ Add this so Post sees it
+        isOwner: post.isOwner ?? false,
       })),
-    [feedPosts]
+    [posts]
   );
 
-  const categoryScales = useMemo(
-    () => categories.map(() => new Animated.Value(1)),
-    []
-  );
-
-  useEffect(() => {
-    categories.forEach((cat, index) => {
-      Animated.spring(categoryScales[index], {
-        toValue: selectedCategory.id === cat.id ? 1.1 : 1,
-        useNativeDriver: true,
-      }).start();
-    });
-  }, [selectedCategory]);
+  // Category animation
+  const categoryScales = categories.map(() => new Animated.Value(1));
 
   const filteredPosts = useMemo(() => {
     if (selectedCategory.name === "All") return mappedPosts;
@@ -102,10 +79,10 @@ export default function Index() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1500);
+    setTimeout(() => setRefreshing(false), 1200);
   };
 
-  if (!postsQuery) return <Loader />;
+  if (!posts) return <Loader />;
   if (mappedPosts.length === 0) return <NoPostsFound />;
 
   return (
@@ -156,17 +133,7 @@ export default function Index() {
           {/* Posts Feed */}
           <FlatList
             data={filteredPosts}
-            renderItem={({ item }) => (
-              <Post
-                post={item}
-                // ✅ Remove post instantly after deletion
-                onDeleted={(deletedId) =>
-                  setFeedPosts((prev) =>
-                    prev.filter((p) => p._id !== deletedId)
-                  )
-                }
-              />
-            )}
+            renderItem={({ item }) => <Post post={item} />}
             keyExtractor={(item) => item._id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[

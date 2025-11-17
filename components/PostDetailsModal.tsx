@@ -40,6 +40,7 @@ interface PostDetailsModalProps {
   };
 }
 
+
 export default function PostDetailsModal({
   visible,
   onClose,

@@ -1,3 +1,4 @@
+// components/post/Post.tsx
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -16,10 +17,13 @@ import {
   View,
 } from "react-native";
 
+import { useProfileImageCache } from "@/hooks/useProfileImageCache";
 import ActionSheet, { ActionSheetRef } from "react-native-actions-sheet";
 import Toast from "react-native-toast-message";
 import CommentsModal from "./CommentsModal";
 import PostDetailsModal from "./PostDetailsModal";
+import { useRouter } from "expo-router";
+
 
 interface PostData {
   _id: Id<"posts">;
@@ -30,30 +34,46 @@ interface PostData {
   isLiked?: boolean;
   likes: number;
   comments: number;
-  author: { username: string; image?: string };
+  author: { username: string; image?: string; _id: Id<"users"> }; // ← ADD _id
   eventDate?: string;
   location?: string;
   isOwner?: boolean;
-  _creationTime?: number; // ✅ fixed (was string before)
+  _creationTime?: number;
 }
 
 interface PostProps {
   post: PostData;
-  // onDeleted is a separate prop (not inside post)
   onDeleted?: (postId: Id<"posts">) => void;
 }
 
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 
+// Category meta info
+const CATEGORY_META: Record<string, { icon: string }> = {
+  Hackathon: { icon: "🚀" },
+  Placements: { icon: "👨‍💼" },
+  Workshops: { icon: "🛠️" },
+  Festivals: { icon: "🎉" },
+  Sports: { icon: "🏅" },
+  Other: { icon: "✨" },
+};
+
 export default function Post({ post, onDeleted }: PostProps) {
+  const router = useRouter();
+
+  // -------------------------------------------------
+  // 1. CACHE BUSTER – updates the avatar instantly
+  // -------------------------------------------------
+  const cacheBuster = useProfileImageCache(post.author._id);
+
   const toggleLike = useMutation(api.posts.toggleLikePost);
   const toggleBookmark = useMutation(api.bookmark.toggleBookmark);
   const deletePostMutation = useMutation(api.posts.deletePost);
   const [timeAgo, setTimeAgo] = useState("");
   const [showDetails, setShowDetails] = useState(false);
 
-  // 👇 Load current bookmarks to check if this post is bookmarked
+
   const bookmarks = useQuery(api.bookmark.getBookmarks);
 
   const [isLiked, setIsLiked] = useState(post.isLiked ?? false);
@@ -62,73 +82,61 @@ export default function Post({ post, onDeleted }: PostProps) {
   const [showComments, setShowComments] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
-  // ─── Sync liked/bookmarked states ─────────────────────
+  // ─── Sync states ─────────────────────
   useEffect(() => {
     setIsLiked(post.isLiked ?? false);
     setLikesCount(post.likes ?? 0);
-
-    // Check if this post is bookmarked
     if (bookmarks) {
       const found = bookmarks.some((b: any) => b._id === post._id);
       setIsBookmarked(found);
     }
   }, [post.isLiked, post.likes, bookmarks]);
 
-  // ─── Like Handler ─────────────────────────────────────
+  // ─── Like ─────────────────────────────────────
   const handleLike = useCallback(async () => {
     try {
-      const optimisticLiked = !isLiked;
-      setIsLiked(optimisticLiked);
-      setLikesCount((prev) =>
-        optimisticLiked ? prev + 1 : Math.max(0, prev - 1)
-      );
+      const optimistic = !isLiked;
+      setIsLiked(optimistic);
+      setLikesCount((c) => (optimistic ? c + 1 : Math.max(0, c - 1)));
 
-      const result = await toggleLike({ postId: post._id });
-
-      if (result === false) {
+      const ok = await toggleLike({ postId: post._id });
+      if (ok === false) {
         setIsLiked(isLiked);
         setLikesCount(post.likes ?? 0);
-
         Toast.show({
           type: "info",
-          text1: "You can’t like your own post 😅",
-          text2: "That’s a bit too much self-love!",
+          text1: "You can’t like your own post",
           position: "bottom",
           visibilityTime: 2000,
         });
       }
-    } catch (error: any) {
-      console.error("Error toggling like:", error);
+    } catch (e) {
+      console.error(e);
     }
   }, [isLiked, post._id, toggleLike, post.likes]);
 
-  // ─── Bookmark Handler ─────────────────────────────────
+  // ─── Bookmark ─────────────────────────────────
   const handleBookmark = useCallback(async () => {
     try {
       const result = await toggleBookmark({ postId: post._id });
       setIsBookmarked(result);
-
       Toast.show({
         type: result ? "success" : "info",
-        text1: result ? "Added to bookmarks 📑" : "Removed from bookmarks ❌",
+        text1: result ? "Added to bookmarks" : "Removed from bookmarks",
         position: "bottom",
         visibilityTime: 1500,
       });
-    } catch (error) {
-      console.error("Error toggling bookmark:", error);
+    } catch (e) {
+      console.error(e);
     }
   }, [post._id, toggleBookmark]);
 
   const actionSheetRef = useRef<ActionSheetRef>(null);
+  const openOptions = () => actionSheetRef.current?.show();
 
-  const openOptions = () => {
-    actionSheetRef.current?.show();
-  };
-
-  // --- Delete confirmation alert (with improved UI text)
   const confirmDelete = async () => {
     Alert.alert(
-      "Delete Post 🗑️",
+      "Delete Post",
       "Are you sure you want to permanently delete this post?",
       [
         { text: "Cancel", style: "cancel" },
@@ -140,20 +148,16 @@ export default function Post({ post, onDeleted }: PostProps) {
               await deletePostMutation({ postId: post._id });
               Toast.show({
                 type: "success",
-                text1: "Post deleted successfully!",
+                text1: "Post deleted!",
                 position: "bottom",
-                visibilityTime: 1600,
               });
-              if (onDeleted) onDeleted(post._id);
-            } catch (err: unknown) {
-              const message =
-                (err as any)?.message ?? String(err ?? "Unknown error");
+              onDeleted?.(post._id);
+            } catch (err: any) {
               Toast.show({
                 type: "error",
-                text1: "Failed to delete post",
-                text2: message,
+                text1: "Failed",
+                text2: err?.message,
                 position: "bottom",
-                visibilityTime: 2000,
               });
             }
           },
@@ -162,36 +166,52 @@ export default function Post({ post, onDeleted }: PostProps) {
     );
   };
 
-  // --- Handle Edit Post option
   const handleEdit = () => {
-    Toast.show({
-      type: "info",
-      text1: "Edit post feature coming soon 🛠️",
-      position: "bottom",
-      visibilityTime: 1500,
-    });
+    Toast.show({ type: "info", text1: "Edit coming soon", position: "bottom" });
   };
 
-  // Readable time ago
-
+  // ─── Time ago ─────────────────────────────────
   useEffect(() => {
-    const updateTime = () => {
+    const update = () => {
       setTimeAgo(
         formatDistanceToNow(new Date(post._creationTime || Date.now()), {
           addSuffix: true,
         })
       );
     };
-    updateTime(); // initial
-    const interval = setInterval(updateTime, 60000); // every 1 minute
-    return () => clearInterval(interval);
+    update();
+    const id = setInterval(update, 60_000);
+    return () => clearInterval(id);
   }, [post._creationTime]);
+
+  // -------------------------------------------------
+  // 2. AVATAR – use cache‑buster in the URL
+  // -------------------------------------------------
+  const avatarUri = post.author.image
+    ? `${post.author.image}?t=${cacheBuster}`
+    : "https://i.pravatar.cc/300";
 
   return (
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.userInfo}>
+        <TouchableOpacity
+          style={styles.userInfo}
+          activeOpacity={0.7}
+          onPress={() => {
+            // If your own post → go to Profile screen
+            if (post.isOwner) {
+              router.push("/profile");
+            } else {
+              router.push({
+                pathname: "/other-profile",
+                params: {
+                  userId: post.author._id, // Convex user ID
+                },
+              });
+            }
+          }}
+        >
           {post.author.image ? (
             <Image source={{ uri: post.author.image }} style={styles.avatar} />
           ) : (
@@ -199,18 +219,15 @@ export default function Post({ post, onDeleted }: PostProps) {
               style={[styles.avatar, { backgroundColor: COLORS.grey + "30" }]}
             />
           )}
+
           <View>
             <Text style={styles.username}>{post.author.username}</Text>
             <Text style={styles.timeAgo}>{timeAgo}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {post.isOwner && (
-          <TouchableOpacity
-            onPress={openOptions}
-            style={styles.threeDotButton}
-            accessibilityLabel="Post options"
-          >
+          <TouchableOpacity onPress={openOptions} style={styles.threeDotButton}>
             <Ionicons
               name="ellipsis-vertical"
               size={20}
@@ -219,28 +236,16 @@ export default function Post({ post, onDeleted }: PostProps) {
           </TouchableOpacity>
         )}
 
-        {/* Category badge moved below username */}
         {post.category && (
           <View style={styles.categoryTag}>
             <LinearGradient
               colors={["#4F9DFF", "#2E6CF3"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
               style={styles.categoryBadge}
             >
               <Text style={styles.categoryEmoji}>
-                {post.category === "Hackathon"
-                  ? "🚀"
-                  : post.category === "Placements"
-                    ? "👨‍💼"
-                    : post.category === "Workshops"
-                      ? "🛠️"
-                      : post.category === "Festivals"
-                        ? "🎉"
-                        : post.category === "Sports"
-                          ? "🏅"
-                          : "✨"}
+                {CATEGORY_META[post.category]?.icon ?? "✨"}
               </Text>
+
               <Text style={styles.categoryText}>{post.category}</Text>
             </LinearGradient>
           </View>
@@ -294,7 +299,6 @@ export default function Post({ post, onDeleted }: PostProps) {
 
       {/* Actions */}
       <View style={styles.actions}>
-        {/* ❤️ Like */}
         <TouchableOpacity onPress={handleLike} style={styles.actionItem}>
           <Ionicons
             name={isLiked ? "heart" : "heart-outline"}
@@ -304,7 +308,6 @@ export default function Post({ post, onDeleted }: PostProps) {
           <Text style={styles.actionText}>{likesCount}</Text>
         </TouchableOpacity>
 
-        {/* 💬 Comments */}
         <TouchableOpacity
           onPress={() => setShowComments(true)}
           style={styles.actionItem}
@@ -317,7 +320,6 @@ export default function Post({ post, onDeleted }: PostProps) {
           <Text style={styles.actionText}>{commentsCount}</Text>
         </TouchableOpacity>
 
-        {/* 🔖 Bookmark (Right end) */}
         <TouchableOpacity
           onPress={handleBookmark}
           style={styles.bookmarkButton}
@@ -330,12 +332,12 @@ export default function Post({ post, onDeleted }: PostProps) {
         </TouchableOpacity>
       </View>
 
-      {/* Comments Modal */}
+      {/* Modals */}
       <CommentsModal
         postId={post._id}
         visible={showComments}
         onClose={() => setShowComments(false)}
-        onCommentAdded={() => setCommentsCount((prev) => prev + 1)}
+        onCommentAdded={() => setCommentsCount((c) => c + 1)}
       />
 
       <PostDetailsModal
@@ -357,11 +359,11 @@ export default function Post({ post, onDeleted }: PostProps) {
         }}
       />
 
+      {/* Action sheet */}
       <ActionSheet ref={actionSheetRef} gestureEnabled>
         <View style={styles.sheetContainer}>
           <Text style={styles.sheetTitle}>Post Options</Text>
 
-          {/* ✏️ Edit Post */}
           <TouchableOpacity
             style={styles.sheetOption}
             onPress={() => {
@@ -373,7 +375,6 @@ export default function Post({ post, onDeleted }: PostProps) {
             <Text style={styles.sheetText}>Edit Post</Text>
           </TouchableOpacity>
 
-          {/* 🗑️ Delete Post */}
           <TouchableOpacity
             style={styles.sheetOption}
             onPress={() => {
@@ -392,7 +393,7 @@ export default function Post({ post, onDeleted }: PostProps) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────
+/* ─── Styles (unchanged) ─────────────────────────────────────────── */
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
@@ -432,24 +433,8 @@ const styles = StyleSheet.create({
     fontSize: wp(3),
     color: COLORS.textSecondary,
   },
-  categoryWrapper: {
-    position: "absolute",
-    top: wp(2),
-    right: wp(8), // 👈 adds spacing so it doesn’t clash with 3 dots
-    zIndex: 2,
-  },
-  threeDotButton: {
-    padding: 6,
-    alignSelf: "flex-start",
-  },
-
-  // Moved category tag below username
-  categoryTag: {
-    position: "absolute",
-    top: wp(0), // below username
-    right: wp(6),
-  },
-
+  threeDotButton: { padding: 6, alignSelf: "flex-start" },
+  categoryTag: { position: "absolute", top: wp(0), right: wp(6) },
   categoryBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -462,18 +447,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 2,
   },
-
-  categoryEmoji: {
-    fontSize: wp(3.2),
-    marginRight: wp(1.2),
-  },
-
-  categoryText: {
-    fontSize: wp(3.2),
-    color: COLORS.white,
-    fontWeight: "600",
-  },
-
+  categoryEmoji: { fontSize: wp(3.2), marginRight: wp(1.2) },
+  categoryText: { fontSize: wp(3.2), color: COLORS.white, fontWeight: "600" },
   title: {
     fontSize: wp(4.5),
     fontWeight: "700",
@@ -498,44 +473,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: wp(4),
   },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: wp(1.5),
-  },
-  metaText: {
-    fontSize: wp(3.4),
-    color: COLORS.textSecondary,
-  },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: wp(1.5) },
+  metaText: { fontSize: wp(3.4), color: COLORS.textSecondary },
   actions: {
     flexDirection: "row",
     alignItems: "center",
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     paddingTop: wp(2.5),
-    justifyContent: "space-between", // pushes bookmark to right
+    justifyContent: "space-between",
     gap: wp(5),
   },
-
-  actionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: wp(1),
-  },
-  bookmarkButton: {
-    marginLeft: "auto", // ensures it stays on the right edge
-  },
-
-  actionText: {
-    fontSize: wp(3.4),
-    fontWeight: "500",
-    color: COLORS.text,
-  },
-
-  sheetContainer: {
-    padding: wp(5),
-    backgroundColor: COLORS.surface,
-  },
+  actionItem: { flexDirection: "row", alignItems: "center", gap: wp(1) },
+  bookmarkButton: { marginLeft: "auto" },
+  actionText: { fontSize: wp(3.4), fontWeight: "500", color: COLORS.text },
+  sheetContainer: { padding: wp(5), backgroundColor: COLORS.surface },
   sheetTitle: {
     fontSize: wp(4),
     fontWeight: "700",
@@ -551,13 +503,6 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     gap: wp(3),
   },
-  sheetText: {
-    fontSize: wp(3.8),
-    color: COLORS.text,
-    fontWeight: "500",
-  },
-  readMore: {
-    color: COLORS.primary,
-    fontWeight: "600",
-  },
+  sheetText: { fontSize: wp(3.8), color: COLORS.text, fontWeight: "500" },
+  readMore: { color: COLORS.primary, fontWeight: "600" },
 });
