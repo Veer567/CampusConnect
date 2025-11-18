@@ -19,17 +19,29 @@ export const createUser = mutation({
     clerkId: v.string(),
   },
   handler: async (ctx, args) => {
-    // Check if the user already exists by their Clerk ID
-    const existingUser = await ctx.db
+    // 1️⃣ If a Convex user already exists with this email → restore profile, update clerkId
+    const existingByEmail = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), args.email))
+      .first();
+
+    if (existingByEmail) {
+      await ctx.db.patch(existingByEmail._id, {
+        clerkId: args.clerkId,
+      });
+      return existingByEmail;
+    }
+
+    // 2️⃣ If user exists with this clerkId → do nothing
+    const existingByClerkId = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
-    // Prevent duplicate user entries
-    if (existingUser) return;
+    if (existingByClerkId) return existingByClerkId;
 
-    // Insert a new user into the database with default stats
-    await ctx.db.insert("users", {
+    // 3️⃣ Create new user
+    return await ctx.db.insert("users", {
       username: args.username,
       fullname: args.fullname,
       email: args.email,
@@ -93,7 +105,8 @@ export const updateUserProfile = mutation({
       resumeStorageId: args.resumeStorageId,
     });
 
-    return await ctx.db.get(args.id);},
+    return await ctx.db.get(args.id);
+  },
 });
 
 export async function getAuthenticatedUser(ctx: QueryCtx | MutationCtx) {
@@ -222,7 +235,6 @@ export const getActivityStats = query({
     };
   },
 });
-
 
 export const updateProfilePicture = mutation({
   args: {

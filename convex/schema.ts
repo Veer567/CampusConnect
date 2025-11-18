@@ -29,6 +29,7 @@ export default defineSchema({
     following: v.number(),
     posts: v.number(),
     clerkId: v.string(),
+    isOnboarded: v.optional(v.boolean()),
   }).index("by_clerk_id", ["clerkId"]),
 
   /*───────────────────────────────

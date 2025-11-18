@@ -6,6 +6,8 @@ import { useMutation, useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Share } from "react-native";
+
 import {
   Alert,
   Dimensions,
@@ -21,7 +23,6 @@ import { useRouter } from "expo-router";
 import ActionSheet, { ActionSheetRef } from "react-native-actions-sheet";
 import Toast from "react-native-toast-message";
 import CommentsModal from "./CommentsModal";
-import PostDetailsModal from "./PostDetailsModal";
 
 interface PostData {
   _id: Id<"posts">;
@@ -165,15 +166,15 @@ export default function Post({ post, onDeleted }: PostProps) {
   };
 
   const handleEdit = () => {
-  actionSheetRef.current?.hide();
+    actionSheetRef.current?.hide();
 
-  router.push({
-    pathname: "/edit-post",
-    params: {
-      postId: post._id,
-    },
-  });
-};
+    router.push({
+      pathname: "/edit-post",
+      params: {
+        postId: post._id,
+      },
+    });
+  };
 
   // ─── Time ago ─────────────────────────────────
   useEffect(() => {
@@ -195,6 +196,19 @@ export default function Post({ post, onDeleted }: PostProps) {
   const avatarUri = post.author.image
     ? `${post.author.image}?t=${cacheBuster}`
     : "https://i.pravatar.cc/300";
+
+  const handleShare = async () => {
+    try {
+      const postUrl = `https://campusconnect.app/post/${post._id}`;
+      // 🔼 Replace with your web URL if different
+
+      await Share.share({
+        message: `${post.title}\n\n${post.caption ?? ""}\n\nCheck it out: ${postUrl}`,
+      });
+    } catch (error) {
+      console.error("Share error:", error);
+    }
+  };
 
   return (
     <View style={styles.card}>
@@ -272,7 +286,7 @@ export default function Post({ post, onDeleted }: PostProps) {
           )}
         </Text>
       )}
-      
+
       {/* TAGS */}
       {post.tags && post.tags.length > 0 && (
         <View style={styles.tagsContainer}>
@@ -336,6 +350,15 @@ export default function Post({ post, onDeleted }: PostProps) {
           <Text style={styles.actionText}>{commentsCount}</Text>
         </TouchableOpacity>
 
+        {/* 🔥 NEW SHARE BUTTON */}
+        <TouchableOpacity onPress={handleShare} style={styles.actionItem}>
+          <Ionicons
+            name="share-social-outline"
+            size={20}
+            color={COLORS.textSecondary}
+          />
+        </TouchableOpacity>
+
         <TouchableOpacity
           onPress={handleBookmark}
           style={styles.bookmarkButton}
@@ -356,8 +379,6 @@ export default function Post({ post, onDeleted }: PostProps) {
         onCommentAdded={() => setCommentsCount((c) => c + 1)}
       />
 
-
-
       {/* Action sheet */}
       <ActionSheet ref={actionSheetRef} gestureEnabled>
         <View style={styles.sheetContainer}>
@@ -367,7 +388,6 @@ export default function Post({ post, onDeleted }: PostProps) {
             style={styles.sheetOption}
             onPress={() => {
               handleEdit();
-             
             }}
           >
             <Ionicons name="create-outline" size={20} color={COLORS.primary} />
@@ -506,24 +526,24 @@ const styles = StyleSheet.create({
   readMore: { color: COLORS.primary, fontWeight: "600" },
 
   tagsContainer: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  marginBottom: wp(3),
-  gap: wp(2),
-},
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: wp(3),
+    gap: wp(2),
+  },
 
-tagChip: {
-  backgroundColor: "#eef4ff",
-  paddingHorizontal: wp(2.5),
-  paddingVertical: wp(1),
-  borderRadius: wp(5),
-  borderWidth: 1,
-  borderColor: COLORS.secondary + "40",
-},
+  tagChip: {
+    backgroundColor: "#eef4ff",
+    paddingHorizontal: wp(2.5),
+    paddingVertical: wp(1),
+    borderRadius: wp(5),
+    borderWidth: 1,
+    borderColor: COLORS.secondary + "40",
+  },
 
-tagText: {
-  fontSize: wp(3.2),
-  fontWeight: "600",
-  color: COLORS.primary,
-},
+  tagText: {
+    fontSize: wp(3.2),
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
 });
