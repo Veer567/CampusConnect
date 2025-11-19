@@ -1,19 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs, router } from "expo-router";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View, Text } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { COLORS } from "../../constants/themes";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import Fontisto from '@expo/vector-icons/Fontisto';
 
 export default function TabLayout() {
-  const unreadCount = useQuery(api.chat.getUnreadCount) ?? 0;
   return (
     <Tabs
       screenOptions={{
         tabBarShowLabel: false,
         headerShown: false,
         tabBarInactiveTintColor: COLORS.grey,
+        tabBarActiveTintColor: COLORS.primary,
         tabBarStyle: {
           backgroundColor: "white",
           borderTopWidth: 0,
@@ -25,7 +24,7 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* Home Tab */}
+      {/* HOME */}
       <Tabs.Screen
         name="index"
         options={{
@@ -35,19 +34,24 @@ export default function TabLayout() {
           ),
         }}
       />
-
-      {/* Bookmarks */}
+        {/* MARKETPLACE */}
       <Tabs.Screen
-        name="bookmarks"
+        name="marketplace"
         options={{
-          title: "Bookmarks",
+          title: "Marketplace",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name="bookmark" size={focused ? 28 : 24} color={color} />
+            <Ionicons
+              name="storefront-outline"
+              size={focused ? 28 : 24}
+              color={color}
+            />
           ),
         }}
       />
 
-      {/* Create Floating Button */}
+
+
+      {/* CREATE FAB */}
       <Tabs.Screen
         name="create"
         options={{
@@ -65,51 +69,22 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 🔥 CHAT (replacing Notifications) */}
+          {/* LOST & FOUND */}
       <Tabs.Screen
-        name="chat"
+        name="lost-found"
         options={{
-          title: "Chat",
+          title: "Lost & Found",
           tabBarIcon: ({ color, focused }) => (
-            <View style={{ position: "relative" }}>
-              <Ionicons
-                name="chatbubbles"
-                size={focused ? 28 : 24}
-                color={color}
-              />
-
-              {/* 🔥 Badge */}
-              {unreadCount > 0 && (
-                <View
-                  style={{
-                    position: "absolute",
-                    top: -4,
-                    right: -10,
-                    backgroundColor: COLORS.primary,
-                    borderRadius: 10,
-                    paddingHorizontal: 5,
-                    paddingVertical: 1,
-                    minWidth: 18,
-                    alignItems: "center",
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: "white",
-                      fontSize: 10,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {unreadCount}
-                  </Text>
-                </View>
-              )}
-            </View>
+            <Fontisto
+              name="dropbox"
+              size={focused ? 28 : 24}
+              color={color}
+            />
           ),
         }}
       />
 
-      {/* Profile */}
+      {/* PROFILE */}
       <Tabs.Screen
         name="profile"
         options={{

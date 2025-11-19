@@ -1,4 +1,5 @@
 // app/(tabs)/chat.tsx
+
 import React from "react";
 import { View, Text, TouchableOpacity, Image } from "react-native";
 import { useQuery } from "convex/react";
@@ -13,6 +14,7 @@ function formatTime(timestamp?: number) {
   if (!timestamp) return "";
   const now = Date.now();
   const diff = now - timestamp;
+
   const mins = Math.floor(diff / 60000);
   const hrs = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
@@ -25,29 +27,44 @@ function formatTime(timestamp?: number) {
 }
 
 export default function ChatListScreen() {
-  const { userId: clerkId } = useAuth(); // Clerk ID
+  const { userId: clerkId } = useAuth();
 
-  // Convert Clerk ID -> Convex user (me)
-  const me = useQuery(api.users.getUserByClerkId, {
-    clerkId: clerkId ?? "",
-  });
+  // 1️⃣ Load Convex user for this Clerk user
+  const me = useQuery(
+    api.users.getUserByClerkId,
+    clerkId ? { clerkId } : "skip" // ← FIX
+  );
 
-  // Conversations and quick user lookup (search q="" returns all users in your implementation)
-  const conversations = useQuery(api.chat.getMyConversations);
+  // 2️⃣ Skip until me exists
+  const conversations = useQuery(
+    api.chat.getMyConversations,
+    me ? {} : "skip" // ← FIX
+  );
+
+  // 3️⃣ Load all users ( needed for avatars + names )
   const users = useQuery(api.users.searchUsers, { q: "" });
 
-  if (!me || !conversations || !users) return <Text>Loading...</Text>;
+  if (!me || !conversations || !users) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Loading chats...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       <AppHeader title="Chats" rightIcon="chatbubbles" />
 
       {conversations.map((c) => {
-        // find other participant (Convex user id) — compare to me._id (Convex id)
+        // find OTHER user (conv participants)
         const otherUserId = c.participants.find(
           (p: any) => String(p) !== String(me._id)
         );
-        const otherUser = users.find((u: any) => String(u._id) === String(otherUserId));
+
+        const otherUser = users.find(
+          (u: any) => String(u._id) === String(otherUserId)
+        );
 
         return (
           <TouchableOpacity
@@ -79,28 +96,26 @@ export default function ChatListScreen() {
                 borderRadius: 30,
                 backgroundColor: "#ddd",
                 marginLeft: 10,
-                
               }}
             />
 
-            {/* Content */}
-            <View style={{ flex: 1, marginLeft: 12, justifyContent: "center" }}>
-              <Text style={{ fontSize: 18, fontWeight: "600", color: COLORS.text }}>
-                {otherUser?.fullname || "Unknown"}
+            {/* DETAILS */}
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={{ fontSize: 18, fontWeight: "600" }}>
+                {otherUser?.fullname || "Unknown User"}
               </Text>
-
               <Text style={{ color: COLORS.textSecondary, marginTop: 4 }}>
                 {c.lastMessage || "Say hi 👋"}
               </Text>
             </View>
 
-            {/* Time & unread */}
-            <View style={{ alignItems: "flex-end" , marginRight: 10}}>
+            {/* Time + unread badge */}
+            <View style={{ alignItems: "flex-end", marginRight: 10 }}>
               <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>
                 {formatTime(c.lastMessageAt)}
               </Text>
 
-              {typeof c.unreadCount === "number" && c.unreadCount > 0 && (
+              {c.unreadCount > 0 && (
                 <View
                   style={{
                     backgroundColor: COLORS.primary,
@@ -110,7 +125,13 @@ export default function ChatListScreen() {
                     marginTop: 6,
                   }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 12 }}>
+                  <Text
+                    style={{
+                      color: "#fff",
+                      fontWeight: "600",
+                      fontSize: 12,
+                    }}
+                  >
                     {c.unreadCount}
                   </Text>
                 </View>

@@ -117,8 +117,8 @@ export default defineSchema({
   ───────────────────────────────*/
   conversations: defineTable({
     participants: v.array(v.id("users")),
-    title: v.optional(v.string()),      // for group chat
-    imageUrl: v.optional(v.string()),   // group image
+    title: v.optional(v.string()), // for group chat
+    imageUrl: v.optional(v.string()), // group image
     lastMessage: v.optional(v.string()),
     lastMessageAt: v.optional(v.number()),
     createdBy: v.optional(v.id("users")),
@@ -154,9 +154,27 @@ export default defineSchema({
   }).index("by_conversation", ["conversationId"]),
 
   recentSearches: defineTable({
-  userId: v.id("users"),
-  query: v.string(),
-  createdAt: v.number(),
-}).index("by_user", ["userId"]),
+    userId: v.id("users"),
+    query: v.string(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  lostItems: defineTable({
+  title: v.string(),
+  description: v.optional(v.string()),
+  imageStorageId: v.optional(v.id("_storage")),
+  imageUrl: v.optional(v.string()),
+  location: v.optional(v.string()),
+  status: v.union(v.literal("lost"), v.literal("found")),
+  category: v.optional(v.string()),                 // category
+  reporterId: v.id("users"),
+  reporterName: v.string(),
+  reporterContact: v.optional(v.string()),          // contact
+  reporterImage: v.optional(v.string()),            // profile image
+  createdAt: v.number(),                            // timestamp
+})
+  .index("by_status", ["status"])
+  .index("by_reporter", ["reporterId"])
+  .index("by_created", ["createdAt"])          // ⬅ correct
 
 });

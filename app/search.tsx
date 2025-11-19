@@ -47,7 +47,7 @@ export default function SearchScreen() {
   // Queries
   const users = useQuery(api.users.searchUsers, { q: trimmed || "" });
   const posts = useQuery(api.posts.searchPosts, { q: trimmed || "" });
-  const recentPosts = useQuery(api.posts.getRecentPosts);
+  const recentPosts = useQuery(api.posts.getRecentPosts, { limit: 12 });
   const recentSearches = useQuery(
     api.users.getRecentSearches,
     me ? { userId: me._id } : "skip"

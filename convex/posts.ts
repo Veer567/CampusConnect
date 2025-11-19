@@ -329,11 +329,11 @@ export const editPost = mutation({
   },
 });
 export const getRecentPosts = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 12 }) => {
     return await ctx.db
       .query("posts")
       .order("desc")
-      .take(15); // latest 15 posts
+      .take(limit);
   },
 });

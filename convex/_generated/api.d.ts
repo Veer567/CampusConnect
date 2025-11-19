@@ -12,6 +12,7 @@ import type * as bookmark from "../bookmark.js";
 import type * as chat from "../chat.js";
 import type * as comments from "../comments.js";
 import type * as http from "../http.js";
+import type * as lostItems from "../lostItems.js";
 import type * as notifications from "../notifications.js";
 import type * as posts from "../posts.js";
 import type * as storage from "../storage.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   chat: typeof chat;
   comments: typeof comments;
   http: typeof http;
+  lostItems: typeof lostItems;
   notifications: typeof notifications;
   posts: typeof posts;
   storage: typeof storage;
