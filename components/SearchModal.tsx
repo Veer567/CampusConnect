@@ -99,171 +99,196 @@ export default function SearchModal({
   }
 
   return (
-    <Modal animationType="fade" transparent visible={visible}>
+ <Modal animationType="fade" transparent visible={visible} >
+  <View
+    style={{
+      flex: 1,
+     backgroundColor: "rgba(0,0,0,0.35)",
+      backdropFilter: "blur(8px)", // works on web but native ignores
+      justifyContent: "center",
+      padding: 20,
+    }}
+  >
+    <View
+      style={{
+        backgroundColor: "#fff",
+        borderRadius: 20,
+        padding: 16,
+        maxHeight: "80%",
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 4 },
+      }}
+    >
+      {/* Top Search Input */}
       <View
         style={{
-          flex: 1,
-          backgroundColor: "rgba(0,0,0,0.3)",
-          justifyContent: "center",
-          padding: 20,
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: "#f2f2f2",
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
         }}
       >
-        <View
+        <Ionicons name="search" size={20} color="#666" />
+        <TextInput
+          autoFocus
+          placeholder="Search users, posts or #tags..."
+          placeholderTextColor="#888"
+          value={query}
+          onChangeText={setQuery}
           style={{
-            backgroundColor: "#fff",
-            borderRadius: 12,
-            padding: 16,
-            maxHeight: "80%",
+            flex: 1,
+            marginLeft: 10,
+            fontSize: 16,
+            color: "#000",
           }}
-        >
-          {/* Header */}
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <TextInput
-              autoFocus
-              placeholder="Search users, posts, or #tags..."
-              value={query}
-              onChangeText={setQuery}
-              style={{
-                flex: 1,
-                borderWidth: 1,
-                borderColor: "#ddd",
-                borderRadius: 10,
-                paddingVertical: 8,
-                paddingHorizontal: 12,
-                fontSize: 16,
-              }}
-            />
-            <TouchableOpacity onPress={onClose} style={{ marginLeft: 10 }}>
-              <Ionicons name="close" size={24} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Results */}
-          <ScrollView style={{ marginTop: 16 }}>
-            {/* USERS */}
-            {filteredUsers.length > 0 && (
-              <>
-                <Text
-                  style={{
-                    fontWeight: "700",
-                    fontSize: 16,
-                    marginBottom: 8,
-                  }}
-                >
-                  Users
-                </Text>
-
-                {filteredUsers.map((u) => (
-                  <TouchableOpacity
-                    key={u._id}
-                    onPress={() => {
-                      if (u.clerkId === loggedInClerkId) {
-                        onClose();
-                        return router.push("/profile");
-                      }
-                      onUserPress(u);
-                    }}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      paddingVertical: 10,
-                    }}
-                  >
-                    <Image
-                      source={{ uri: u.image || "https://i.pravatar.cc/100" }}
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        marginRight: 12,
-                      }}
-                    />
-                    <Text style={{ fontSize: 16 }}>{u.fullname}</Text>
-                  </TouchableOpacity>
-                ))}
-              </>
-            )}
-
-            {/* POSTS */}
-            {filteredPosts.length > 0 && (
-              <>
-                <Text
-                  style={{
-                    fontWeight: "700",
-                    fontSize: 16,
-                    marginTop: 16,
-                    marginBottom: 8,
-                  }}
-                >
-                  Posts
-                </Text>
-
-                {filteredPosts.map((p) => (
-                  <TouchableOpacity
-                    key={p._id}
-                    onPress={() => {
-                      onPostPress(p);
-                      onClose();
-                    }}
-                    style={{
-                      paddingVertical: 10,
-                      flexDirection: "row",
-                      alignItems: "center",
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 8,
-                        backgroundColor: "#eee",
-                        overflow: "hidden",
-                        marginRight: 12,
-                      }}
-                    >
-                      <Image
-                        source={{ uri: p.imageUrl }}
-                        style={{ width: "100%", height: "100%" }}
-                      />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 16 }}>{p.title}</Text>
-
-                      {/* TAGS */}
-                      {p.tags && p.tags.length > 0 && (
-                        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                          {p.tags.slice(0, 3).map((t, i) => (
-                            <Text
-                              key={i}
-                              style={{
-                                fontSize: 12,
-                                color: COLORS.primary,
-                                marginRight: 6,
-                              }}
-                            >
-                              #{t}
-                            </Text>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </>
-            )}
-
-            {/* NO RESULTS */}
-            {trimmed.length > 1 &&
-              filteredUsers.length === 0 &&
-              filteredPosts.length === 0 && (
-                <Text style={{ textAlign: "center", marginTop: 20 }}>
-                  No results found
-                </Text>
-              )}
-          </ScrollView>
-        </View>
+        />
+        <TouchableOpacity onPress={onClose}>
+          <Ionicons name="close-circle" size={24} color="#666" />
+        </TouchableOpacity>
       </View>
-    </Modal>
+
+      <ScrollView style={{ marginTop: 16 }}>
+        {/* USERS */}
+        {filteredUsers.length > 0 && (
+          <>
+            <Text
+              style={{
+                fontWeight: "600",
+                fontSize: 15,
+                marginBottom: 8,
+                color: "#333",
+              }}
+            >
+              Users
+            </Text>
+
+            {filteredUsers.map((u) => (
+              <TouchableOpacity
+                key={u._id}
+                onPress={() => {
+                  onUserPress(u);
+                  onClose();
+                }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingVertical: 10,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#eee",
+                }}
+              >
+                <Image
+                  source={{ uri: u.image || "https://i.pravatar.cc/100" }}
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 21,
+                    marginRight: 12,
+                  }}
+                />
+                <Text style={{ fontSize: 16, color: "#111" }}>
+                  {u.fullname}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+
+        {/* POSTS */}
+        {filteredPosts.length > 0 && (
+          <>
+            <Text
+              style={{
+                fontWeight: "600",
+                fontSize: 15,
+                marginTop: 16,
+                marginBottom: 8,
+                color: "#333",
+              }}
+            >
+              Posts
+            </Text>
+
+            {filteredPosts.map((p) => (
+              <TouchableOpacity
+                key={p._id}
+                onPress={() => {
+                  onPostPress(p);
+                  onClose();
+                }}
+                style={{
+                  paddingVertical: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#eee",
+                }}
+              >
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 10,
+                    backgroundColor: "#eee",
+                    overflow: "hidden",
+                    marginRight: 12,
+                  }}
+                >
+                  <Image
+                    source={{ uri: p.imageUrl }}
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, color: "#111" }}>{p.title}</Text>
+
+                  {Array.isArray(p.tags) && p.tags.length > 0 && (
+                    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                      {(p.tags || []).slice(0, 3).map((t, i) => (
+                        <Text
+                          key={i}
+                          style={{
+                            fontSize: 12,
+                            color: COLORS.primary,
+                            marginRight: 6,
+                            marginTop: 2,
+                          }}
+                        >
+                          #{t}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+
+        {/* NO RESULTS */}
+        {trimmed.length > 1 &&
+          filteredUsers.length === 0 &&
+          filteredPosts.length === 0 && (
+            <Text
+              style={{
+                textAlign: "center",
+                marginTop: 20,
+                color: "#555",
+                fontSize: 15,
+              }}
+            >
+              No results found
+            </Text>
+          )}
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
+
   );
 }

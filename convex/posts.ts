@@ -328,3 +328,12 @@ export const editPost = mutation({
     return true;
   },
 });
+export const getRecentPosts = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("posts")
+      .order("desc")
+      .take(15); // latest 15 posts
+  },
+});

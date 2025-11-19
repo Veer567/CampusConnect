@@ -1,22 +1,19 @@
-// Import dependencies and necessary components
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs, router } from "expo-router";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View, Text } from "react-native";
 import { COLORS } from "../../constants/themes";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
-// Bottom tab layout configuration
 export default function TabLayout() {
+  const unreadCount = useQuery(api.chat.getUnreadCount) ?? 0;
   return (
     <Tabs
       screenOptions={{
-        // Hide text labels under icons
         tabBarShowLabel: false,
-        // Remove default header from each screen
         headerShown: false,
-        // Set inactive icon color
         tabBarInactiveTintColor: COLORS.grey,
-        // Customize bottom tab bar appearance
         tabBarStyle: {
           backgroundColor: "white",
           borderTopWidth: 0,
@@ -33,35 +30,29 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons name="home" size={focused ? 28 : 24} color={color} />
           ),
         }}
       />
 
-      {/* Bookmarks Tab */}
+      {/* Bookmarks */}
       <Tabs.Screen
         name="bookmarks"
         options={{
           title: "Bookmarks",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name="bookmark"
-              size={focused ? 28 : 24}
-              color={color}
-            />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name="bookmark" size={focused ? 28 : 24} color={color} />
           ),
         }}
       />
 
-      {/* Create Post Tab (custom floating action button style) */}
+      {/* Create Floating Button */}
       <Tabs.Screen
         name="create"
         options={{
-          title: "create",
           tabBarIcon: () => (
             <View style={styles.createButtonWrapper}>
-              {/* Floating action button for creating posts */}
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.createButton}
@@ -74,27 +65,56 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Notifications Tab */}
+      {/* 🔥 CHAT (replacing Notifications) */}
       <Tabs.Screen
-        name="notifications"
+        name="chat"
         options={{
-          title: "Notifications",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name="notifications"
-              size={focused ? 28 : 24}
-              color={color}
-            />
+          title: "Chat",
+          tabBarIcon: ({ color, focused }) => (
+            <View style={{ position: "relative" }}>
+              <Ionicons
+                name="chatbubbles"
+                size={focused ? 28 : 24}
+                color={color}
+              />
+
+              {/* 🔥 Badge */}
+              {unreadCount > 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -4,
+                    right: -10,
+                    backgroundColor: COLORS.primary,
+                    borderRadius: 10,
+                    paddingHorizontal: 5,
+                    paddingVertical: 1,
+                    minWidth: 18,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "white",
+                      fontSize: 10,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           ),
         }}
       />
 
-      {/* Profile Tab */}
+      {/* Profile */}
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size, focused }) => (
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons name="person" size={focused ? 28 : 24} color={color} />
           ),
         }}
@@ -103,7 +123,6 @@ export default function TabLayout() {
   );
 }
 
-// Styles for floating action button and layout adjustments
 const styles = StyleSheet.create({
   createButtonWrapper: {
     position: "absolute",
@@ -113,7 +132,7 @@ const styles = StyleSheet.create({
   createButton: {
     width: 50,
     height: 50,
-    borderRadius: 50 / 2,
+    borderRadius: 25,
     backgroundColor: COLORS.surface,
     justifyContent: "center",
     alignItems: "center",
@@ -121,6 +140,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 8, // Adds subtle depth on Android
+    elevation: 8,
   },
 });

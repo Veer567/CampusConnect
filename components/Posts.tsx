@@ -280,7 +280,10 @@ export default function Post({ post, onDeleted }: PostProps) {
             ? `${post.caption.substring(0, 120)}... `
             : post.caption}
           {post.caption.length > 120 && (
-            <Text style={styles.readMore} onPress={() => setShowDetails(true)}>
+            <Text style={styles.readMore} onPress={() => router.push({
+              pathname: "/post-details",
+              params: { postId: post._id },
+            })}>
               Read more
             </Text>
           )}

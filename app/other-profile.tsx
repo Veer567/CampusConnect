@@ -1,6 +1,8 @@
 // app/(tabs)/other-profile.tsx
+
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
+import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -22,18 +24,31 @@ import { useProfileImageCache } from "@/hooks/useProfileImageCache";
 
 export default function OtherUserProfile() {
   const router = useRouter();
+
+  // URL PARAM
   const { userId } = useLocalSearchParams();
   const uid = userId as Id<"users">;
 
+  // Clerk Auth
+  const { userId: myClerkId } = useAuth();
+
+  // Fetch MY Convex User
+  const me = useQuery(api.users.getUserByClerkId, {
+    clerkId: myClerkId || "",
+  });
+
+  // Fetch OTHER user profile
   const user = useQuery(api.users.getUserProfile, { id: uid });
   const userPosts = useQuery(api.posts.getPostsByUser, { userId: uid });
   const isFollowing = useQuery(api.users.isFollowing, { followingId: uid });
 
+  // Mutations
   const toggleFollow = useMutation(api.users.toggleFollow);
+  const getOrStartConv = useMutation(api.chat.getOrStartConversation);
 
   const imageCacheBuster = useProfileImageCache(userId as string);
 
-  if (!user) {
+  if (!user || !me) {
     return (
       <SafeAreaView style={styles.loadingBox}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -42,9 +57,8 @@ export default function OtherUserProfile() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff",  marginLeft: 10,}}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff", marginLeft: 10 }}>
       <ScrollView
-      
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
@@ -54,7 +68,7 @@ export default function OtherUserProfile() {
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
 
-        {/* REUSE EXISTING PROFILE HEADER */}
+        {/* PROFILE HEADER */}
         <ProfileHeader
           imageUrl={user.image}
           fullname={user.fullname}
@@ -70,8 +84,7 @@ export default function OtherUserProfile() {
           posts={user.posts}
         />
 
-
-        {/* Follow Button */}
+        {/* FOLLOW BUTTON */}
         <TouchableOpacity
           style={isFollowing ? styles.followingBtn : styles.followBtn}
           onPress={() => toggleFollow({ followingId: user._id })}
@@ -81,8 +94,34 @@ export default function OtherUserProfile() {
           </Text>
         </TouchableOpacity>
 
-        {/* REUSE EXISTING PROFILE CONTENT */}
-        <ProfileContent 
+        {/* MESSAGE BUTTON */}
+        <TouchableOpacity
+          style={styles.messageBtn}
+          onPress={async () => {
+            try {
+              const conv = await getOrStartConv({
+                otherUserId: user._id,
+              });
+
+              const conversationId =
+                typeof conv === "object" && conv && "_id" in conv
+                  ? conv._id
+                  : conv;
+
+              // Pass *Convex IDs* not Clerk ID
+              router.push(
+                `/chat-screen?conversationId=${conversationId}&currentUserId=${me._id}&otherUserId=${user._id}`
+              );
+            } catch (err) {
+              console.error("Start conversation error:", err);
+            }
+          }}
+        >
+          <Text style={styles.messageText}>Message 💬</Text>
+        </TouchableOpacity>
+
+        {/* PROFILE CONTENT */}
+        <ProfileContent
           emails={user.emails || []}
           departments={user.departments || []}
           interests={user.interests || []}
@@ -128,24 +167,12 @@ export default function OtherUserProfile() {
 }
 
 const styles = StyleSheet.create({
-  loadingBox: { flex: 1, justifyContent: "center", alignItems: "center"
-   },
+  loadingBox: { flex: 1, justifyContent: "center", alignItems: "center" },
 
-backBtn: {
-  paddingHorizontal: 5,
-
-},
-
-
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 30,
+  backBtn: {
+    paddingHorizontal: 5,
     marginTop: 10,
   },
-  stat: { alignItems: "center" },
-  statNumber: { fontSize: 20, fontWeight: "700", color: COLORS.text },
-  statLabel: { fontSize: 12, color: COLORS.textSecondary },
 
   followBtn: {
     marginTop: 18,
@@ -171,6 +198,21 @@ backBtn: {
     fontWeight: "700",
   },
 
+  messageBtn: {
+    marginTop: 12,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    width: "60%",
+    alignSelf: "center",
+    borderRadius: 10,
+  },
+  messageText: {
+    textAlign: "center",
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+
   postsTitle: {
     marginTop: 28,
     marginLeft: 18,
@@ -194,6 +236,5 @@ backBtn: {
     borderRadius: 12,
     backgroundColor: "#eee",
   },
-
   noPostsBox: { alignItems: "center", marginTop: 30 },
 });

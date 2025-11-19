@@ -1,4 +1,4 @@
-// FEED SCREEN — FULL FIXED VERSION
+// FEED SCREEN — UPDATED WITH CHAT + NOTIFICATIONS BUTTONS
 
 import AppHeader from "@/components/AppHeader";
 import { Loader } from "@/components/Loader";
@@ -6,12 +6,11 @@ import Post from "@/components/Posts";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { styles } from "@/styles/feed.styles";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useMemo, useState } from "react";
-import SearchModal from "../../components/SearchModal";
-
 import { router } from "expo-router";
+import React, { useMemo, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -40,26 +39,10 @@ const categories = [
 export default function Index() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
-  const [searchVisible, setSearchVisible] = useState(false);
-  const [query, setQuery] = useState("");
 
-  const users = useQuery(api.users.searchUsers, { q: query || "" });
-  const postsSearch = useQuery(api.posts.searchPosts, { q: query || "" });
-
-  // Ensure posts returned to SearchModal always have required fields (e.g. title as string)
-  const results = {
-    users: users || [],
-    posts: (postsSearch || []).map((p) => ({
-      ...p,
-      title: p.title ?? "Untitled",
-      tags: p.tags ?? [],
-    })),
-  };
-
-  // ✅ Correct: directly use Convex reactive query (NO LOCAL COPY)
+  // Feed posts
   const posts = useQuery(api.posts.getFeedPosts) || [];
 
-  // ✅ Map posts — include author._id so new cache-buster works
   const mappedPosts = useMemo(
     () =>
       posts.map((post) => ({
@@ -69,15 +52,15 @@ export default function Index() {
         category: post.category || "Other",
         imageUrl: post.imageUrl ?? undefined,
         author: {
-          _id: post.author._id, // 🔥 IMPORTANT FOR CACHE-BUSTER
+          _id: post.author._id,
           username: post.author.username || "Anonymous",
           image: post.author.image ?? "",
         },
         likes: post.likes ?? 0,
         comments: post.comments ?? 0,
-        _creationTime: post._creationTime,
         isLiked: !!post.isLiked,
         isBookmarked: !!post.isBookmarked,
+        _creationTime: post._creationTime,
         location: post.location ?? undefined,
         eventDate: post.eventDate ?? undefined,
         isOwner: post.isOwner ?? false,
@@ -86,14 +69,11 @@ export default function Index() {
     [posts]
   );
 
-  // Category animation
   const categoryScales = categories.map(() => new Animated.Value(1));
 
   const filteredPosts = useMemo(() => {
     if (selectedCategory.name === "All") return mappedPosts;
-    return mappedPosts.filter(
-      (post) => post.category === selectedCategory.name
-    );
+    return mappedPosts.filter((p) => p.category === selectedCategory.name);
   }, [mappedPosts, selectedCategory]);
 
   const onRefresh = () => {
@@ -113,12 +93,41 @@ export default function Index() {
         end={{ x: 1, y: 1 }}
       >
         <SafeAreaView style={styles.container}>
-          <AppHeader
-            title="Campus Connect 🎓"
-            alignLeft
-            rightIcon="search"
-            onRightPress={() => setSearchVisible(true)}
-          />
+          {/* TOP HEADER WITH CHAT + NOTIFICATION BUTTONS */}
+          {/* Custom Header Only for Feed Screen */}
+          <View style={{ position: "relative" }}>
+            <AppHeader title="Campus Connect 🎓" alignLeft />
+
+            {/* Right-side Icons over Header */}
+            <View
+              style={{
+                position: "absolute",
+                right: 16,
+                top: 18, // adjust for perfect alignment
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 18,
+              }}
+            >
+              {/* Notifications */}
+              <TouchableOpacity onPress={() => router.push("/notifications")}>
+                <Ionicons
+                  name="notifications-outline"
+                  size={24}
+                  color="white"
+                />
+              </TouchableOpacity>
+
+              {/* Chat */}
+              <TouchableOpacity onPress={() => router.push("/chat")}>
+                <Ionicons
+                  name="chatbubble-ellipses-outline"
+                  size={24}
+                  color="white"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Categories */}
           <View style={styles.categoryContainer}>
@@ -174,23 +183,6 @@ export default function Index() {
           />
         </SafeAreaView>
       </LinearGradient>
-      <SearchModal
-        visible={searchVisible}
-        onClose={() => setSearchVisible(false)}
-        query={query}
-        setQuery={setQuery}
-        results={results}
-        onUserPress={(u) => {
-          setSearchVisible(false);
-          router.push(`/other-profile?userId=${u._id}`);
-        }}
-        onPostPress={(p) => {
-          setSearchVisible(false);
-          router.push(`/post-details?postId=${p._id}` as any);
-
-          // Navigate to your post details (if you have screen)
-        }}
-      />
     </SafeAreaProvider>
   );
 }

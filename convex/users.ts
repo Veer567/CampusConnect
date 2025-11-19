@@ -269,3 +269,40 @@ export const searchUsers = query({
     );
   },
 });
+export const saveRecentSearch = mutation({
+  args: {
+    userId: v.id("users"),
+    query: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // remove duplicates
+    const existing = await ctx.db
+      .query("recentSearches")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("query"), args.query))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { createdAt: Date.now() });
+      return;
+    }
+
+    // insert new
+    await ctx.db.insert("recentSearches", {
+      userId: args.userId,
+      query: args.query,
+      createdAt: Date.now(),
+    });
+  },
+});
+export const getRecentSearches = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    return await ctx.db
+      .query("recentSearches")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(10);
+  },
+});
+

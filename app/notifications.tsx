@@ -155,7 +155,7 @@ export default function NotificationScreen() {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container}>
-        <AppHeader title="Notifications" rightIcon="notifications" />
+        <AppHeader title="Notifications"  />
 
         {notifications.length === 0 ? (
           <View style={styles.empty}>
