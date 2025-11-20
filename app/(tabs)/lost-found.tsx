@@ -34,7 +34,9 @@ const CATEGORY_FILTERS = [
   "Electronics",
   "Books",
   "Accessories",
+  "Clothes",
   "Other",
+
 ] as const;
 
 export default function LostFoundScreen() {
@@ -423,8 +425,8 @@ const styles = StyleSheet.create({
 
   floatingAddBtn: {
     position: "absolute",
-    bottom: 60,
-    right: 25,
+    bottom: 75,
+    right: 20,
     
   },
 });

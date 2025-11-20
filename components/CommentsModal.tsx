@@ -16,97 +16,147 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Comment from "./Comment";
-import { Loader } from "./Loader";
+import CommentItem from "./Comment";
 
-type CommentsModalProps = {
-  postId: Id<"posts">;
+/*───────────────────────────────────────────────
+ 🔹 Comment Type
+───────────────────────────────────────────────*/
+export interface CommentType {
+  _id: Id<"comments">;
+  content: string;
+  createdAt: number;
+  editedAt?: number;
+  parentId?: Id<"comments">;
+  user: {
+    username: string;
+    fullname: string;
+    image: string | null;
+    _id: Id<"users"> | undefined; // ⭐ Fix here
+  };
+}
+
+type Props = {
+  targetId: Id<"posts"> | Id<"marketplacePosts">;
+  targetType: "post" | "marketplace";
   visible: boolean;
   onClose: () => void;
-  onCommentAdded: () => void;
+
+  // ⭐ ADD THESE 3
+  currentUserId?: Id<"users">;
+  postOwnerId?: Id<"users">;
+  onCommentAdded?: () => void;
 };
 
 export default function CommentsModal({
-  postId,
+  targetId,
+  targetType,
   visible,
   onClose,
+  currentUserId,
+  postOwnerId,
   onCommentAdded,
-}: CommentsModalProps) {
+}: Props) {
   const [newComment, setNewComment] = useState("");
-  const comments = useQuery(api.comments.getComments, { postId });
-  const addComment = useMutation(api.comments.addComments);
+  const [replyTo, setReplyTo] = useState<null | {
+    id: Id<"comments">;
+    username: string;
+  }>(null);
 
-  const handleAddComment = async () => {
+  // Load top-level comments
+  const comments: CommentType[] =
+    useQuery(api.comments.getComments, { targetId }) ?? [];
+
+  // Mutations
+  const addComment = useMutation(api.comments.addComment);
+  const editComment = useMutation(api.comments.editComment);
+  const deleteComment = useMutation(api.comments.deleteComment);
+
+  /*-------------------------------------------------
+      SEND COMMENT / SEND REPLY
+  --------------------------------------------------*/
+  const handleSend = async () => {
     if (!newComment.trim()) return;
-    try {
-      await addComment({
-        content: newComment,
-        postId,
-      });
-      setNewComment("");
-      onCommentAdded();
-    } catch (error) {
-      console.error("Error adding comment:", error);
-    }
+
+    await addComment({
+      targetId,
+      targetType,
+      content: newComment,
+      parentId: replyTo?.id ?? undefined,
+    });
+
+    onCommentAdded?.();
+
+    setNewComment("");
+    setReplyTo(null);
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide">
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
-          style={styles.keyboardContainer}
+          style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          {/* Header */}
+          {/* HEADER */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Comments</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={28} color="black" />
+              <Ionicons name="close" size={26} color={COLORS.text} />
             </TouchableOpacity>
           </View>
 
-          {/* Comments List */}
-          <View style={styles.commentsSection}>
-            {comments === undefined ? (
-              <Loader />
-            ) : comments.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>
-                  No comments yet. Be the first!
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={comments}
-                keyExtractor={(item) => item._id.toString()}
-                renderItem={({ item }) => <Comment comment={item} />}
-                contentContainerStyle={styles.commentsList}
+          {/* COMMENT LIST */}
+          <FlatList
+            data={comments}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={{ padding: 14, paddingBottom: 100 }}
+            renderItem={({ item }) => (
+              <CommentItem
+                comment={item}
+                onReply={(comment: CommentType) =>
+                  setReplyTo({
+                    id: comment._id,
+                    username: comment.user.username,
+                  })
+                }
+                onEdit={async (comment: CommentType, text: string) =>
+                  editComment({ commentId: comment._id, text })
+                }
+                onDelete={async (comment: CommentType) =>
+                  deleteComment({ commentId: comment._id })
+                }
               />
             )}
-          </View>
+          />
 
-          {/* Input Area */}
+          {/* REPLY INDICATOR */}
+          {replyTo && (
+            <View style={styles.replyBanner}>
+              <Text style={styles.replyText}>
+                Replying to @{replyTo.username}
+              </Text>
+              <TouchableOpacity onPress={() => setReplyTo(null)}>
+                <Ionicons name="close-circle" size={20} color={COLORS.red} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* INPUT BAR */}
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Write a comment..."
-              placeholderTextColor="#999"
+              placeholder="Add a comment..."
               value={newComment}
               onChangeText={setNewComment}
             />
+
             <TouchableOpacity
-              onPress={handleAddComment}
+              onPress={handleSend}
               disabled={!newComment.trim()}
-              style={styles.sendButton}
             >
               <Ionicons
                 name="send"
-                size={26}
+                size={24}
                 color={newComment.trim() ? COLORS.primary : "#bbb"}
               />
             </TouchableOpacity>
@@ -117,67 +167,44 @@ export default function CommentsModal({
   );
 }
 
-/*──────────────────────────────
-   🧱 STYLES
-──────────────────────────────*/
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  keyboardContainer: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+
   header: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
     borderBottomColor: "#eee",
+    borderBottomWidth: 1,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+  headerTitle: { fontSize: 20, fontWeight: "700" },
+
+  replyBanner: {
+    padding: 10,
+    backgroundColor: "#eef4ff",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-  commentsSection: {
-    flex: 1,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    color: "#888",
-    fontSize: 16,
-  },
-  commentsList: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
+
+  replyText: { color: COLORS.primary },
+
   inputContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    padding: 12,
     borderTopWidth: 1,
     borderTopColor: "#eee",
-    backgroundColor: "#fafafa",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: Platform.OS === "ios" ? 14 : 16, // 👈 lifted a bit above bottom
+    backgroundColor: "#fff",
+    alignItems: "center",
   },
+
   input: {
     flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: Platform.OS === "ios" ? 10 : 8,
-    fontSize: 15,
-    backgroundColor: "white",
-  },
-  sendButton: {
-    marginLeft: 10,
+    marginRight: 10,
   },
 });

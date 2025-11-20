@@ -128,6 +128,25 @@ export default function Index() {
               </TouchableOpacity>
             </View>
           </View>
+          <TouchableOpacity
+            onPress={() => router.push("/search")}
+            activeOpacity={0.8}
+            style={{
+              marginTop: 10,
+              marginHorizontal: 16,
+              backgroundColor: "#f2f2f2",
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              borderRadius: 10,
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons name="search-outline" size={20} color="#777" />
+            <Text style={{ marginLeft: 10, fontSize: 16, color: "#777" }}>
+              Search users, posts or #tags...
+            </Text>
+          </TouchableOpacity>
 
           {/* Categories */}
           <View style={styles.categoryContainer}>

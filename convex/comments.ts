@@ -1,61 +1,245 @@
-import { query, mutation } from "./_generated/server";
+// convex/comments.ts
 import { v } from "convex/values";
-import { getAuthenticatedUser } from "./users";
+import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 /*───────────────────────────────────────────────
- 🔹 Add new comment
+ 🔹 Helper: load correct target (post or marketplacePost)
 ───────────────────────────────────────────────*/
-export const addComments = mutation({
-  args: {
-    content: v.string(),
-    postId: v.id("posts"),
-  },
-  handler: async (ctx, args) => {
-    const currentUser = await getAuthenticatedUser(ctx);
+async function getTarget(ctx: any, targetType: "post" | "marketplace", targetId: any) {
+  const target = await ctx.db.get(targetId);
+  if (!target) return null;
+  return { ...target, type: targetType };
+}
 
-    await ctx.db.insert("comments", {
-      userId: currentUser._id,
-      postId: args.postId,
-      content: args.content,
+/*───────────────────────────────────────────────
+ 🔹 Add Comment
+───────────────────────────────────────────────*/
+export const addComment = mutation({
+  args: {
+    targetId: v.union(v.id("posts"), v.id("marketplacePosts")),
+    targetType: v.union(v.literal("post"), v.literal("marketplace")),
+    content: v.string(),
+    parentId: v.optional(v.id("comments")),
+  },
+  handler: async (ctx, { targetId, targetType, content, parentId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated.");
+
+    const me = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!me) throw new Error("User not found.");
+    const userId = me._id;
+
+    // Insert comment
+    const commentId = await ctx.db.insert("comments", {
+      userId,
+      targetId,
+      targetType,
+      content,
+      parentId,
+      createdAt: Date.now(),
     });
 
-    // Optionally increment comment count on the post
-    const post = await ctx.db.get(args.postId);
-    if (post) {
-      await ctx.db.patch(args.postId, {
-        comments: (post.comments ?? 0) + 1,
+    const target = await getTarget(ctx, targetType, targetId);
+    if (!target) return commentId;
+
+    /* Update post comment count (posts only) */
+    if (targetType === "post") {
+      await ctx.db.patch(targetId as Id<"posts">, {
+        comments: (target.comments ?? 0) + 1,
       });
     }
+
+    /* Notifications */
+    if (targetType === "post") {
+      // notify post owner
+      if (String(target.userId) !== String(userId)) {
+        await ctx.db.insert("notifications", {
+          receiverId: target.userId,
+          senderId: userId,
+          type: "comment",
+          postId: targetId as Id<"posts">, // SAFE CAST
+          commentId,
+          createdAt: Date.now(),
+        });
+      }
+    } else {
+      // marketplace post
+      if (String(target.creatorId) !== String(userId)) {
+        await ctx.db.insert("notifications", {
+          receiverId: target.creatorId,
+          senderId: userId,
+          type: "comment",
+          commentId,
+          createdAt: Date.now(),
+        });
+      }
+    }
+
+    return commentId;
   },
 });
 
 /*───────────────────────────────────────────────
- 🔹 Get comments for a post (with username)
+ 🔹 Get Comments (top level)
 ───────────────────────────────────────────────*/
 export const getComments = query({
-  args: { postId: v.id("posts") },
-  handler: async (ctx, { postId }) => {
-    // Fetch comments for this post
-    const comments = await ctx.db
+  args: {
+    targetId: v.union(v.id("posts"), v.id("marketplacePosts")),
+  },
+  handler: async (ctx, { targetId }) => {
+    const all = await ctx.db
       .query("comments")
-      .withIndex("by_post", (q) => q.eq("postId", postId))
+      .withIndex("by_target", q => q.eq("targetId", targetId))
       .order("desc")
       .collect();
 
-    // Attach each comment's username & image (like getFeedPosts)
-    const commentsWithUser = await Promise.all(
-      comments.map(async (comment) => {
-        const user = await ctx.db.get(comment.userId);
+    const top = all.filter(c => !c.parentId);
+
+    return Promise.all(
+      top.map(async c => {
+        const user = await ctx.db.get(c.userId);
+
+        const replies = await ctx.db
+          .query("comments")
+          .withIndex("by_parent", q => q.eq("parentId", c._id))
+          .collect();
+
         return {
-          ...comment,
+          ...c,
+          replyCount: replies.length,
           user: {
-            username: user?.username ?? "UnknownUser",
+            username: user?.username ?? "",
+            fullname: user?.fullname ?? "",
             image: user?.image ?? null,
+            _id: user?._id,
           },
         };
       })
     );
+  },
+});
 
-    return commentsWithUser;
+/*───────────────────────────────────────────────
+ 🔹 Get Replies
+───────────────────────────────────────────────*/
+export const getReplies = query({
+  args: { parentId: v.id("comments") },
+  handler: async (ctx, { parentId }) => {
+    const replies = await ctx.db
+      .query("comments")
+      .withIndex("by_parent", q => q.eq("parentId", parentId))
+      .order("asc")
+      .collect();
+
+    return Promise.all(
+      replies.map(async r => {
+        const user = await ctx.db.get(r.userId);
+        return {
+          ...r,
+          user: {
+            username: user?.username ?? "",
+            fullname: user?.fullname ?? "",
+            image: user?.image ?? null,
+            _id: user?._id,
+          },
+        };
+      })
+    );
+  },
+});
+
+/*───────────────────────────────────────────────
+ 🔹 Edit Comment
+───────────────────────────────────────────────*/
+export const editComment = mutation({
+  args: { commentId: v.id("comments"), text: v.string() },
+  handler: async (ctx, { commentId, text }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated.");
+
+    const me = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!me) throw new Error("User not found.");
+    const userId = me._id;
+
+    const c = await ctx.db.get(commentId);
+    if (!c) throw new Error("Comment not found.");
+
+    if (String(c.userId) !== String(userId)) {
+      throw new Error("Not authorized.");
+    }
+
+    await ctx.db.patch(commentId, {
+      content: text,
+      editedAt: Date.now(),
+    });
+
+    return true;
+  },
+});
+
+/*───────────────────────────────────────────────
+ 🔹 Delete Comment
+───────────────────────────────────────────────*/
+export const deleteComment = mutation({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, { commentId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated.");
+
+    const me = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!me) throw new Error("User not found.");
+    const userId = me._id;
+
+    const comment = await ctx.db.get(commentId);
+    if (!comment) throw new Error("Comment not found.");
+
+    const target = await getTarget(
+      ctx,
+      comment.targetType as "post" | "marketplace",
+      comment.targetId
+    );
+    if (!target) throw new Error("Target not found.");
+
+    const isOwner = String(comment.userId) === String(userId);
+    const isPostOwner =
+      (comment.targetType === "post" &&
+        String(target.userId) === String(userId)) ||
+      (comment.targetType === "marketplace" &&
+        String(target.creatorId) === String(userId));
+
+    if (!isOwner && !isPostOwner) {
+      throw new Error("Not authorized to delete");
+    }
+
+    // delete replies
+    const replies = await ctx.db
+      .query("comments")
+      .withIndex("by_parent", q => q.eq("parentId", commentId))
+      .collect();
+
+    for (const r of replies) {
+      await ctx.db.delete(r._id);
+    }
+
+    await ctx.db.delete(commentId);
+
+    // decrement comment count (posts only, and only for top-level)
+    if (!comment.parentId && comment.targetType === "post") {
+      await ctx.db.patch(comment.targetId as Id<"posts">, {
+        comments: Math.max(0, (target.comments ?? 1) - 1),
+      });
+    }
+
+    return true;
   },
 });

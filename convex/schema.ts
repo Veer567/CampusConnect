@@ -61,11 +61,27 @@ export default defineSchema({
   /*───────────────────────────────
    🔹 Comments Table
   ───────────────────────────────*/
-  comments: defineTable({
-    userId: v.id("users"),
-    postId: v.id("posts"),
-    content: v.string(),
-  }).index("by_post", ["postId"]),
+comments: defineTable({
+  userId: v.id("users"),
+
+  targetId: v.union(
+    v.id("posts"),
+    v.id("marketplacePosts")
+  ),
+
+  targetType: v.string(), // "post" | "marketplace"
+
+  content: v.string(),
+  createdAt: v.number(),
+
+  parentId: v.optional(v.id("comments")), // reply threads
+  mentions: v.optional(v.array(v.id("users"))),
+  editedAt: v.optional(v.number()),
+})
+.index("by_target", ["targetId"])
+.index("by_parent", ["parentId"]),
+
+
 
   /*───────────────────────────────
    🔹 Follows Table
@@ -160,21 +176,97 @@ export default defineSchema({
   }).index("by_user", ["userId"]),
 
   lostItems: defineTable({
-  title: v.string(),
-  description: v.optional(v.string()),
-  imageStorageId: v.optional(v.id("_storage")),
-  imageUrl: v.optional(v.string()),
-  location: v.optional(v.string()),
-  status: v.union(v.literal("lost"), v.literal("found")),
-  category: v.optional(v.string()),                 // category
-  reporterId: v.id("users"),
-  reporterName: v.string(),
-  reporterContact: v.optional(v.string()),          // contact
-  reporterImage: v.optional(v.string()),            // profile image
-  createdAt: v.number(),                            // timestamp
-})
-  .index("by_status", ["status"])
-  .index("by_reporter", ["reporterId"])
-  .index("by_created", ["createdAt"])          // ⬅ correct
+    title: v.string(),
+    description: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
+    imageUrl: v.optional(v.string()),
+    location: v.optional(v.string()),
+    status: v.union(v.literal("lost"), v.literal("found")),
+    category: v.optional(v.string()), // category
+    reporterId: v.id("users"),
+    reporterName: v.string(),
+    reporterContact: v.optional(v.string()), // contact
+    reporterImage: v.optional(v.string()), // profile image
+    createdAt: v.number(), // timestamp
+  })
+    .index("by_status", ["status"])
+    .index("by_reporter", ["reporterId"])
+    .index("by_created", ["createdAt"]),
 
-});
+  marketplacePosts: defineTable({
+    /*───────────────────────────────
+   🔹 Creator Info
+  ───────────────────────────────*/
+    creatorId: v.id("users"),
+    creatorName: v.string(),
+    creatorImage: v.optional(v.string()),
+
+    /*───────────────────────────────
+   🔹 Post Type (Top Tabs)
+   project | hackathon | startup
+  ───────────────────────────────*/
+    type: v.union(
+      v.literal("project"),
+      v.literal("hackathon"),
+      v.literal("startup")
+    ),
+
+    /*───────────────────────────────
+   🔹 Main Content
+  ───────────────────────────────*/
+    title: v.string(),
+    description: v.string(),
+    tags: v.optional(v.array(v.string())), // chips/tags
+
+    /*───────────────────────────────
+   🔹 Recruitment Section
+  ───────────────────────────────*/
+    lookingFor: v.optional(v.string()), // free text (Q1 Option 2)
+
+    /*───────────────────────────────
+   🔹 Dates
+  ───────────────────────────────*/
+    eventDate: v.optional(v.string()), // hackathons / events
+    lastDateToJoin: v.optional(v.string()), // optional field
+
+    /*───────────────────────────────
+   🔹 Optional Image
+  ───────────────────────────────*/
+    imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
+
+    /*───────────────────────────────
+   🔹 Interest System
+  ───────────────────────────────*/
+    interestedUsers: v.optional(v.array(v.id("users"))),
+
+    /*───────────────────────────────
+   🔹 Timestamp
+  ───────────────────────────────*/
+    createdAt: v.number(),
+
+    // ⭐ NEW
+    location: v.optional(v.string()),
+  })
+    .index("by_creator", ["creatorId"])
+    .index("by_type", ["type"])
+    .index("by_createdAt", ["createdAt"]),
+
+// marketplaceComments: defineTable({
+//   postId: v.id("marketplacePosts"),
+//   userId: v.id("users"),
+//   username: v.string(),
+//   userImage: v.optional(v.string()),
+//   text: v.string(),
+//   createdAt: v.number(),
+
+//   // optional fields for replies, mentions, edits
+//   parentId: v.optional(v.id("marketplaceComments")),
+//   mentions: v.optional(v.array(v.id("users"))),
+//   editedAt: v.optional(v.number()),
+// })
+//   .index("by_post", ["postId"])
+//   .index("by_parent", ["parentId"])
+//   .index("by_user", ["userId"])
+
+ });

@@ -62,6 +62,9 @@ const CATEGORY_META: Record<string, { icon: string }> = {
 export default function Post({ post, onDeleted }: PostProps) {
   const router = useRouter();
 
+  // current user id (optional) — use undefined when no user is available
+  const currentUserId: Id<"users"> | undefined = undefined;
+
   // -------------------------------------------------
   // 1. CACHE BUSTER – updates the avatar instantly
   // -------------------------------------------------
@@ -72,13 +75,17 @@ export default function Post({ post, onDeleted }: PostProps) {
   const deletePostMutation = useMutation(api.posts.deletePost);
   const [timeAgo, setTimeAgo] = useState("");
   const [showDetails, setShowDetails] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState<Id<"posts"> | null>(
+    null
+  );
 
   const bookmarks = useQuery(api.bookmark.getBookmarks);
 
   const [isLiked, setIsLiked] = useState(post.isLiked ?? false);
   const [likesCount, setLikesCount] = useState(post.likes ?? 0);
   const [commentsCount, setCommentsCount] = useState(post.comments ?? 0);
-  const [showComments, setShowComments] = useState(false);
+
   const [isBookmarked, setIsBookmarked] = useState(false);
 
   // ─── Sync states ─────────────────────
@@ -381,10 +388,13 @@ export default function Post({ post, onDeleted }: PostProps) {
 
       {/* Modals */}
       <CommentsModal
-        postId={post._id}
+        targetId={post._id}
+        targetType="post"
         visible={showComments}
         onClose={() => setShowComments(false)}
-        onCommentAdded={() => setCommentsCount((c) => c + 1)}
+        currentUserId={currentUserId}
+        postOwnerId={post.author._id} // <-- IMPORTANT for delete permission UI
+        onCommentAdded={() => setCommentsCount((c) => c + 1)} // optimistic update
       />
 
       {/* Action sheet */}

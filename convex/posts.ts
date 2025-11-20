@@ -216,10 +216,15 @@ export const deletePost = mutation({
     }
 
     // Delete associated comments
+    // Delete associated comments
     const comments = await ctx.db
       .query("comments")
-      .withIndex("by_post", (q) => q.eq("postId", args.postId))
+      .withIndex("by_target", (q) => q.eq("targetId", args.postId))
       .collect();
+
+    for (const c of comments) {
+      await ctx.db.delete(c._id);
+    }
 
     for (const comment of comments) {
       await ctx.db.delete(comment._id);
@@ -331,9 +336,6 @@ export const editPost = mutation({
 export const getRecentPosts = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 12 }) => {
-    return await ctx.db
-      .query("posts")
-      .order("desc")
-      .take(limit);
+    return await ctx.db.query("posts").order("desc").take(limit);
   },
 });
