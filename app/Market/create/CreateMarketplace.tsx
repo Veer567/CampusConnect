@@ -7,6 +7,8 @@ import React, { useEffect, useState } from "react";
 import {
   BackHandler,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,11 +24,12 @@ export default function CreateMarketplace() {
   const { type } = useLocalSearchParams();
   const [location, setLocation] = useState("");
 
-  const postType =
+  const [postType, setPostType] = useState<"project" | "hackathon" | "startup">(
     typeof type === "string" &&
-    ["project", "hackathon", "startup"].includes(type)
-      ? type
-      : "project";
+      ["project", "hackathon", "startup"].includes(type)
+      ? (type as any)
+      : "project"
+  );
 
   const createPost = useMutation(api.marketplace.createMarketplacePost);
 
@@ -91,126 +94,141 @@ export default function CreateMarketplace() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* ⭐ Custom Back Button */}
-      <TouchableOpacity
-        onPress={() => router.replace(`/marketplace?tab=${postType}`)}
-        style={{ marginBottom: 10, flexDirection: "row", alignItems: "center" }}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 1 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <Ionicons name="arrow-back" size={26} color={COLORS.text} />
-        <Text style={{ fontSize: 17, marginLeft: 6, color: COLORS.text }}>
-          Back
-        </Text>
-      </TouchableOpacity>
-
-      <Text style={styles.header}>
-        Create {postType.charAt(0).toUpperCase() + postType.slice(1)}
-      </Text>
-
-      {/* Type Buttons */}
-      <View style={styles.typeRow}>
-        {["project", "hackathon", "startup"].map((t) => {
-          const active = t === postType;
-          return (
-            <TouchableOpacity
-              key={t}
-              style={[styles.typeBtn, active && styles.typeBtnActive]}
-            >
-              <Text style={[styles.typeBtnText, active && { color: "#fff" }]}>
-                {t.charAt(0).toUpperCase() + t.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      <Text style={styles.label}>Cover Image</Text>
-      <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
-        {!image ? (
-          <>
-            <Text style={styles.uploadText}>Upload Cover Image</Text>
-            <Text style={styles.uploadSub}>Tap to select an image</Text>
-          </>
-        ) : (
-          <Image source={{ uri: image }} style={styles.previewImage} />
-        )}
-      </TouchableOpacity>
-
-      <Text style={styles.label}>Title</Text>
-      <TextInput
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Enter a catchy title..."
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Description</Text>
-      <TextInput
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Describe your idea..."
-        multiline
-        style={[styles.input, { minHeight: 120 }]}
-      />
-
-      <Text style={styles.label}>Skills & Tags</Text>
-      <TextInput
-        value={tags}
-        onChangeText={setTags}
-        placeholder="React, UI Design..."
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Looking For</Text>
-      <TextInput
-        value={lookingFor}
-        onChangeText={setLookingFor}
-        placeholder="Backend dev, designer..."
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Event Date</Text>
-      <TextInput
-        value={eventDate}
-        onChangeText={setEventDate}
-        placeholder="YYYY-MM-DD"
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Last Date to Join</Text>
-      <TextInput
-        value={lastDateToJoin}
-        onChangeText={setLastDateToJoin}
-        placeholder="YYYY-MM-DD"
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Location (City / Remote)</Text>
-      <TextInput
-        value={location}
-        onChangeText={setLocation}
-        placeholder="Mumbai, Delhi, Remote..."
-        style={styles.input}
-      />
-
-      <TouchableOpacity style={styles.submitBtn} onPress={submit}>
-        <LinearGradient
-          colors={[COLORS.primary, COLORS.secondary]}
-          style={styles.submitGradient}
+        {/* ⭐ Custom Back Button */}
+        <TouchableOpacity
+          onPress={() => router.replace(`/marketplace?tab=${postType}`)}
+          style={{
+            marginBottom: 10,
+            flexDirection: "row",
+            alignItems: "center",
+          }}
         >
-          <Text style={styles.submitText}>
-            Post {postType.charAt(0).toUpperCase() + postType.slice(1)}
+          <Ionicons name="arrow-back" size={26} color={COLORS.text} />
+          <Text style={{ fontSize: 17, marginLeft: 6, color: COLORS.text }}>
+            Back
           </Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </ScrollView>
+        </TouchableOpacity>
+
+        <Text style={styles.header}>
+          Create {postType.charAt(0).toUpperCase() + postType.slice(1)}
+        </Text>
+
+        {/* Type Buttons */}
+        <View style={styles.typeRow}>
+          {["project", "hackathon", "startup"].map((t) => {
+            const active = t === postType;
+            return (
+              <TouchableOpacity
+                key={t}
+                onPress={() => setPostType(t as any)} // ⭐ CHANGE TYPE IN STATE
+                style={[styles.typeBtn, active && styles.typeBtnActive]}
+              >
+                <Text style={[styles.typeBtnText, active && { color: "#fff" }]}>
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={styles.label}>Cover Image</Text>
+        <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
+          {!image ? (
+            <>
+              <Text style={styles.uploadText}>Upload Cover Image</Text>
+              <Text style={styles.uploadSub}>Tap to select an image</Text>
+            </>
+          ) : (
+            <Image source={{ uri: image }} style={styles.previewImage} />
+          )}
+        </TouchableOpacity>
+
+        <Text style={styles.label}>Title</Text>
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Enter a catchy title..."
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Describe your idea..."
+          multiline
+          style={[styles.input, { minHeight: 120 }]}
+        />
+
+        <Text style={styles.label}>Skills & Tags</Text>
+        <TextInput
+          value={tags}
+          onChangeText={setTags}
+          placeholder="React, UI Design..."
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Looking For</Text>
+        <TextInput
+          value={lookingFor}
+          onChangeText={setLookingFor}
+          placeholder="Backend dev, designer..."
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Event Date</Text>
+        <TextInput
+          value={eventDate}
+          onChangeText={setEventDate}
+          placeholder="YYYY-MM-DD"
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Last Date to Join</Text>
+        <TextInput
+          value={lastDateToJoin}
+          onChangeText={setLastDateToJoin}
+          placeholder="YYYY-MM-DD"
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Location (City / Remote)</Text>
+        <TextInput
+          value={location}
+          onChangeText={setLocation}
+          placeholder="Mumbai, Delhi, Remote..."
+          style={styles.input}
+        />
+
+        <TouchableOpacity style={styles.submitBtn} onPress={submit}>
+          <LinearGradient
+            colors={[COLORS.primary, COLORS.secondary]}
+            style={styles.submitGradient}
+          >
+            <Text style={styles.submitText}>
+              Post {postType.charAt(0).toUpperCase() + postType.slice(1)}
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     padding: 18,
-    paddingBottom: 120,
+    paddingBottom: 10,
     backgroundColor: COLORS.background,
   },
   header: {

@@ -10,7 +10,7 @@ export const addLostItem = mutation({
     imageUrl: v.optional(v.string()),
     location: v.optional(v.string()),
     status: v.union(v.literal("lost"), v.literal("found")),
-    category: v.optional(v.string()),          // ✅ NEW FIELD
+    category: v.optional(v.string()), // ✅ NEW FIELD
   },
   handler: async (ctx, args) => {
     const user = await getAuthenticatedUser(ctx);
@@ -21,30 +21,17 @@ export const addLostItem = mutation({
       imageUrl: args.imageUrl ?? "",
       location: args.location,
       status: args.status,
-      category: args.category ?? "Other",       // ✅ DEFAULT
+      category: args.category ?? "Other", // ✅ DEFAULT
       reporterId: user._id,
       reporterName: user.fullname,
-      reporterImage: user.image ?? "",          // ✅ STORE PROFILE IMAGE
+      reporterImage: user.image ?? "", // ✅ STORE PROFILE IMAGE
       createdAt: Date.now(),
     });
   },
 });
 
-export const markItemFound = mutation({
-  args: { id: v.id("lostItems") },
-  handler: async (ctx, { id }) => {
-    const current = await getAuthenticatedUser(ctx);
 
-    const item = await ctx.db.get(id);
-    if (!item) throw new Error("Item not found");
 
-    // Only the reporter or admin may mark as found (simple check: reporter)
-    if (item.reporterId !== current._id) throw new Error("Unauthorized");
-
-    await ctx.db.patch(id, { status: "found" });
-    return await ctx.db.get(id);
-  },
-});
 
 export const getLostItems = query({
   args: {
@@ -142,4 +129,66 @@ export const getItemById = query({
     return await ctx.db.get(args.id);
   },
 });
+export const getLostFoundStats = query({
+  handler: async (ctx) => {
+    // Count lost
+    const lostItems = await ctx.db
+      .query("lostItems")
+      .withIndex("by_status", (q) => q.eq("status", "lost"))
+      .collect();
+    const foundItems = await ctx.db
+      .query("lostItems")
+      .withIndex("by_status", (q) => q.eq("status", "found"))
+      .collect();
 
+    // reunited events table (we'll insert an event each time owner marks reunited)
+    // It's fine to use collect() if dataset is small; else you'd store a counter doc.
+    const reunitedEvents = await ctx.db.query("reunitedEvents").collect();
+
+    return {
+      lostCount: lostItems.length,
+      foundCount: foundItems.length,
+      reunitedCount: reunitedEvents.length,
+    };
+  },
+});
+export const markItemFound = mutation({
+  args: { id: v.id("lostItems") },
+  handler: async (ctx, { id }) => {
+    const user = await getAuthenticatedUser(ctx);
+    const item = await ctx.db.get(id);
+    if (!item) throw new Error("Item not found");
+    if (String(item.reporterId) !== String(user._id))
+      throw new Error("Unauthorized");
+    await ctx.db.patch(id, { status: "found" });
+    return await ctx.db.get(id);
+  },
+});
+
+// 2) mutation: mark reunited -> record event then delete the lostItems doc
+export const markItemReunited = mutation({
+  args: { id: v.id("lostItems") },
+  handler: async (ctx, { id }) => {
+    const user = await getAuthenticatedUser(ctx);
+    const item = await ctx.db.get(id);
+    if (!item) throw new Error("Item not found");
+
+    // Only reporter can mark reunited
+    if (String(item.reporterId) !== String(user._id))
+      throw new Error("Unauthorized");
+
+    // Record a reunite event (so we can compute reunited count later)
+    await ctx.db.insert("reunitedEvents", {
+      itemId: id,
+      reporterId: user._id,
+      reporterName: user.fullname,
+      reporterImage: user.image ?? "",
+      createdAt: Date.now(),
+    });
+
+    // delete the original item (per your requirement)
+    await ctx.db.delete(id);
+
+    return true;
+  },
+});

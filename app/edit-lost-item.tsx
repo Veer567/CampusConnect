@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,7 +22,6 @@ import {
 export default function EditLostItem() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  // Load existing item
   const item = useQuery(
     api.lostItems.getItemById,
     id ? { id: id as any } : "skip"
@@ -31,24 +32,15 @@ export default function EditLostItem() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
-  const [category, setCategory] = useState("Other");
-
-  // ❗ status must always be: "lost" | "found"
   const [status, setStatus] = useState<"lost" | "found">("lost");
-
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  // Load item into form
   useEffect(() => {
     if (item) {
       setTitle(item.title);
       setDescription(item.description || "");
       setLocation(item.location || "");
-      setCategory(item.category || "Other");
-
-      // FIX: Explicit cast to union type
       setStatus(item.status as "lost" | "found");
-
       setImageUrl(item.imageUrl || null);
     }
   }, [item]);
@@ -60,32 +52,24 @@ export default function EditLostItem() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
 
-    if (!result.canceled) {
-      setImageUrl(result.assets[0].uri);
-    }
+    if (!result.canceled) setImageUrl(result.assets[0].uri);
   };
 
   const handleSubmit = async () => {
-    if (!title.trim()) {
-      Alert.alert("Missing title", "Please enter a valid title.");
-      return;
-    }
-
     try {
       await updateLostItem({
         id: id as any,
         title,
         description,
         location,
-        category,
-        status, // already correct type
+        status,
+        category: undefined,
         imageUrl: imageUrl || undefined,
       });
 
       Alert.alert("Updated!", "Your item was successfully updated.");
       router.replace("/lost-found");
     } catch (err: any) {
-      console.error(err);
       Alert.alert("Error", err.message || "Update failed");
     }
   };
@@ -98,113 +82,81 @@ export default function EditLostItem() {
     );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Edit Lost & Found Item</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    >
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.header}>Edit Lost & Found Item</Text>
 
-      {/* Title */}
-      <Text style={styles.label}>Title</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Item title"
-        value={title}
-        onChangeText={setTitle}
-      />
+        {/* Title */}
+        <Text style={styles.label}>Title</Text>
+        <TextInput style={styles.input} value={title} onChangeText={setTitle} />
 
-      {/* Description */}
-      <Text style={styles.label}>Description</Text>
-      <TextInput
-        style={[styles.input, { height: 100 }]}
-        placeholder="Describe your item"
-        value={description}
-        multiline
-        onChangeText={setDescription}
-      />
+        {/* Description */}
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={[styles.input, { height: 100 }]}
+          value={description}
+          multiline
+          onChangeText={setDescription}
+        />
 
-      {/* Location */}
-      <Text style={styles.label}>Location</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Where was it lost or found?"
-        value={location}
-        onChangeText={setLocation}
-      />
+        {/* Location */}
+        <Text style={styles.label}>Location</Text>
+        <TextInput
+          style={styles.input}
+          value={location}
+          onChangeText={setLocation}
+        />
 
-      {/* Category */}
-      <Text style={styles.label}>Category</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {["Electronics", "Books", "Accessories", "Other"].map((c) => (
-          <TouchableOpacity
-            key={c}
-            onPress={() => setCategory(c)}
-            style={[
-              styles.chip,
-              category === c && { backgroundColor: COLORS.primary },
-            ]}
-          >
-            <Text
-              style={[styles.chipText, category === c && { color: "white" }]}
+        {/* Status */}
+        <Text style={styles.label}>Status</Text>
+        <View style={{ flexDirection: "row" }}>
+          {(["lost", "found"] as const).map((s) => (
+            <TouchableOpacity
+              key={s}
+              onPress={() => setStatus(s)}
+              style={[
+                styles.chip,
+                status === s && { backgroundColor: COLORS.primary },
+              ]}
             >
-              {c}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[styles.chipText, status === s && { color: "white" }]}
+              >
+                {s.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Image Picker */}
+        <Text style={styles.label}>Image</Text>
+
+        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.image} />
+          ) : (
+            <Ionicons name="image-outline" size={40} color="#444" />
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+          <Text style={styles.submitText}>Save Changes</Text>
+        </TouchableOpacity>
       </ScrollView>
-
-      {/* Status */}
-      <Text style={styles.label}>Status</Text>
-      <View style={{ flexDirection: "row" }}>
-        {(["lost", "found"] as const).map((s) => (
-          <TouchableOpacity
-            key={s}
-            onPress={() => setStatus(s)} // now correct type
-            style={[
-              styles.chip,
-              status === s && { backgroundColor: COLORS.primary },
-            ]}
-          >
-            <Text style={[styles.chipText, status === s && { color: "white" }]}>
-              {s.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Image */}
-      <Text style={styles.label}>Image</Text>
-
-      <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.image} />
-        ) : (
-          <Ionicons name="image-outline" size={40} color="#444" />
-        )}
-      </TouchableOpacity>
-
-      {/* Submit */}
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Save Changes</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    paddingBottom: 50,
-  },
-  header: {
-    fontSize: 26,
-    fontWeight: "700",
-    marginBottom: 20,
-    color: "#222",
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginTop: 12,
-    marginBottom: 6,
-  },
+  container: { padding: 20, paddingBottom: 10 },
+  header: { fontSize: 26, fontWeight: "700", marginBottom: 20, color: "#222" },
+
+  label: { fontSize: 16, fontWeight: "600", marginTop: 12, marginBottom: 6 },
+
   input: {
     backgroundColor: "#fff",
     borderRadius: 10,
@@ -213,6 +165,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
   },
+
   chip: {
     paddingHorizontal: 15,
     paddingVertical: 8,
@@ -220,10 +173,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#eee",
     marginRight: 10,
   },
-  chipText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
+
+  chipText: { fontSize: 14, fontWeight: "500" },
+
   imagePicker: {
     height: 180,
     backgroundColor: "#eee",
@@ -234,16 +186,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: 6,
   },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
+
+  image: { width: "100%", height: "100%" },
+
   submitBtn: {
     backgroundColor: COLORS.primary,
     paddingVertical: 14,
     borderRadius: 12,
     marginTop: 20,
   },
+
   submitText: {
     color: "#fff",
     textAlign: "center",

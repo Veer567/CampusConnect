@@ -1,9 +1,11 @@
 // components/profile/ProfileHeader.tsx
 import { COLORS } from "@/constants/themes";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   Image,
+ 
   Text,
   TextInput,
   TouchableOpacity,
@@ -23,6 +25,7 @@ interface ProfileHeaderProps {
   posts: number;
   followers: number;
   following: number;
+  userId: string;
 }
 
 export function ProfileHeader({
@@ -38,19 +41,22 @@ export function ProfileHeader({
   posts,
   followers,
   following,
+  userId,
 }: ProfileHeaderProps & { imageCacheBuster: number }) {
-  const { width, height } = useWindowDimensions();
-  const size = Math.min(width, height) * 0.28;
+  const { width } = useWindowDimensions();
+  const size = width * 0.32;
+  const router = useRouter();
 
   return (
     <>
-      <StatusBar style="dark"  backgroundColor="#fff"  />
+      <StatusBar style="dark" />
 
-      <View style={{ alignItems: "center",}}>
-        {/* --- Avatar --- */}
+      <View style={{ alignItems: "center" }}>
+        {/* Avatar */}
         <TouchableOpacity
           onPress={openImageCropper}
-          activeOpacity={isOwner ? 0.8 : 1}
+          activeOpacity={isOwner ? 0.7 : 1}
+          disabled={!isOwner}
         >
           <View style={{ position: "relative" }}>
             <Image
@@ -66,7 +72,6 @@ export function ProfileHeader({
                 borderWidth: 4,
                 borderColor: COLORS.primary,
               }}
-              resizeMode="cover"
             />
             {isOwner && (
               <View
@@ -75,124 +80,115 @@ export function ProfileHeader({
                   bottom: 6,
                   right: -6,
                   backgroundColor: COLORS.primary,
-                  borderRadius: 18,
-                  padding: 6,
+                  borderRadius: 20,
+                  padding: 7,
                 }}
               >
-                <Ionicons name="create-outline" size={16} color="#fff" />
+                <Ionicons name="camera" size={18} color="#fff" />
               </View>
             )}
           </View>
         </TouchableOpacity>
 
-        {/* --- Name --- */}
+        {/* Name */}
         {editing ? (
           <TextInput
             value={fullname}
             onChangeText={setFullname}
             style={{
-              marginTop: 10,
+              marginTop: 12,
+              fontSize: 24,
               fontWeight: "700",
               color: COLORS.primary,
-              backgroundColor: "#f8fbff",
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 8,
-              fontSize: size * 0.2,
+              backgroundColor: "#f0f7ff",
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 12,
+              minWidth: 200,
+              textAlign: "center",
             }}
           />
         ) : (
-          <Text
-            style={{
-              marginTop: 10,
-              fontWeight: "700",
-              color: COLORS.primary,
-              fontSize: size * 0.2,
-            }}
-          >
-            {fullname || "—"}
+          <Text style={{ marginTop: 12, fontSize: 24, fontWeight: "700", color: COLORS.primary }}>
+            {fullname || "No Name"}
           </Text>
         )}
 
-        {/* --- Year Badge --- */}
+        {/* Year */}
         {editing ? (
           <TextInput
             value={year}
             onChangeText={setYear}
+            placeholder="e.g. 2026"
             style={{
               marginTop: 8,
-              backgroundColor: "#f8fbff",
-              paddingHorizontal: 12,
-              paddingVertical: 6,
+              backgroundColor: "#f0f7ff",
+              paddingHorizontal: 16,
+              paddingVertical: 8,
               borderRadius: 12,
-              color: COLORS.primary,
               fontWeight: "600",
-              fontSize: size * 0.12,
+              color: COLORS.primary,
             }}
           />
         ) : (
           <View
             style={{
-              backgroundColor: COLORS.secondary,
-              borderRadius: 18,
-              paddingVertical: 6,
-              paddingHorizontal: 14,
               marginTop: 8,
+              backgroundColor: COLORS.secondary,
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 20,
             }}
           >
-            <Text
-              style={{
-                color: "#fff",
-                fontWeight: "600",
-                fontSize: size * 0.12,
-              }}
-            >
-              Year: {year || "Year —"}
+            <Text style={{ color: "#fff", fontWeight: "600" }}>
+              Year: {year || "—"}
             </Text>
           </View>
         )}
 
-        {/* ⭐ --- Followers + Following Row --- */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "center",
-            marginTop: 14,
-            gap: 40,
-          }}
-        >
-          <View style={{ alignItems: "center" }}>
-            <Text
-              style={{ color: COLORS.text, fontSize: 18, fontWeight: "700" }}
-            >
+        {/* Stats */}
+        <View style={{ flexDirection: "row", gap: 42, marginTop: 20 }}>
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/followers",
+                params: { userId, from: "profile" },
+              })
+            }
+          >
+            <Text style={{ fontSize: 19, fontWeight: "700", textAlign: "center" }}>
               {followers}
             </Text>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 13 }}>
-              Followers
-            </Text>
-          </View>
+            <Text style={{ color: COLORS.textSecondary, fontSize: 13 }}>Followers</Text>
+          </TouchableOpacity>
 
-          <View style={{ alignItems: "center" }}>
-            <Text
-              style={{ color: COLORS.text, fontSize: 18, fontWeight: "700" }}
-            >
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/following",
+                params: { userId, from: "profile" },
+              })
+            }
+          >
+            <Text style={{ fontSize: 19, fontWeight: "700", textAlign: "center" }}>
               {following}
             </Text>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 13 }}>
-              Following
-            </Text>
-          </View>
-          {/* Posts */}
-          <View style={{ alignItems: "center" }}>
-            <Text
-              style={{ color: COLORS.text, fontSize: 18, fontWeight: "700" }}
-            >
+            <Text style={{ color: COLORS.textSecondary, fontSize: 13 }}>Following</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/user-posts",
+                params: { userId, from: "profile" },
+              })
+            }
+          >
+            <Text style={{ fontSize: 19, fontWeight: "700", textAlign: "center" }}>
               {posts}
             </Text>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 13 }}>
-              Posts
-            </Text>
-          </View>
+            <Text style={{ color: COLORS.textSecondary, fontSize: 13 }}>Posts</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </>

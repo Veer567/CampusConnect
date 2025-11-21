@@ -12,7 +12,7 @@ export default function RootLayout() {
   const pathname = usePathname();
 
   // Screens where you don't want the gradient status bar
-  const excludedScreens = ["/index", "/profile" , "/other-profile"];
+  const excludedScreens = ["/index", "/profile" , "/other-profile" , "/lost-found"];
 
   const shouldHideStatusBar = excludedScreens.some((path) =>
     pathname.endsWith(path)  

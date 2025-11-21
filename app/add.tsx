@@ -8,6 +8,8 @@ import {
   Image,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,15 +18,12 @@ import { api } from "@/convex/_generated/api";
 import { router } from "expo-router";
 import { COLORS } from "@/constants/themes";
 
-const CATEGORIES = ["Electronics", "Books", "Accessories", "Clothes", "Other"];
-
 export default function AddLostItem() {
   const [image, setImage] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState<"lost" | "found">("lost");
-  const [category, setCategory] = useState("Electronics");
 
   const createLostItem = useMutation(api.lostItems.addLostItem);
 
@@ -43,6 +42,7 @@ export default function AddLostItem() {
     if (!title || !desc || !location) {
       Alert.alert("Missing fields", "Please fill all required fields.");
       return;
+      
     }
 
     try {
@@ -51,11 +51,12 @@ export default function AddLostItem() {
         description: desc,
         location,
         status,
+        category: undefined, 
         imageUrl: image ?? "",
       });
 
-      Alert.alert("Success", "Lost/Found item submitted!");
-      router.back();
+      router.push("/(tabs)/lost-found"  );
+      
     } catch (err) {
       Alert.alert("Error", "Failed to upload item.");
       console.log(err);
@@ -63,7 +64,13 @@ export default function AddLostItem() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 50 }}>
+        <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+    > 
+     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 10 }}>
+      
       <Text style={styles.header}>Report Item</Text>
       <Text style={styles.subheader}>Help others by reporting lost or found items</Text>
 
@@ -81,7 +88,6 @@ export default function AddLostItem() {
 
       {/* Form Fields */}
       <View style={styles.formCard}>
-        {/* Title */}
         <Text style={styles.label}>Item Title *</Text>
         <TextInput
           style={styles.input}
@@ -90,7 +96,6 @@ export default function AddLostItem() {
           onChangeText={setTitle}
         />
 
-        {/* Description */}
         <Text style={styles.label}>Description *</Text>
         <TextInput
           style={[styles.input, { height: 80 }]}
@@ -100,7 +105,6 @@ export default function AddLostItem() {
           onChangeText={setDesc}
         />
 
-        {/* Location */}
         <Text style={styles.label}>Location *</Text>
         <TextInput
           style={styles.input}
@@ -124,36 +128,18 @@ export default function AddLostItem() {
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* Category */}
-        <Text style={styles.label}>Category</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {CATEGORIES.map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[styles.categoryChip, category === c && styles.categoryChipActive]}
-              onPress={() => setCategory(c)}
-            >
-              <Text
-                style={[styles.categoryText, category === c && styles.categoryTextActive]}
-              >
-                {c}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
       </View>
 
-      {/* Submit Button */}
       <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
         <Text style={styles.submitText}>Submit Item</Text>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F9FC", padding: 20 },
+  container: { flex: 1, backgroundColor: "#F7F9FC", padding: 20 ,},
 
   header: { fontSize: 26, fontWeight: "700", color: "#222", marginBottom: 4 },
   subheader: { color: "#666", marginBottom: 20 },
@@ -167,11 +153,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginBottom: 20,
   },
-  previewImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 14,
-  },
+  previewImage: { width: "100%", height: "100%", borderRadius: 14 },
   imageText: { color: "#666", marginTop: 8, fontWeight: "500" },
 
   formCard: {
@@ -204,18 +186,6 @@ const styles = StyleSheet.create({
   statusText: { color: "#555" },
   statusTextActive: { color: "#fff" },
 
-  categoryChip: {
-    backgroundColor: "#F1F3F6",
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 18,
-    marginRight: 10,
-    marginTop: 10,
-  },
-  categoryChipActive: { backgroundColor: COLORS.primary },
-  categoryText: { color: "#444" },
-  categoryTextActive: { color: "#fff" },
-
   submitBtn: {
     backgroundColor: COLORS.primary,
     paddingVertical: 16,
@@ -223,9 +193,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 40,
   },
-  submitText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-  },
+  submitText: { color: "#fff", fontSize: 18, fontWeight: "700" },
 });

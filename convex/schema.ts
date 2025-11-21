@@ -56,32 +56,29 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
   })
     .index("by_post", ["postId"])
-    .index("by_user_and_post", ["userId", "postId"]),
+    .index("by_user_and_post", ["userId", "postId"])
+    .index("by_user", ["userId"]),
+
 
   /*───────────────────────────────
    🔹 Comments Table
   ───────────────────────────────*/
-comments: defineTable({
-  userId: v.id("users"),
+  comments: defineTable({
+    userId: v.id("users"),
 
-  targetId: v.union(
-    v.id("posts"),
-    v.id("marketplacePosts")
-  ),
+    targetId: v.union(v.id("posts"), v.id("marketplacePosts")),
 
-  targetType: v.string(), // "post" | "marketplace"
+    targetType: v.string(), // "post" | "marketplace"
 
-  content: v.string(),
-  createdAt: v.number(),
+    content: v.string(),
+    createdAt: v.number(),
 
-  parentId: v.optional(v.id("comments")), // reply threads
-  mentions: v.optional(v.array(v.id("users"))),
-  editedAt: v.optional(v.number()),
-})
-.index("by_target", ["targetId"])
-.index("by_parent", ["parentId"]),
-
-
+    parentId: v.optional(v.id("comments")), // reply threads
+    mentions: v.optional(v.array(v.id("users"))),
+    editedAt: v.optional(v.number()),
+  })
+    .index("by_target", ["targetId"])
+    .index("by_parent", ["parentId"]),
 
   /*───────────────────────────────
    🔹 Follows Table
@@ -192,6 +189,15 @@ comments: defineTable({
     .index("by_status", ["status"])
     .index("by_reporter", ["reporterId"])
     .index("by_created", ["createdAt"]),
+  reunitedEvents: defineTable({
+    itemId: v.id("lostItems"),
+    reporterId: v.id("users"),
+    reporterName: v.string(),
+    reporterImage: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_reporter", ["reporterId"])
+    .index("by_item", ["itemId"]),
 
   marketplacePosts: defineTable({
     /*───────────────────────────────
@@ -252,21 +258,20 @@ comments: defineTable({
     .index("by_type", ["type"])
     .index("by_createdAt", ["createdAt"]),
 
-// marketplaceComments: defineTable({
-//   postId: v.id("marketplacePosts"),
-//   userId: v.id("users"),
-//   username: v.string(),
-//   userImage: v.optional(v.string()),
-//   text: v.string(),
-//   createdAt: v.number(),
+  // marketplaceComments: defineTable({
+  //   postId: v.id("marketplacePosts"),
+  //   userId: v.id("users"),
+  //   username: v.string(),
+  //   userImage: v.optional(v.string()),
+  //   text: v.string(),
+  //   createdAt: v.number(),
 
-//   // optional fields for replies, mentions, edits
-//   parentId: v.optional(v.id("marketplaceComments")),
-//   mentions: v.optional(v.array(v.id("users"))),
-//   editedAt: v.optional(v.number()),
-// })
-//   .index("by_post", ["postId"])
-//   .index("by_parent", ["parentId"])
-//   .index("by_user", ["userId"])
-
- });
+  //   // optional fields for replies, mentions, edits
+  //   parentId: v.optional(v.id("marketplaceComments")),
+  //   mentions: v.optional(v.array(v.id("users"))),
+  //   editedAt: v.optional(v.number()),
+  // })
+  //   .index("by_post", ["postId"])
+  //   .index("by_parent", ["parentId"])
+  //   .index("by_user", ["userId"])
+});

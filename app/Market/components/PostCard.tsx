@@ -1,3 +1,4 @@
+import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { MotiView } from "moti";
@@ -13,9 +14,8 @@ import {
 } from "react-native";
 import type { ActionSheetRef } from "react-native-actions-sheet";
 import ActionSheet from "react-native-actions-sheet";
-import CommentsModal from "../../../components/CommentsModal"; // ✅ ADD THIS
+import CommentsModal from "../../../components/CommentsModal";
 import { COLORS } from "../../../constants/themes";
-import { Id } from "@/convex/_generated/dataModel";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -33,10 +33,17 @@ type Props = {
     imageUrl?: string;
     type: string;
     location?: string;
-    interestedUsers?: (string | undefined)[];
+  interestedUsers?: (
+  | {
+      _id: string;
+      fullname: string;
+      image?: string;
+    }
+  | null
+)[];
   };
   onLearnMore?: (post?: any) => void;
-  interestedAvatars?: (string | undefined)[];
+  interestedAvatars?: string[];
   currentUserId?: string;
   onEdit?: (postId: string) => void;
   onDelete?: (postId: string) => void;
@@ -53,7 +60,6 @@ export default function PostCard({
   const isSelf = post.creatorId === currentUserId;
   const actionSheetRef = useRef<ActionSheetRef>(null);
 
-  // ✅ COMMENT MODAL STATE
   const [commentsVisible, setCommentsVisible] = useState(false);
 
   const handleEditSelected = () => {
@@ -65,6 +71,10 @@ export default function PostCard({
     actionSheetRef.current?.hide();
     onDelete?.(post._id);
   };
+
+  /* ============================================================
+     CARD UI
+  ============================================================= */
 
   return (
     <>
@@ -79,6 +89,7 @@ export default function PostCard({
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
           android_ripple={{ color: "rgba(0,0,0,0.06)" }}
         >
+          {/* OPTIONS BUTTON */}
           {isSelf && (
             <View style={styles.actionBar}>
               <Pressable onPress={() => actionSheetRef.current?.show()}>
@@ -91,6 +102,7 @@ export default function PostCard({
             </View>
           )}
 
+          {/* HEADER IMAGE */}
           {post.imageUrl && (
             <View style={styles.imageWrap}>
               <Image source={{ uri: post.imageUrl }} style={styles.image} />
@@ -103,6 +115,7 @@ export default function PostCard({
             </View>
           )}
 
+          {/* CONTENT */}
           <View style={styles.content}>
             <Text style={styles.title} numberOfLines={2}>
               {post.title}
@@ -112,6 +125,7 @@ export default function PostCard({
               {post.description}
             </Text>
 
+            {/* TAGS */}
             <View style={styles.tagsRow}>
               {(post.tags ?? []).slice(0, 6).map((t) => (
                 <View key={t} style={styles.chip}>
@@ -120,7 +134,9 @@ export default function PostCard({
               ))}
             </View>
 
+            {/* META ROW */}
             <View style={styles.metaRow}>
+              {/* LEFT: CREATOR */}
               <View style={styles.creatorRow}>
                 {post.creatorImage ? (
                   <Image
@@ -140,31 +156,42 @@ export default function PostCard({
                   <Text style={styles.creatorMeta}>
                     {new Date(post.createdAt).toLocaleDateString()}
                   </Text>
-
-                  <View style={{ flexDirection: "row", marginTop: 2 }}>
-                    <Ionicons
-                      name="location-outline"
-                      size={12}
-                      color={COLORS.primary}
-                    />
-                    <Text style={[styles.creatorMeta, { marginLeft: 4 }]}>
-                      {post.location ?? "Remote"}
-                    </Text>
-                  </View>
                 </View>
               </View>
 
-              {/* COMMENT BUTTON */}
-              <TouchableOpacity
-                onPress={() => setCommentsVisible(true)}
-                style={styles.iconBtn}
-              >
-                <Ionicons
-                  name="chatbubble-outline"
-                  size={18}
-                  color={COLORS.primary}
-                />
-              </TouchableOpacity>
+              {/* RIGHT: INTERESTED MEMBERS + COMMENTS */}
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                {/* INTERESTED AVATARS */}
+                <View style={styles.avatarRow}>
+                  {interestedAvatars.slice(0, 4).map((img, idx) => (
+                    <Image
+                      key={idx}
+                      source={{ uri: img || "https://i.pravatar.cc/300" }}
+                      style={styles.smallAvatar}
+                    />
+                  ))}
+
+                  {interestedAvatars.length > 4 && (
+                    <View style={styles.moreCircle}>
+                      <Text style={styles.moreText}>
+                        +{interestedAvatars.length - 4}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* COMMENT BUTTON */}
+                <TouchableOpacity
+                  onPress={() => setCommentsVisible(true)}
+                  style={styles.iconBtn}
+                >
+                  <Ionicons
+                    name="chatbubble-outline"
+                    size={18}
+                    color={COLORS.primary}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Pressable>
@@ -187,7 +214,7 @@ export default function PostCard({
             style={sheetStyles.sheetOption}
             onPress={handleDeleteSelected}
           >
-            <Ionicons name="trash-outline" size={20} color={"red"} />
+            <Ionicons name="trash-outline" size={20} color="red" />
             <Text style={[sheetStyles.sheetText, { color: "red" }]}>
               Delete Post
             </Text>
@@ -207,8 +234,7 @@ export default function PostCard({
         </View>
       </ActionSheet>
 
-      {/* ⭐ COMMENTS MODAL */}
-   
+      {/* COMMENTS MODAL */}
       <CommentsModal
         targetId={post._id as unknown as Id<"marketplacePosts">}
         targetType="marketplace"
@@ -219,7 +245,9 @@ export default function PostCard({
   );
 }
 
-/* ---------------- STYLES ---------------- */
+/* ============================================================
+   STYLES
+============================================================ */
 const styles = StyleSheet.create({
   wrapper: { width: CARD_WIDTH, alignSelf: "center", marginVertical: 8 },
 
@@ -251,6 +279,7 @@ const styles = StyleSheet.create({
   description: { color: COLORS.textSecondary, marginTop: 4 },
 
   tagsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
+
   chip: {
     backgroundColor: COLORS.surfaceLight,
     paddingHorizontal: 10,
@@ -278,32 +307,57 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   creatorInitial: { fontSize: 18, fontWeight: "800", color: COLORS.primary },
-
   creatorName: { fontSize: 14, fontWeight: "700" },
   creatorMeta: { fontSize: 12, color: COLORS.textSecondary },
 
-iconBtn: {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  backgroundColor: "#fff",
-  borderWidth: 1,
-  borderColor: "rgba(0,0,0,0.1)",
+  avatarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 4,
+  },
+  smallAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: -6,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
 
-  justifyContent: "center",
-  alignItems: "center",
+  moreCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: -6,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  moreText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
 
-  shadowColor: "#000",
-  shadowOpacity: 0.06,
-  shadowRadius: 4,
-  shadowOffset: { width: 0, height: 1 },
-  elevation: 2,
-}
-
-
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 2,
+    marginLeft: 8,
+  },
 });
 
-/* ActionSheet Styles */
+/* ============================================================
+   ACTION SHEET STYLES
+============================================================ */
 export const sheetStyles = StyleSheet.create({
   sheetContainer: {
     padding: 20,

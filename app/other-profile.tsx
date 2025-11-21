@@ -82,6 +82,7 @@ export default function OtherUserProfile() {
           followers={user.followers}
           following={user.following}
           posts={user.posts}
+          userId={user._id}
         />
 
         {/* FOLLOW BUTTON */}
@@ -142,11 +143,17 @@ export default function OtherUserProfile() {
         <View style={styles.postsGrid}>
           {userPosts?.length ? (
             userPosts.map((p) => (
-              <Image
+              <TouchableOpacity
                 key={p._id}
-                source={{ uri: p.imageUrl }}
-                style={styles.postImage}
-              />
+                onPress={() =>
+                  router.push({
+                    pathname: "/post-details",
+                    params: { postId: p._id },
+                  })
+                }
+              >
+                <Image source={{ uri: p.imageUrl }} style={styles.postImage} />
+              </TouchableOpacity>
             ))
           ) : (
             <View style={styles.noPostsBox}>

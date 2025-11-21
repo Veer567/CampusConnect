@@ -16,6 +16,7 @@ import type * as lostItems from "../lostItems.js";
 import type * as marketplace from "../marketplace.js";
 import type * as notifications from "../notifications.js";
 import type * as posts from "../posts.js";
+import type * as push from "../push.js";
 import type * as storage from "../storage.js";
 import type * as users from "../users.js";
 
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   marketplace: typeof marketplace;
   notifications: typeof notifications;
   posts: typeof posts;
+  push: typeof push;
   storage: typeof storage;
   users: typeof users;
 }>;

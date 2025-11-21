@@ -3,7 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -31,7 +31,7 @@ export interface CommentType {
     username: string;
     fullname: string;
     image: string | null;
-    _id: Id<"users"> | undefined; // ⭐ Fix here
+    _id: Id<"users"> | undefined;
   };
 }
 
@@ -40,8 +40,6 @@ type Props = {
   targetType: "post" | "marketplace";
   visible: boolean;
   onClose: () => void;
-
-  // ⭐ ADD THESE 3
   currentUserId?: Id<"users">;
   postOwnerId?: Id<"users">;
   onCommentAdded?: () => void;
@@ -57,10 +55,7 @@ export default function CommentsModal({
   onCommentAdded,
 }: Props) {
   const [newComment, setNewComment] = useState("");
-  const [replyTo, setReplyTo] = useState<null | {
-    id: Id<"comments">;
-    username: string;
-  }>(null);
+  const [replyTo, setReplyTo] = useState<null | { id: Id<"comments">; username: string }>(null);
 
   // Load top-level comments
   const comments: CommentType[] =
@@ -71,9 +66,30 @@ export default function CommentsModal({
   const editComment = useMutation(api.comments.editComment);
   const deleteComment = useMutation(api.comments.deleteComment);
 
-  /*-------------------------------------------------
-      SEND COMMENT / SEND REPLY
-  --------------------------------------------------*/
+  /*───────────────────────────────────────────────
+   🔹 Mentions: followers + following
+  ───────────────────────────────────────────────*/
+  const [mentionUsers, setMentionUsers] = useState<any[]>([]);
+  const [showMentionList, setShowMentionList] = useState(false);
+
+  const mentionList = useQuery(api.users.getMentionUsers);
+
+  useEffect(() => {
+    if (mentionList) setMentionUsers(mentionList);
+  }, [mentionList]);
+
+  // Detect "@" and open mention list
+  const handleTyping = (text: string) => {
+    setNewComment(text);
+
+    if (text.endsWith("@")) {
+      setShowMentionList(true);
+    }
+  };
+
+  /*───────────────────────────────────────────────
+   🔹 SEND COMMENT OR REPLY
+  ───────────────────────────────────────────────*/
   const handleSend = async () => {
     if (!newComment.trim()) return;
 
@@ -88,6 +104,7 @@ export default function CommentsModal({
 
     setNewComment("");
     setReplyTo(null);
+    setShowMentionList(false);
   };
 
   return (
@@ -96,6 +113,7 @@ export default function CommentsModal({
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
         >
           {/* HEADER */}
           <View style={styles.header}>
@@ -114,30 +132,47 @@ export default function CommentsModal({
               <CommentItem
                 comment={item}
                 onReply={(comment: CommentType) =>
-                  setReplyTo({
-                    id: comment._id,
-                    username: comment.user.username,
-                  })
+                  setReplyTo({ id: comment._id, username: comment.user.username })
                 }
-                onEdit={async (comment: CommentType, text: string) =>
+                onEdit={(comment: CommentType, text: string) =>
                   editComment({ commentId: comment._id, text })
                 }
-                onDelete={async (comment: CommentType) =>
+                onDelete={(comment: CommentType) =>
                   deleteComment({ commentId: comment._id })
                 }
               />
             )}
           />
 
-          {/* REPLY INDICATOR */}
+          {/* REPLY BANNER */}
           {replyTo && (
             <View style={styles.replyBanner}>
-              <Text style={styles.replyText}>
-                Replying to @{replyTo.username}
-              </Text>
+              <Text style={styles.replyText}>Replying to @{replyTo.username}</Text>
               <TouchableOpacity onPress={() => setReplyTo(null)}>
                 <Ionicons name="close-circle" size={20} color={COLORS.red} />
               </TouchableOpacity>
+            </View>
+          )}
+
+          {/* MENTION LIST */}
+          {showMentionList && (
+            <View style={styles.mentionList}>
+              {mentionUsers.map((u) => (
+                <TouchableOpacity
+                  key={u._id}
+                  style={styles.mentionItem}
+                  onPress={() => {
+                    setNewComment(prev => prev + u.username + " ");
+                    setShowMentionList(false);
+                  }}
+                >
+                  <Ionicons name="person-circle-outline" size={26} color={COLORS.primary} />
+                  <View style={{ marginLeft: 10 }}>
+                    <Text style={styles.mentionName}>{u.fullname}</Text>
+                    <Text style={styles.mentionUsername}>@{u.username}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
 
@@ -147,13 +182,10 @@ export default function CommentsModal({
               style={styles.input}
               placeholder="Add a comment..."
               value={newComment}
-              onChangeText={setNewComment}
+              onChangeText={handleTyping}
             />
 
-            <TouchableOpacity
-              onPress={handleSend}
-              disabled={!newComment.trim()}
-            >
+            <TouchableOpacity onPress={handleSend} disabled={!newComment.trim()}>
               <Ionicons
                 name="send"
                 size={24}
@@ -167,6 +199,9 @@ export default function CommentsModal({
   );
 }
 
+/*───────────────────────────────────────────────
+ 🔹 STYLES
+───────────────────────────────────────────────*/
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
 
@@ -186,8 +221,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
+  replyText: { color: COLORS.primary, fontWeight: "500" },
 
-  replyText: { color: COLORS.primary },
+  mentionList: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 70,
+    backgroundColor: "#fff",
+    paddingVertical: 6,
+    maxHeight: 220,
+    borderTopWidth: 1,
+    borderColor: "#eee",
+  },
+
+  mentionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+  },
+  mentionName: { fontSize: 14, fontWeight: "600" },
+  mentionUsername: { fontSize: 12, color: "#666" },
 
   inputContainer: {
     flexDirection: "row",

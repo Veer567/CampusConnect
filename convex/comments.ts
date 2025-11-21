@@ -1,12 +1,17 @@
 // convex/comments.ts
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { mutation, query } from "./_generated/server";
 
 /*───────────────────────────────────────────────
  🔹 Helper: load correct target (post or marketplacePost)
 ───────────────────────────────────────────────*/
-async function getTarget(ctx: any, targetType: "post" | "marketplace", targetId: any) {
+async function getTarget(
+  ctx: any,
+  targetType: "post" | "marketplace",
+  targetId: any
+) {
   const target = await ctx.db.get(targetId);
   if (!target) return null;
   return { ...target, type: targetType };
@@ -28,57 +33,66 @@ export const addComment = mutation({
 
     const me = await ctx.db
       .query("users")
-      .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
+
     if (!me) throw new Error("User not found.");
-    const userId = me._id;
+
+    const now = Date.now();
 
     // Insert comment
     const commentId = await ctx.db.insert("comments", {
-      userId,
+      userId: me._id,
       targetId,
       targetType,
       content,
       parentId,
-      createdAt: Date.now(),
+      createdAt: now,
     });
 
     const target = await getTarget(ctx, targetType, targetId);
     if (!target) return commentId;
 
-    /* Update post comment count (posts only) */
+    // Update post comments count
     if (targetType === "post") {
-      await ctx.db.patch(targetId as Id<"posts">, {
+      await ctx.db.patch(targetId, {
         comments: (target.comments ?? 0) + 1,
       });
     }
 
-    /* Notifications */
-    if (targetType === "post") {
-      // notify post owner
-      if (String(target.userId) !== String(userId)) {
-        await ctx.db.insert("notifications", {
-          receiverId: target.userId,
-          senderId: userId,
-          type: "comment",
-          postId: targetId as Id<"posts">, // SAFE CAST
-          commentId,
-          createdAt: Date.now(),
-        });
-      }
-    } else {
-      // marketplace post
-      if (String(target.creatorId) !== String(userId)) {
-        await ctx.db.insert("notifications", {
-          receiverId: target.creatorId,
-          senderId: userId,
-          type: "comment",
-          commentId,
-          createdAt: Date.now(),
-        });
-      }
-    }
+    // Determine who is notified
+    const receiverId = targetType === "post" ? target.userId : target.creatorId;
 
+    // no self notifications
+    if (String(receiverId) !== String(me._id)) {
+      await ctx.db.insert("notifications", {
+        receiverId,
+        senderId: me._id,
+        type: "comment",
+        postId: targetType === "post" ? (targetId as Id<"posts">) : undefined,
+        commentId,
+        createdAt: now,
+      });
+
+      // PUSH Notification
+      await ctx.runMutation(api.push.sendPushNotification, {
+        userId: receiverId,
+        title: `${me.username} commented on your ${
+          targetType === "post" ? "post" : "listing"
+        }`,
+        body: content.length > 80 ? content.slice(0, 80) + "…" : content,
+        data: {
+          type: targetType === "post" ? "comment_post" : "comment_marketplace",
+          postId: targetType === "post" ? (targetId as Id<"posts">) : undefined,
+          marketplaceId:
+            targetType === "marketplace"
+              ? (targetId as Id<"marketplacePosts">)
+              : undefined,
+          commentId,
+        },
+      });
+    }
+    
     return commentId;
   },
 });
@@ -93,19 +107,19 @@ export const getComments = query({
   handler: async (ctx, { targetId }) => {
     const all = await ctx.db
       .query("comments")
-      .withIndex("by_target", q => q.eq("targetId", targetId))
+      .withIndex("by_target", (q) => q.eq("targetId", targetId))
       .order("desc")
       .collect();
 
-    const top = all.filter(c => !c.parentId);
+    const top = all.filter((c) => !c.parentId);
 
     return Promise.all(
-      top.map(async c => {
+      top.map(async (c) => {
         const user = await ctx.db.get(c.userId);
 
         const replies = await ctx.db
           .query("comments")
-          .withIndex("by_parent", q => q.eq("parentId", c._id))
+          .withIndex("by_parent", (q) => q.eq("parentId", c._id))
           .collect();
 
         return {
@@ -131,12 +145,12 @@ export const getReplies = query({
   handler: async (ctx, { parentId }) => {
     const replies = await ctx.db
       .query("comments")
-      .withIndex("by_parent", q => q.eq("parentId", parentId))
+      .withIndex("by_parent", (q) => q.eq("parentId", parentId))
       .order("asc")
       .collect();
 
     return Promise.all(
-      replies.map(async r => {
+      replies.map(async (r) => {
         const user = await ctx.db.get(r.userId);
         return {
           ...r,
@@ -163,7 +177,7 @@ export const editComment = mutation({
 
     const me = await ctx.db
       .query("users")
-      .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
     if (!me) throw new Error("User not found.");
     const userId = me._id;
@@ -195,7 +209,7 @@ export const deleteComment = mutation({
 
     const me = await ctx.db
       .query("users")
-      .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
     if (!me) throw new Error("User not found.");
     const userId = me._id;
@@ -224,7 +238,7 @@ export const deleteComment = mutation({
     // delete replies
     const replies = await ctx.db
       .query("comments")
-      .withIndex("by_parent", q => q.eq("parentId", commentId))
+      .withIndex("by_parent", (q) => q.eq("parentId", commentId))
       .collect();
 
     for (const r of replies) {

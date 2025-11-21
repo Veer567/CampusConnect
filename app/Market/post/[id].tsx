@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,7 +23,6 @@ export default function MarketplacePostDetail() {
   const { id, scrollTo } = useLocalSearchParams();
   const router = useRouter();
 
-  /* ---------------- AUTH ---------------- */
   const { userId: clerkId } = useAuth();
   const me = useQuery(
     api.users.getUserByClerkId,
@@ -31,7 +31,6 @@ export default function MarketplacePostDetail() {
 
   const safeUserId = me?._id;
 
-  /* ---------------- POST DATA ---------------- */
   const post = useQuery(
     api.marketplace.getMarketplacePostById,
     id ? { id: id as any } : "skip"
@@ -58,15 +57,19 @@ export default function MarketplacePostDetail() {
       </View>
     );
 
-  /* ---------- CONDITIONS ---------- */
   const isSelf = safeUserId && String(post.creatorId) === String(safeUserId);
 
   const isJoined =
     safeUserId &&
-    Array.isArray(post.interestedUsers) &&
-    post.interestedUsers.some((u: any) => String(u._id) === String(safeUserId));
+    post.interestedUsers?.some(
+      (u: any) => String(u._id) === String(safeUserId)
+    );
 
-  /* ---------------- JOIN TEAM ---------------- */
+  const navigateBack = () => {
+    const tab = post.type?.toLowerCase() || "project";
+    router.replace(`/marketplace?tab=${tab}`);
+  };
+
   const handleJoinToggle = async () => {
     Animated.sequence([
       Animated.timing(joinAnim, {
@@ -84,7 +87,6 @@ export default function MarketplacePostDetail() {
     await toggleInterest({ postId: post._id as Id<"marketplacePosts"> });
   };
 
-  /* ---------------- CHAT WITH CREATOR ---------------- */
   const handleMessageCreator = async () => {
     if (!safeUserId || safeUserId === post.creatorId) return;
 
@@ -92,46 +94,34 @@ export default function MarketplacePostDetail() {
       otherUserId: post.creatorId as Id<"users">,
     });
 
-    if (!conv) return;
-
     const conversationId =
-      typeof conv === "object" && "_id" in conv ? conv._id : conv;
+      typeof conv === "object" && conv && "_id" in conv ? conv._id : conv;
 
     router.push(
       `/chat-screen?conversationId=${conversationId}&currentUserId=${safeUserId}&otherUserId=${post.creatorId}`
     );
   };
 
-  /* =============================================================
-      UI STARTS HERE
-  =============================================================== */
   return (
     <ScrollView
       ref={scrollRef}
       style={styles.container}
       showsVerticalScrollIndicator={false}
     >
-      <TouchableOpacity
-        onPress={() => router.back()}
-        style={{
-          position: "absolute",
-          top: 40,
-          left: 16,
-          zIndex: 20,
-          backgroundColor: "rgba(0,0,0,0.35)",
-          padding: 10,
-          borderRadius: 30,
-        }}
-      >
-        <Ionicons name="arrow-back" size={22} color="#fff" />
+      {/* BACK BUTTON */}
+      <TouchableOpacity onPress={navigateBack} style={styles.backBtn}>
+        <Ionicons name="arrow-back" size={24} color="#fff" />
       </TouchableOpacity>
-      {/* HEADER IMAGE */}
-      <Image
-        source={{ uri: post.imageUrl || "https://via.placeholder.com/400" }}
-        style={styles.headerImage}
-      />
 
-      {/* TYPE PILL */}
+      {/* HERO IMAGE */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: post.imageUrl || "https://via.placeholder.com/400" }}
+          style={styles.headerImage}
+        />
+      </View>
+
+      {/* TYPE LABEL */}
       <View style={styles.typePill}>
         <Text style={styles.typeText}>{post.type.toUpperCase()}</Text>
       </View>
@@ -139,7 +129,7 @@ export default function MarketplacePostDetail() {
       {/* TITLE */}
       <Text style={styles.title}>{post.title}</Text>
 
-      {/* ------------ CREATOR CARD ------------ */}
+      {/* CREATOR CARD */}
       <View style={styles.creatorCard}>
         <Image
           source={{ uri: post.creatorImage || "https://i.pravatar.cc/200" }}
@@ -151,7 +141,6 @@ export default function MarketplacePostDetail() {
           <Text style={styles.creatorCardRole}>Organizer</Text>
         </View>
 
-        {/* CHAT BUTTON (ONLY OTHERS CAN CHAT) */}
         {!isSelf && (
           <TouchableOpacity
             style={styles.messageBtn}
@@ -159,7 +148,7 @@ export default function MarketplacePostDetail() {
           >
             <Ionicons
               name="chatbubble-ellipses-outline"
-              size={20}
+              size={18}
               color={COLORS.primary}
             />
             <Text style={styles.messageBtnText}>Message</Text>
@@ -167,7 +156,7 @@ export default function MarketplacePostDetail() {
         )}
       </View>
 
-      {/* ------------ STATS ------------ */}
+      {/* STATS */}
       <View style={styles.statsBox}>
         <View style={styles.statCol}>
           <Ionicons name="people-outline" size={18} color={COLORS.primary} />
@@ -178,8 +167,12 @@ export default function MarketplacePostDetail() {
         </View>
 
         <View style={[styles.statCol, styles.divider]}>
-          <Ionicons name="sparkles" size={18} color={COLORS.secondary} />
-          <Text style={styles.statNumber}>{(post.tags ?? []).length}</Text>
+          <Ionicons
+            name="sparkles-outline"
+            size={18}
+            color={COLORS.secondary}
+          />
+          <Text style={styles.statNumber}>{post.tags?.length ?? 0}</Text>
           <Text style={styles.statLabel}>Skills</Text>
         </View>
 
@@ -190,16 +183,17 @@ export default function MarketplacePostDetail() {
         </View>
       </View>
 
-      {/* ------------ ABOUT ------------ */}
+      {/* ABOUT */}
       <Text style={styles.sectionTitle}>About</Text>
       <Text style={styles.description}>{post.description}</Text>
 
+      {/* SKILLS */}
       {/* ------------ SKILLS ------------ */}
-      {(post.tags ?? []).length > 0 && (
+      {(post.tags?.length ?? 0) > 0 && (
         <>
           <Text style={styles.sectionTitle}>Required Skills</Text>
           <View style={styles.tagsRow}>
-            {(post.tags ?? []).map((t) => (
+            {(post.tags ?? []).map((t: string) => (
               <View key={t} style={styles.skillPill}>
                 <Text style={styles.skillText}>{t}</Text>
               </View>
@@ -208,7 +202,7 @@ export default function MarketplacePostDetail() {
         </>
       )}
 
-      {/* ------------ INTERESTED MEMBERS ------------ */}
+      {/* INTERESTED AVATARS */}
       <Text style={styles.sectionTitle}>Interested Members</Text>
 
       <View style={styles.avatarRow}>
@@ -223,13 +217,13 @@ export default function MarketplacePostDetail() {
         {(post.interestedUsers ?? []).length > 5 && (
           <View style={styles.moreCircle}>
             <Text style={{ color: "#fff", fontWeight: "700" }}>
-              +{(post.interestedUsers ?? []).length - 5}
+              +{post.interestedUsers.length - 5}
             </Text>
           </View>
         )}
       </View>
 
-      {/* ------------ JOIN BUTTON ------------ */}
+      {/* JOIN BUTTON */}
       {!isSelf && (
         <Animated.View style={{ transform: [{ scale: joinAnim }] }}>
           <TouchableOpacity onPress={handleJoinToggle} style={styles.joinBtn}>
@@ -250,133 +244,156 @@ export default function MarketplacePostDetail() {
   );
 }
 
-/* =============================================================
-      STYLES
-============================================================== */
+/* ========================= STYLES ========================= */
+
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
 
-  container: { flex: 1, backgroundColor: COLORS.background },
+  heroContainer: {
+    width: "100%",
+    height: 260,
+    overflow: "hidden",
+    borderBottomLeftRadius: 26,
+    borderBottomRightRadius: 26,
+    backgroundColor: "#ddd",
+  },
 
   headerImage: {
     width: "100%",
-    height: 240,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    height: "100%",
+    resizeMode: "cover",
+  },
+
+  backBtn: {
+    position: "absolute",
+    top: Platform.OS === "android" ? 40 : 50,
+    left: 16,
+    zIndex: 20,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    padding: 10,
+    borderRadius: 30,
   },
 
   typePill: {
-    position: "absolute",
-    top: 200,
-    left: 16,
+    marginTop: -20,
+    marginLeft: 16,
+    alignSelf: "flex-start",
     backgroundColor: COLORS.secondary,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
   },
-  typeText: { fontWeight: "700", color: "#fff" },
+
+  typeText: { color: "#fff", fontWeight: "700" },
 
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "800",
-    marginTop: 24,
-    marginHorizontal: 16,
     color: COLORS.text,
+    marginTop: 14,
+    marginLeft: 16,
+    marginRight: 16,
   },
 
-  /* CREATOR CARD */
   creatorCard: {
     marginHorizontal: 16,
     marginTop: 20,
     padding: 16,
-    borderRadius: 20,
     backgroundColor: COLORS.surface,
+    borderRadius: 18,
     flexDirection: "row",
     alignItems: "center",
     elevation: 3,
   },
+
   creatorCardAvatar: {
     width: 52,
     height: 52,
     borderRadius: 26,
     marginRight: 14,
   },
-  creatorCardName: { fontSize: 17, fontWeight: "700", color: COLORS.text },
-  creatorCardRole: { fontSize: 14, color: COLORS.textSecondary, marginTop: 2 },
 
-  /* MESSAGE BUTTON */
+  creatorCardName: { fontSize: 17, fontWeight: "700", color: COLORS.text },
+
+  creatorCardRole: { fontSize: 14, color: COLORS.textSecondary },
+
   messageBtn: {
     flexDirection: "row",
-    backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: 14,
+    alignItems: "center",
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
+    backgroundColor: COLORS.surfaceLight,
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: "center",
     gap: 6,
   },
+
   messageBtnText: {
     fontSize: 14,
     fontWeight: "700",
     color: COLORS.primary,
   },
 
-  /* STATS */
   statsBox: {
     marginHorizontal: 16,
-    marginTop: 20,
+    marginTop: 22,
+    padding: 16,
     backgroundColor: COLORS.surface,
     borderRadius: 16,
-    padding: 14,
     flexDirection: "row",
     justifyContent: "space-between",
   },
+
   statCol: { flex: 1, alignItems: "center" },
+
   statNumber: { fontSize: 18, fontWeight: "700", marginTop: 6 },
+
   statLabel: { color: COLORS.textSecondary, marginTop: 4 },
+
   divider: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderColor: COLORS.surfaceLight,
   },
 
-  /* ABOUT */
   sectionTitle: {
-    marginHorizontal: 16,
-    marginTop: 20,
-    fontSize: 16,
+    marginTop: 26,
+    marginLeft: 16,
+    fontSize: 17,
     fontWeight: "800",
     color: COLORS.text,
   },
+
   description: {
     marginHorizontal: 16,
     marginTop: 6,
-    color: COLORS.textSecondary,
     lineHeight: 20,
+    color: COLORS.textSecondary,
   },
-
-  /* SKILLS */
-  skillPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#fff",
-    borderRadius: 999,
-    borderColor: COLORS.primary,
-    borderWidth: 1,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  skillText: { color: COLORS.primary, fontWeight: "700" },
 
   tagsRow: {
-    marginHorizontal: 16,
     marginTop: 10,
+    marginHorizontal: 16,
     flexDirection: "row",
     flexWrap: "wrap",
   },
 
-  /* INTERESTED MEMBERS */
+  skillPill: {
+    backgroundColor: "#fff",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 10,
+    marginBottom: 10,
+  },
+
+  skillText: { color: COLORS.primary, fontWeight: "700" },
+
   avatarRow: {
     marginHorizontal: 16,
     marginTop: 10,
@@ -390,6 +407,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     marginRight: 8,
   },
+
   moreCircle: {
     width: 44,
     height: 44,
@@ -399,13 +417,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* JOIN BUTTON */
   joinBtn: {
-    marginTop: 20,
+    marginTop: 30,
     marginHorizontal: 16,
     borderRadius: 18,
     overflow: "hidden",
   },
-  joinGradient: { paddingVertical: 16, alignItems: "center" },
+
+  joinGradient: {
+    paddingVertical: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   joinText: { color: "#fff", fontSize: 17, fontWeight: "800" },
 });

@@ -1,3 +1,4 @@
+import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 
@@ -62,22 +63,74 @@ export const createMarketplacePost = mutation(
 -----------------------------------------------------------*/
 export const getMarketplacePosts = query(
   async (ctx, input: { type: "project" | "hackathon" | "startup" }) => {
-    return await ctx.db
+    const posts = await ctx.db
       .query("marketplacePosts")
       .withIndex("by_type", (q) => q.eq("type", input.type))
       .order("desc")
       .collect();
+
+    // ⭐ Populate interestedUsers with full user objects
+    const enriched = await Promise.all(
+      posts.map(async (post) => {
+        const interestedUsers = await Promise.all(
+          (post.interestedUsers ?? []).map(async (uId) => {
+            const user = await ctx.db.get(uId);
+            return user
+              ? {
+                  _id: user._id,
+                  fullname: user.fullname,
+                  image: user.image,
+                }
+              : null;
+          })
+        );
+
+        return {
+          ...post,
+          interestedUsers: interestedUsers.filter(Boolean),
+        };
+      })
+    );
+
+    return enriched;
   }
 );
+
 
 /*----------------------------------------------------------
   📌 Get post by ID
 -----------------------------------------------------------*/
-export const getMarketplacePostById = query(
-  async (ctx, input: { id: Id<"marketplacePosts"> }) => {
-    return await ctx.db.get(input.id);
-  }
-);
+export const getMarketplacePostById = query({
+  args: { id: v.id("marketplacePosts") },
+  handler: async (ctx, { id }) => {
+    const post = await ctx.db.get(id);
+    if (!post) return null;
+
+    // Fetch creator
+    const creator = await ctx.db.get(post.creatorId);
+
+    // Fetch interested users as full objects
+    const interestedUsers =
+      await Promise.all(
+        (post.interestedUsers ?? []).map(async (uId) => {
+          const user = await ctx.db.get(uId);
+          return user ? {
+            _id: user._id,
+            fullname: user.fullname,
+            image: user.image,
+          } : null;
+        })
+      ).then((list) => list.filter(Boolean));
+
+    return {
+      ...post,
+      creatorName: creator?.fullname ?? "Unknown",
+      creatorImage: creator?.image ?? null,
+      interestedUsers,
+    };
+  },
+});
+
 
 /*----------------------------------------------------------
   📌 Toggle Interest Button

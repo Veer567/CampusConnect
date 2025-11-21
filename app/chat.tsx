@@ -1,5 +1,3 @@
-// app/(tabs)/chat.tsx
-
 import React from "react";
 import { View, Text, TouchableOpacity, Image } from "react-native";
 import { useQuery } from "convex/react";
@@ -9,11 +7,9 @@ import { useAuth } from "@clerk/clerk-expo";
 import { COLORS } from "@/constants/themes";
 import AppHeader from "@/components/AppHeader";
 
-/** Utility to format time (2m, 3h, Yesterday) */
-function formatTime(timestamp?: number) {
-  if (!timestamp) return "";
-  const now = Date.now();
-  const diff = now - timestamp;
+function formatTime(ts?: number) {
+  if (!ts) return " ";
+  const diff = Date.now() - ts;
 
   const mins = Math.floor(diff / 60000);
   const hrs = Math.floor(diff / 3600000);
@@ -22,32 +18,31 @@ function formatTime(timestamp?: number) {
   if (mins < 1) return "now";
   if (mins < 60) return `${mins}m`;
   if (hrs < 24) return `${hrs}h`;
-  if (days === 1) return "Yesterday";
+  if (days === 1) return "yesterday";
   return `${days}d`;
 }
 
-export default function ChatListScreen() {
+export default function ChatList() {
   const { userId: clerkId } = useAuth();
 
-  // 1️⃣ Load Convex user for this Clerk user
   const me = useQuery(
     api.users.getUserByClerkId,
-    clerkId ? { clerkId } : "skip" // ← FIX
+    clerkId ? { clerkId } : "skip"
   );
 
-  // 2️⃣ Skip until me exists
   const conversations = useQuery(
     api.chat.getMyConversations,
-    me ? {} : "skip" // ← FIX
+    me ? {} : "skip"
   );
 
-  // 3️⃣ Load all users ( needed for avatars + names )
   const users = useQuery(api.users.searchUsers, { q: "" });
+  
+
 
   if (!me || !conversations || !users) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Loading chats...</Text>
+        <Text>Loading chats…</Text>
       </View>
     );
   }
@@ -57,14 +52,11 @@ export default function ChatListScreen() {
       <AppHeader title="Chats" rightIcon="chatbubbles" />
 
       {conversations.map((c) => {
-        // find OTHER user (conv participants)
         const otherUserId = c.participants.find(
           (p: any) => String(p) !== String(me._id)
         );
 
-        const otherUser = users.find(
-          (u: any) => String(u._id) === String(otherUserId)
-        );
+        const other = users.find((u) => String(u._id) === String(otherUserId));
 
         return (
           <TouchableOpacity
@@ -77,41 +69,54 @@ export default function ChatListScreen() {
             style={{
               flexDirection: "row",
               alignItems: "center",
-              paddingVertical: 12,
-              marginBottom: 10,
-              borderBottomWidth: 1.5,
-              borderColor: "#eee",
+              paddingVertical: 14,
+              paddingHorizontal: 12,
+              borderBottomColor: "#f1f1f1",
+              borderBottomWidth: 1,
             }}
           >
-            {/* Avatar */}
-            <Image
-              source={{
-                uri:
-                  otherUser?.image ||
-                  "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-              }}
-              style={{
-                width: 55,
-                height: 55,
-                borderRadius: 30,
-                backgroundColor: "#ddd",
-                marginLeft: 10,
-              }}
-            />
+            {/* Avatar + online dot */}
+            <View style={{ position: "relative" }}>
+              <Image
+                source={{ uri: other?.image ?? "https://cdn-icons-png.flaticon.com/512/149/149071.png" }}
+                style={{
+                  width: 58,
+                  height: 58,
+                  borderRadius: 30,
+                }}
+              />
 
-            {/* DETAILS */}
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={{ fontSize: 18, fontWeight: "600" }}>
-                {otherUser?.fullname || "Unknown User"}
+              <View
+                style={{
+                  width: 13,
+                  height: 13,
+                  borderRadius: 7,
+                  backgroundColor: COLORS.primary,
+                  borderWidth: 2,
+                  borderColor: "#fff",
+                  position: "absolute",
+                  right: -1,
+                  bottom: -1,
+                }}
+              />
+            </View>
+
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <Text style={{ fontSize: 16, fontWeight: "600" }}>
+                {other?.fullname}
               </Text>
-              <Text style={{ color: COLORS.textSecondary, marginTop: 4 }}>
+
+              <Text
+                numberOfLines={1}
+                style={{ color: "#777", marginTop: 4, maxWidth: "92%" }}
+              >
                 {c.lastMessage || "Say hi 👋"}
               </Text>
             </View>
 
             {/* Time + unread badge */}
-            <View style={{ alignItems: "flex-end", marginRight: 10 }}>
-              <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={{ fontSize: 12, color: "#777" }}>
                 {formatTime(c.lastMessageAt)}
               </Text>
 
@@ -119,7 +124,8 @@ export default function ChatListScreen() {
                 <View
                   style={{
                     backgroundColor: COLORS.primary,
-                    paddingHorizontal: 8,
+                    minWidth: 24,
+                    paddingHorizontal: 7,
                     paddingVertical: 2,
                     borderRadius: 12,
                     marginTop: 6,
@@ -128,8 +134,9 @@ export default function ChatListScreen() {
                   <Text
                     style={{
                       color: "#fff",
-                      fontWeight: "600",
-                      fontSize: 12,
+                      fontWeight: "700",
+                      fontSize: 13,
+                      textAlign: "center",
                     }}
                   >
                     {c.unreadCount}

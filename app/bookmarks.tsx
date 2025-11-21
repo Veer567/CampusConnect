@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Share,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,53 +16,39 @@ import AppHeader from "@/components/AppHeader";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 // Responsive helpers
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
-const hp = (p: number) => (height * p) / 100;
 
 // ────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ────────────────────────────────────────────────────────────────
 export default function Bookmarks() {
-  // ✅ Fetch user bookmarks from Convex
+  const router = useRouter();
+
+  // Fetch bookmarks
   const bookmarks = useQuery(api.bookmark.getBookmarks);
   const toggleBookmark = useMutation(api.bookmark.toggleBookmark);
 
-  // ─────────────── SHARE HANDLER ───────────────
-  const handleShare = async (item: any) => {
-    try {
-      await Share.share({
-        message: `📌 ${item.title}\n📅 ${item.eventDate || "TBA"}\n📍 ${
-          item.location || "Unknown"
-        }`,
-      });
-    } catch (error) {
-      console.error("Error sharing:", error);
-    }
-  };
-
-  // ─────────────── REMOVE BOOKMARK HANDLER ───────────────
   const handleRemoveBookmark = async (postId: Id<"posts">) => {
     try {
-      await toggleBookmark({ postId }); // Removes the bookmark
+      await toggleBookmark({ postId });
       Toast.show({
         type: "info",
-        text1: "Removed from bookmarks ❌",
+        text1: "Removed from bookmarks",
         position: "bottom",
-        visibilityTime: 1500,
       });
     } catch (error) {
-      console.error("Error removing bookmark:", error);
+      console.error("Bookmark remove error:", error);
     }
   };
 
-  // ─────────────── RENDER ───────────────
   return (
     <LinearGradient
-      colors={["#EFF6FF", "#FFFFFF"]}
+      colors={["#F8FAFF", "#FFFFFF"]}
       style={{ flex: 1 }}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -73,92 +58,83 @@ export default function Bookmarks() {
 
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.content}
         >
-          {bookmarks === undefined ? (
-            // Loading state
-            <View style={styles.emptyContainer}>
+          {/* LOADING */}
+          {bookmarks === undefined && (
+            <View style={styles.emptyBox}>
               <Ionicons name="time-outline" size={48} color={COLORS.grey} />
-              <Text style={styles.emptyText}>Loading bookmarks...</Text>
+              <Text style={styles.emptyText}>Loading...</Text>
             </View>
-          ) : bookmarks.length > 0 ? (
-            bookmarks.map((item: any) => (
-              <View key={item._id} style={styles.card}>
-                {/* Event image */}
-                {item.imageUrl && (
-                  <Image source={{ uri: item.imageUrl }} style={styles.image} />
-                )}
+          )}
 
-                {/* Card content */}
-                <View style={styles.cardContent}>
-                  <Text style={styles.title}>{item.title}</Text>
-
-                  {/* Event date */}
-                  {item.eventDate && (
-                    <View style={styles.infoRow}>
-                      <Ionicons
-                        name="calendar-outline"
-                        size={16}
-                        color={COLORS.textSecondary}
-                      />
-                      <Text style={styles.infoText}>{item.eventDate}</Text>
-                    </View>
-                  )}
-
-                  {/* Event location */}
-                  {item.location && (
-                    <View style={styles.infoRow}>
-                      <Ionicons
-                        name="location-outline"
-                        size={16}
-                        color={COLORS.textSecondary}
-                      />
-                      <Text style={styles.infoText}>{item.location}</Text>
-                    </View>
-                  )}
-
-                  {/* Actions */}
-                  <View style={styles.actions}>
-                    {/* Share Button */}
-                    <TouchableOpacity
-                      activeOpacity={0.85}
-                      onPress={() => handleShare(item)}
-                    >
-                      <LinearGradient
-                        colors={[COLORS.primary, COLORS.secondary]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.shareButton}
-                      >
-                        <Ionicons name="share-outline" size={18} color="#fff" />
-                        <Text style={styles.shareText}>Share</Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-
-                    {/* Remove Bookmark Button */}
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() =>
-                        handleRemoveBookmark(item._id as Id<"posts">)
-                      }
-                    >
-                      <Ionicons
-                        name="bookmark"
-                        size={22}
-                        color={COLORS.primary}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            ))
-          ) : (
-            // Empty state
-            <View style={styles.emptyContainer}>
-              <Ionicons name="bookmark-outline" size={64} color={COLORS.grey} />
+          {/* EMPTY */}
+          {bookmarks?.length === 0 && bookmarks !== undefined && (
+            <View style={styles.emptyBox}>
+              <Ionicons name="bookmark-outline" size={60} color={COLORS.grey} />
               <Text style={styles.emptyText}>No bookmarks yet</Text>
             </View>
           )}
+
+          {/* LIST */}
+          {bookmarks?.map((item: any) => (
+            <TouchableOpacity
+              key={item._id}
+              activeOpacity={0.9}
+              style={styles.card}
+              onPress={() =>
+                router.push(`/post-details?postId=${item._id}`)
+              }
+            >
+              {/* Thumbnail */}
+              {item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={styles.thumb} />
+              ) : (
+                <View style={[styles.thumb, { backgroundColor: "#ccc" }]} />
+              )}
+
+              {/* Content */}
+              <View style={styles.info}>
+                <Text style={styles.title} numberOfLines={2}>
+                  {item.title}
+                </Text>
+
+                {item.eventDate ? (
+                  <View style={styles.row}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={14}
+                      color={COLORS.textSecondary}
+                    />
+                    <Text style={styles.meta}>{item.eventDate}</Text>
+                  </View>
+                ) : null}
+
+                {item.location ? (
+                  <View style={styles.row}>
+                    <Ionicons
+                      name="location-outline"
+                      size={14}
+                      color={COLORS.textSecondary}
+                    />
+                    <Text style={styles.meta}>{item.location}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {/* Remove */}
+              <TouchableOpacity
+                onPress={() => handleRemoveBookmark(item._id)}
+                style={styles.removeBtn}
+              >
+                <Ionicons
+                  name="bookmark"
+                  size={22}
+                  color={COLORS.primary}
+                />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
 
         <Toast />
@@ -171,78 +147,67 @@ export default function Bookmarks() {
 // STYLES
 // ────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
+  container: { flex: 1 },
+  content: {
     paddingHorizontal: wp(5),
-    paddingBottom: hp(10),
+    paddingTop: 10,
+    paddingBottom: 30,
   },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: wp(4),
-    marginBottom: hp(2),
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-    overflow: "hidden",
-    borderWidth: 0.5,
-    borderColor: "#f0f0f0",
-    marginTop: hp(2),
-  },
-  image: {
-    width: "100%",
-    height: hp(23),
-    borderTopLeftRadius: wp(4),
-    borderTopRightRadius: wp(4),
-  },
-  cardContent: {
-    padding: wp(4),
-  },
-  title: {
-    fontSize: wp(4.5),
-    fontWeight: "700",
-    color: COLORS.primary,
-    marginBottom: hp(0.5),
-  },
-  infoRow: {
-    flexDirection: "row",
+
+  /* EMPTY */
+  emptyBox: {
     alignItems: "center",
-    marginVertical: hp(0.3),
-  },
-  infoText: {
-    color: COLORS.textSecondary,
-    fontSize: wp(3.5),
-    marginLeft: wp(1.5),
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: hp(1.5),
-  },
-  shareButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(1),
-    borderRadius: wp(3),
-  },
-  shareText: {
-    color: "#fff",
-    fontSize: wp(3.5),
-    fontWeight: "600",
-    marginLeft: wp(2),
-  },
-  emptyContainer: {
-    alignItems: "center",
-    marginTop: hp(15),
+    marginTop: 80,
   },
   emptyText: {
     color: COLORS.textSecondary,
-    fontSize: wp(4),
-    marginTop: hp(2),
+    fontSize: 16,
+    marginTop: 10,
+  },
+
+  /* CARD */
+  card: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 10,
+    marginBottom: 14,
+    alignItems: "center",
+    elevation: 2,
+  },
+
+  thumb: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    backgroundColor: "#eee",
+  },
+
+  info: {
+    flex: 1,
+    marginLeft: 10,
+  },
+
+  title: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+
+  meta: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginLeft: 4,
+  },
+
+  removeBtn: {
+    padding: 4,
   },
 });

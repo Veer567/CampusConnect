@@ -17,12 +17,15 @@ export default function MarketplaceTabs() {
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Text style={styles.title}>Marketplace</Text>
+        {/* 👇 FIXED: STACKED TITLE + SUBTITLE */}
+        <View style={{ alignItems: "flex-start" }}>
+          <Text style={styles.title}>Innovation Hub</Text>
+          <Text style={styles.subtitle}>
+            Find ideas. Join Teams. Build Together
+          </Text>
         </View>
       </LinearGradient>
 
-      {/* TOP TABS → pass tab here */}
       <TopTabs initialTab={tab as string} />
     </SafeAreaView>
   );
@@ -36,7 +39,14 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#fff",
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: "800",
+    marginBottom: 2, // small gap
+  },
+  subtitle: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "400",
+    opacity: 0.9,
   },
 });

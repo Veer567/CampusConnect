@@ -3,6 +3,7 @@
 // Handles creating new users (synced with Clerk) and fetching authenticated user details.
 
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { mutation, MutationCtx, query, QueryCtx } from "./_generated/server";
 
@@ -174,11 +175,20 @@ export const toggleFollow = mutation({
       await updateFollowCounts(ctx, currentUser._id, args.followingId, true);
 
       // create a notification
+      // FOLLOW
       await ctx.db.insert("notifications", {
         receiverId: args.followingId,
         senderId: currentUser._id,
         type: "follow",
         createdAt: Date.now(),
+      });
+
+      // PUSH Notification
+      await ctx.runMutation(api.push.sendPushNotification, {
+        userId: args.followingId,
+        title: `${currentUser.username} started following you`,
+        body: "Tap to view their profile",
+        data: { type: "follow", userId: currentUser._id },
       });
     }
   },
@@ -295,6 +305,7 @@ export const saveRecentSearch = mutation({
     });
   },
 });
+
 export const getRecentSearches = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
@@ -305,4 +316,87 @@ export const getRecentSearches = query({
       .take(10);
   },
 });
+// Get users you follow + users who follow you
+export const getMentionUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
 
+    const me = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!me) return [];
+
+    // following = users I follow
+    const following = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q) => q.eq("followerId", me._id))
+      .collect();
+
+    // followers = users who follow me
+    const followers = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q) => q.eq("followingId", me._id))
+      .collect();
+
+    const userIds = new Set([
+      ...following.map((f) => f.followingId),
+      ...followers.map((f) => f.followerId),
+    ]);
+
+    const users = await Promise.all(
+      [...userIds].map(async (id) => {
+        return await ctx.db.get(id);
+      })
+    );
+
+    return users.filter(Boolean).map((u) => ({
+      _id: u!._id,
+      username: u!.username,
+      fullname: u!.fullname,
+      image: u!.image,
+    }));
+  },
+});
+export const getFollowers = query({
+  args: { userId: v.optional(v.id("users")) },
+  handler: async (ctx, args) => {
+    const target = args.userId
+      ? await ctx.db.get(args.userId)
+      : await getAuthenticatedUser(ctx);
+
+    if (!target) return [];
+
+    const followers = await ctx.db
+      .query("follows")
+      .withIndex("by_following", (q) => q.eq("followingId", target._id))
+      .collect();
+
+    return Promise.all(
+      followers.map(async (f) => await ctx.db.get(f.followerId))
+    );
+  },
+});
+
+export const getFollowing = query({
+  args: { userId: v.optional(v.id("users")) },
+  handler: async (ctx, args) => {
+    const target = args.userId
+      ? await ctx.db.get(args.userId)
+      : await getAuthenticatedUser(ctx);
+
+    if (!target) return [];
+
+    const following = await ctx.db
+      .query("follows")
+      .withIndex("by_follower", (q) => q.eq("followerId", target._id))
+      .collect();
+
+    return Promise.all(
+      following.map(async (f) => await ctx.db.get(f.followingId))
+    );
+  },
+});

@@ -71,30 +71,30 @@ export const sendMessage = mutation({
     if (!conversation.participants.map(String).includes(String(me._id)))
       throw new Error("Not a participant");
 
+    // If we have an image → get URL
     let imageUrl: string | undefined = undefined;
-
     if (args.storageId) {
       imageUrl = (await ctx.storage.getUrl(args.storageId)) ?? undefined;
     }
 
     const now = Date.now();
 
-    const messageId = await ctx.db.insert("messages", {
+    const msgId = await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       senderId: me._id,
       text: args.text,
       imageUrl,
       storageId: args.storageId,
       createdAt: now,
-      readBy: [me._id], // sender has seen their own message
+      readBy: [me._id],
     });
 
     await ctx.db.patch(args.conversationId, {
-      lastMessage: args.text ?? (imageUrl ? "📷 Image" : "Attachment"),
+      lastMessage: args.text ?? (imageUrl ? "📷 Photo" : "Attachment"),
       lastMessageAt: now,
     });
 
-    // Create notification for other participants
+    // Create notifications for others
     for (const userId of conversation.participants) {
       if (String(userId) === String(me._id)) continue;
 
@@ -106,8 +106,14 @@ export const sendMessage = mutation({
       });
     }
 
-    return messageId;
+    return msgId;
   },
+});
+export const generateUploadUrl = mutation(async (ctx) => {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Unauthorized");
+
+  return await ctx.storage.generateUploadUrl();
 });
 
 /*───────────────────────────────────────────

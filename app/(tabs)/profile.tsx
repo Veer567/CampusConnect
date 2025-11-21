@@ -135,6 +135,7 @@ export default function ProfileScreen({
                 posts={current.posts}  
               followers={current.followers} 
               following={current.following} 
+              userId={current._id}
             />
           </View>
 

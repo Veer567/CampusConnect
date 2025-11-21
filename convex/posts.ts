@@ -2,6 +2,7 @@
 // Convex backend logic for handling post creation, media upload, and fetching feed posts with user metadata.
 
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
@@ -147,12 +148,12 @@ export const toggleLikePost = mutation({
 
     if (!post) throw new Error("Post not found");
 
-    // 🚫 Prevent user from liking their own post
-    if (post.userClerkId === currentUser.clerkId) {
+    // Prevent user from liking their own post — use owner id comparison (reliable)
+    if (String(post.userId) === String(currentUser._id)) {
       return false;
     }
 
-    // ✅ Check if already liked
+    // Check if already liked
     const existingLike = await ctx.db
       .query("likes")
       .withIndex("by_user_and_post", (q) =>
@@ -161,32 +162,44 @@ export const toggleLikePost = mutation({
       .first();
 
     if (existingLike) {
-      // Unlike the post
+      // Unlike
       await ctx.db.delete(existingLike._id);
+
       await ctx.db.patch(args.postId, {
         likes: Math.max(0, post.likes - 1),
       });
+
       return false;
     }
 
-    // ✅ Like the post
+    const now = Date.now();
+
+    // Insert like
     await ctx.db.insert("likes", {
       userId: currentUser._id,
       postId: args.postId,
-      createdAt: Date.now(),
+      createdAt: now,
     });
 
     await ctx.db.patch(args.postId, {
       likes: (post.likes ?? 0) + 1,
     });
 
-    // ✅ Notify post owner (not self — already prevented)
+    // DB Notification
     await ctx.db.insert("notifications", {
       receiverId: post.userId,
       senderId: currentUser._id,
       type: "like",
       postId: args.postId,
-      createdAt: Date.now(),
+      createdAt: now,
+    });
+
+    // PUSH Notification (typed)
+    await ctx.runMutation(api.push.sendPushNotification, {
+      userId: post.userId,
+      title: `${currentUser.username} liked your post`,
+      body: post.title ?? "Someone liked your post",
+      data: { type: "like", postId: args.postId },
     });
 
     return true;
@@ -337,5 +350,28 @@ export const getRecentPosts = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 12 }) => {
     return await ctx.db.query("posts").order("desc").take(limit);
+  },
+});
+export const getLikedPosts = query({
+  handler: async (ctx) => {
+    const user = await getAuthenticatedUser(ctx);
+
+    // Get all liked items by user
+    const likes = await ctx.db
+      .query("likes")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    if (!likes.length) return [];
+
+    // Fetch all posts
+    const posts = await Promise.all(
+      likes.map(async (l) => {
+        const post = await ctx.db.get(l.postId);
+        return post ? { ...post, likeId: l._id } : null;
+      })
+    );
+
+    return posts.filter(Boolean);
   },
 });

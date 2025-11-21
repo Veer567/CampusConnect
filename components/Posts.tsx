@@ -365,15 +365,6 @@ export default function Post({ post, onDeleted }: PostProps) {
           <Text style={styles.actionText}>{commentsCount}</Text>
         </TouchableOpacity>
 
-        {/* 🔥 NEW SHARE BUTTON */}
-        <TouchableOpacity onPress={handleShare} style={styles.actionItem}>
-          <Ionicons
-            name="share-social-outline"
-            size={20}
-            color={COLORS.textSecondary}
-          />
-        </TouchableOpacity>
-
         <TouchableOpacity
           onPress={handleBookmark}
           style={styles.bookmarkButton}
