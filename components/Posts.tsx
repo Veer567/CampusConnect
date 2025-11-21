@@ -101,25 +101,37 @@ export default function Post({ post, onDeleted }: PostProps) {
   // ─── Like ─────────────────────────────────────
   const handleLike = useCallback(async () => {
     try {
-      const optimistic = !isLiked;
-      setIsLiked(optimistic);
-      setLikesCount((c) => (optimistic ? c + 1 : Math.max(0, c - 1)));
+      const oldLiked = isLiked;
+      const oldLikes = likesCount;
 
-      const ok = await toggleLike({ postId: post._id });
-      if (ok === false) {
-        setIsLiked(isLiked);
-        setLikesCount(post.likes ?? 0);
+      // Optimistic UI update
+      setIsLiked(!oldLiked);
+      setLikesCount(oldLiked ? oldLikes - 1 : oldLikes + 1);
+
+      const result = await toggleLike({ postId: post._id });
+
+      if (!result) return;
+
+      // If backend says user cannot like own post
+      if (result.liked === false && post.isOwner) {
+        setIsLiked(false);
+        setLikesCount(oldLikes);
+
         Toast.show({
           type: "info",
-          text1: "You can’t like your own post",
+          text1: "You can't like your own post",
           position: "bottom",
-          visibilityTime: 2000,
         });
+        return;
       }
-    } catch (e) {
-      console.error(e);
+
+      // Sync with backend
+      setIsLiked(result.liked);
+      setLikesCount(result.likes);
+    } catch (err) {
+      console.error(err);
     }
-  }, [isLiked, post._id, toggleLike, post.likes]);
+  }, [isLiked, likesCount, post._id]);
 
   // ─── Bookmark ─────────────────────────────────
   const handleBookmark = useCallback(async () => {

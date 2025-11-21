@@ -148,44 +148,44 @@ export const toggleLikePost = mutation({
 
     if (!post) throw new Error("Post not found");
 
-    // Prevent user from liking their own post — use owner id comparison (reliable)
-    if (String(post.userId) === String(currentUser._id)) {
-      return false;
+    // ❌ Don't allow liking your own post
+    if (post.userId === currentUser._id) {
+      return { liked: false, likes: post.likes };
     }
 
-    // Check if already liked
-    const existingLike = await ctx.db
+    // Check existing like
+    const existing = await ctx.db
       .query("likes")
       .withIndex("by_user_and_post", (q) =>
         q.eq("userId", currentUser._id).eq("postId", args.postId)
       )
       .first();
 
-    if (existingLike) {
-      // Unlike
-      await ctx.db.delete(existingLike._id);
+    // ✅ UNLIKE
+    if (existing) {
+      await ctx.db.delete(existing._id);
 
-      await ctx.db.patch(args.postId, {
-        likes: Math.max(0, post.likes - 1),
-      });
+      const newLikes = Math.max(0, (post.likes ?? 1) - 1);
 
-      return false;
+      await ctx.db.patch(args.postId, { likes: newLikes });
+
+      return { liked: false, likes: newLikes };
     }
 
+    // ✅ LIKE
     const now = Date.now();
 
-    // Insert like
     await ctx.db.insert("likes", {
       userId: currentUser._id,
       postId: args.postId,
       createdAt: now,
     });
 
-    await ctx.db.patch(args.postId, {
-      likes: (post.likes ?? 0) + 1,
-    });
+    const newLikes = (post.likes ?? 0) + 1;
 
-    // DB Notification
+    await ctx.db.patch(args.postId, { likes: newLikes });
+
+    // Create DB + Push notification
     await ctx.db.insert("notifications", {
       receiverId: post.userId,
       senderId: currentUser._id,
@@ -194,7 +194,6 @@ export const toggleLikePost = mutation({
       createdAt: now,
     });
 
-    // PUSH Notification (typed)
     await ctx.runMutation(api.push.sendPushNotification, {
       userId: post.userId,
       title: `${currentUser.username} liked your post`,
@@ -202,9 +201,10 @@ export const toggleLikePost = mutation({
       data: { type: "like", postId: args.postId },
     });
 
-    return true;
+    return { liked: true, likes: newLikes };
   },
 });
+
 
 export const deletePost = mutation({
   args: { postId: v.id("posts") },
