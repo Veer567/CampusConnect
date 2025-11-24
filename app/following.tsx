@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import {
+  Dimensions,
   FlatList,
   Image,
   SafeAreaView,
@@ -14,13 +15,18 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
+
+const { width, height } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
+const hp = (p: number) => (height * p) / 100;
 
 export default function FollowingScreen() {
   const router = useRouter();
   const { userId, from } = useLocalSearchParams();
 
-  // FOLLOWING LIST
+  // FETCH FOLLOWING
   const rawFollowing = useQuery(api.users.getFollowing, {
     userId: userId === "me" ? undefined : (userId as any),
   });
@@ -30,28 +36,25 @@ export default function FollowingScreen() {
   const toggleFollow = useMutation(api.users.toggleFollow);
   const startConversation = useMutation(api.chat.getOrStartConversation);
 
-  // ⭐ SMART BACK HANDLER
+  /*──────────────────────────────
+     SMART BACK HANDLER
+  ──────────────────────────────*/
   const handleBack = () => {
-    if (from === "profile") {
-      router.push("/(tabs)/profile");
-    } else if (from === "other") {
-      router.push(`/other-profile?userId=${userId}`);
-    } else {
-      router.back();
-    }
+    if (router.canGoBack()) return router.back();
+
+    const fallback =
+      from === "profile"
+        ? "/(tabs)/profile"
+        : from === "other"
+        ? `/other-profile?userId=${userId}`
+        : "/(tabs)";
+
+    router.replace(fallback as any);
   };
 
-  // AppHeader's props type doesn't include onBack in the current declaration;
-  // use a local any-cast so we can pass the handler without a type error.
-  const AppHeaderAny = AppHeader as any;
-
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <AppHeader
-        title="Following"
-        showBackButton={true}
-        onBackPress={() => router.push("/(tabs)/profile")}
-      />
+    <SafeAreaView style={styles.container}>
+      <AppHeader title="Following" showBackButton onBackPress={handleBack} />
 
       {following.length === 0 ? (
         <View style={styles.emptyBox}>
@@ -60,39 +63,54 @@ export default function FollowingScreen() {
       ) : (
         <FlatList
           data={following}
+          showsVerticalScrollIndicator={false}
           keyExtractor={(item) => item._id}
+          contentContainerStyle={{ paddingBottom: hp(2) }}
           renderItem={({ item }) => (
             <View style={styles.row}>
               {/* Profile Image */}
               <TouchableOpacity
-                onPress={() => router.push(`/other-profile?userId=${item._id}`)}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push(`/other-profile?userId=${item._id}`)
+                }
               >
                 <Image
-                  source={{ uri: item.image || "https://i.pravatar.cc/150" }}
+                  source={{
+                    uri:
+                      item.image ||
+                      "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                  }}
                   style={styles.avatar}
                 />
               </TouchableOpacity>
 
-              {/* Name + Username */}
+              {/* Name & Username */}
               <TouchableOpacity
-                style={{ flex: 1 }}
-                onPress={() => router.push(`/other-profile?userId=${item._id}`)}
+                style={styles.userInfo}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push(`/other-profile?userId=${item._id}`)
+                }
               >
-                <Text style={styles.name}>{item.fullname}</Text>
-                <Text style={styles.username}>@{item.username}</Text>
+                <Text numberOfLines={1} style={styles.name}>
+                  {item.fullname}
+                </Text>
+                <Text numberOfLines={1} style={styles.username}>
+                  @{item.username}
+                </Text>
               </TouchableOpacity>
 
               {/* Message Button */}
               <TouchableOpacity
                 style={styles.msgBtn}
+                activeOpacity={0.8}
                 onPress={async () => {
                   const conv = await startConversation({
                     otherUserId: item._id,
                   });
-                  if (!conv || !conv._id) {
-                    // conversation couldn't be created/fetched; abort navigation
-                    return;
-                  }
+                  if (!conv || !conv._id) return;
+
                   router.push(
                     `/chat-screen?conversationId=${conv._id}&otherUserId=${item._id}`
                   );
@@ -104,6 +122,7 @@ export default function FollowingScreen() {
               {/* Unfollow Button */}
               <TouchableOpacity
                 style={styles.unfollowBtn}
+                activeOpacity={0.7}
                 onPress={() => toggleFollow({ followingId: item._id })}
               >
                 <Text style={styles.unfollowX}>✕</Text>
@@ -117,61 +136,73 @@ export default function FollowingScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#fff" },
+
   emptyBox: {
-    marginTop: 100,
+    marginTop: hp(15),
     alignItems: "center",
   },
   emptyText: {
+    fontSize: wp(4),
     color: COLORS.textSecondary,
-    fontSize: 16,
   },
+
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: hp(1.8),
+    paddingHorizontal: wp(4),
     borderBottomWidth: 1,
-    borderColor: "#f2f2f2",
+    borderColor: "#f1f1f1",
   },
+
   avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 999,
-    marginRight: 12,
+    width: wp(14),
+    height: wp(14),
+    borderRadius: wp(7),
+    marginRight: wp(4),
   },
+
+  userInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+
   name: {
+    fontSize: wp(4),
     fontWeight: "700",
-    fontSize: 15,
     color: COLORS.text,
   },
   username: {
-    fontSize: 13,
+    fontSize: wp(3.4),
     color: COLORS.textSecondary,
     marginTop: 2,
   },
+
   msgBtn: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginRight: 10,
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.9),
+    borderRadius: wp(2),
+    marginRight: wp(2),
   },
   msgBtnText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: wp(3.2),
     fontWeight: "600",
   },
+
   unfollowBtn: {
     backgroundColor: "#eee",
-    width: 30,
-    height: 30,
-    borderRadius: 999,
+    width: wp(8),
+    height: wp(8),
+    borderRadius: wp(4),
     justifyContent: "center",
     alignItems: "center",
   },
   unfollowX: {
-    fontSize: 16,
-    color: "#444",
+    fontSize: wp(4.2),
     fontWeight: "700",
+    color: "#444",
   },
 });

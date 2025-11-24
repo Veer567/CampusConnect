@@ -1,3 +1,4 @@
+// app/Market/screens/StartupsScreen.tsx
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
@@ -9,12 +10,11 @@ import { api } from "../../../convex/_generated/api";
 import PostCard from "../components/PostCard";
 import SearchBar from "../components/SearchBar";
 
-export default function StartScreen() {
+export default function StartupsScreen() {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
 
   const [search, setSearch] = useState("");
-
   const me = useQuery(
     api.users.getUserByClerkId,
     clerkId ? { clerkId } : "skip"
@@ -23,15 +23,11 @@ export default function StartScreen() {
 
   const posts =
     useQuery(api.marketplace.getMarketplacePosts, { type: "startup" }) ?? [];
-
   const deletePost = useMutation(api.marketplace.deleteMarketplacePost);
 
-  /* 🔍 SEARCH FILTER LOGIC */
   const filtered = useMemo(() => {
     if (!search.trim()) return posts;
-
     const q = search.toLowerCase();
-
     return posts.filter((item: any) => {
       return (
         item.title?.toLowerCase()?.includes(q) ||
@@ -54,7 +50,7 @@ export default function StartScreen() {
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
           <PostCard
-            post={item}
+            post={item as any}
             currentUserId={safeUserId}
             onEdit={(id) =>
               router.push(`/Market/create/EditMarketplace?id=${id}`)
@@ -65,7 +61,7 @@ export default function StartScreen() {
             onLearnMore={(post) =>
               router.push({
                 pathname: "/Market/post/[id]",
-                params: { id: post._id },
+                params: { id: post._id, from: "startup" },
               })
             }
             interestedAvatars={

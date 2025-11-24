@@ -14,6 +14,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,6 +22,9 @@ import { ProfileContent } from "@/components/Profile/ProfileContent";
 import { ProfileHeader } from "@/components/Profile/ProfileHeader";
 import { Id } from "@/convex/_generated/dataModel";
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
+
+const { width } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
 
 export default function OtherUserProfile() {
   const router = useRouter();
@@ -57,15 +61,15 @@ export default function OtherUserProfile() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff", marginLeft: 10 }}>
+    <SafeAreaView style={styles.screen}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 50 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Back Button */}
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={26} color={COLORS.text} />
         </TouchableOpacity>
 
         {/* PROFILE HEADER */}
@@ -90,32 +94,27 @@ export default function OtherUserProfile() {
           style={isFollowing ? styles.followingBtn : styles.followBtn}
           onPress={() => toggleFollow({ followingId: user._id })}
         >
-          <Text style={isFollowing ? styles.followingText : styles.followText}>
+          <Text style={styles.followBtnText}>
             {isFollowing ? "Following ✔" : "Follow"}
           </Text>
         </TouchableOpacity>
 
-        {/* MESSAGE BUTTON */}
+        {/* MESSAGE */}
         <TouchableOpacity
           style={styles.messageBtn}
           onPress={async () => {
-            try {
-              const conv = await getOrStartConv({
-                otherUserId: user._id,
-              });
+            const conv = await getOrStartConv({
+              otherUserId: user._id,
+            });
 
-              const conversationId =
-                typeof conv === "object" && conv && "_id" in conv
-                  ? conv._id
-                  : conv;
+            const conversationId =
+              typeof conv === "object" && conv && "_id" in conv
+                ? conv._id
+                : conv;
 
-              // Pass *Convex IDs* not Clerk ID
-              router.push(
-                `/chat-screen?conversationId=${conversationId}&currentUserId=${me._id}&otherUserId=${user._id}`
-              );
-            } catch (err) {
-              console.error("Start conversation error:", err);
-            }
+            router.push(
+              `/chat-screen?conversationId=${conversationId}&currentUserId=${me._id}&otherUserId=${user._id}`
+            );
           }}
         >
           <Text style={styles.messageText}>Message 💬</Text>
@@ -136,95 +135,73 @@ export default function OtherUserProfile() {
           pickResume={() => {}}
         />
 
-        {/* POSTS TITLE */}
-        <Text style={styles.postsTitle}>Posts</Text>
-
-        {/* POSTS GRID */}
-        <View style={styles.postsGrid}>
-          {userPosts?.length ? (
-            userPosts.map((p) => (
-              <TouchableOpacity
-                key={p._id}
-                onPress={() =>
-                  router.push({
-                    pathname: "/post-details",
-                    params: { postId: p._id },
-                  })
-                }
-              >
-                <Image source={{ uri: p.imageUrl }} style={styles.postImage} />
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View style={styles.noPostsBox}>
-              <Ionicons
-                name="image-outline"
-                size={45}
-                color={COLORS.textSecondary}
-              />
-              <Text style={{ color: COLORS.textSecondary, marginTop: 10 }}>
-                No posts yet
-              </Text>
-            </View>
-          )}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+/*───────────────────────────────────────────────
+  STYLES (Responsive)
+───────────────────────────────────────────────*/
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: "#fff",
+    margin: 10
+
+  },
+
   loadingBox: { flex: 1, justifyContent: "center", alignItems: "center" },
 
   backBtn: {
-    paddingHorizontal: 5,
-    marginTop: 10,
+    paddingHorizontal: wp(3),
+    paddingVertical: wp(2),
+    marginTop: 8,
   },
 
   followBtn: {
-    marginTop: 18,
+    marginTop: 20,
     backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    width: "60%",
+    paddingVertical: 14,
+    width: "70%",
     alignSelf: "center",
-    borderRadius: 10,
+    borderRadius: 12,
   },
-  followText: { textAlign: "center", color: "#fff", fontWeight: "700" },
-
   followingBtn: {
-    marginTop: 18,
+    marginTop: 20,
     backgroundColor: COLORS.secondary,
-    paddingVertical: 12,
-    width: "60%",
+    paddingVertical: 14,
+    width: "70%",
     alignSelf: "center",
-    borderRadius: 10,
+    borderRadius: 12,
   },
-  followingText: {
+  followBtnText: {
     textAlign: "center",
     color: "#fff",
     fontWeight: "700",
+    fontSize: wp(4),
   },
 
   messageBtn: {
-    marginTop: 12,
+    marginTop: 14,
     backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    width: "60%",
+    paddingVertical: 14,
+    width: "70%",
     alignSelf: "center",
-    borderRadius: 10,
+    borderRadius: 12,
   },
   messageText: {
-    textAlign: "center",
     color: "#fff",
     fontWeight: "700",
-    fontSize: 16,
+    textAlign: "center",
+    fontSize: wp(4),
   },
 
   postsTitle: {
-    marginTop: 28,
-    marginLeft: 18,
+    marginTop: 30,
+    marginLeft: wp(4),
     marginBottom: 10,
-    fontSize: 20,
+    fontSize: wp(5),
     fontWeight: "700",
     color: COLORS.text,
   },
@@ -232,16 +209,24 @@ const styles = StyleSheet.create({
   postsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    paddingHorizontal: 10,
     justifyContent: "center",
-    marginTop: 10,
+    paddingHorizontal: wp(2),
   },
+
   postImage: {
-    width: 110,
-    height: 110,
-    margin: 6,
+    width: width * 0.28,
+    height: width * 0.28,
+    margin: wp(2),
     borderRadius: 12,
     backgroundColor: "#eee",
   },
-  noPostsBox: { alignItems: "center", marginTop: 30 },
+
+  noPostsBox: {
+    marginTop: 40,
+    alignItems: "center",
+  },
+  noPostsText: {
+    color: COLORS.textSecondary,
+    marginTop: 8,
+  },
 });

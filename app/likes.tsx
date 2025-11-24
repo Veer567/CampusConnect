@@ -1,75 +1,120 @@
-import React from "react";
+// app/likes.tsx
+import AppHeader from "@/components/AppHeader";
+import { COLORS } from "@/constants/themes";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { Ionicons } from "@expo/vector-icons";
+import { useMutation, useQuery } from "convex/react";
+import { useRouter } from "expo-router";
+import React, { useMemo } from "react";
 import {
-  View,
-  Text,
-  SafeAreaView,
+  Dimensions,
   FlatList,
   Image,
+  Platform,
+  SafeAreaView,
   StyleSheet,
+  Text,
   TouchableOpacity,
-  Dimensions,
+  View,
 } from "react-native";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { COLORS } from "@/constants/themes";
-import AppHeader from "@/components/AppHeader";
-import { useRouter } from "expo-router";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
+const hp = (p: number) => (height * p) / 100;
 
 export default function LikesScreen() {
   const router = useRouter();
 
-  // Raw results may include null
+  // Fetch liked posts (reactive)
   const rawLikes = useQuery(api.posts.getLikedPosts) ?? [];
 
-  // Filter out null values -> TS-SAFE
-  const likes = rawLikes.filter((p) => p !== null);
+  // Toggle like/unlike (same mutation you already have)
+  const toggleLikePost = useMutation(api.posts.toggleLikePost);
+
+  // Filter nulls safely
+  const likes = useMemo(() => rawLikes.filter((p) => p !== null), [rawLikes]);
+
+  // When user toggles like here we call the same mutation — likes table will update,
+  // and ActivityStatsCard will reflect it because it re-reads likes from DB reactively.
+  const handleUnlike = async (postId: Id<"posts">) => {
+    try {
+      await toggleLikePost({ postId });
+    } catch (err) {
+      console.log("Unlike error:", err);
+    }
+  };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <AppHeader title="Liked Posts" rightIcon="heart" />
+    <SafeAreaView style={styles.container}>
+      <AppHeader
+        title="Liked Posts"
+        rightIcon="heart"
+        showBackButton={true}
+        onBackPress={() => router.replace("/profile")}
+      />
 
       {likes.length === 0 ? (
-        <View style={styles.emptyContainer}>
+        <View style={styles.emptyBox}>
           <Text style={styles.emptyText}>No liked posts yet</Text>
         </View>
       ) : (
         <FlatList
           data={likes}
-          keyExtractor={(item) => item._id}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              activeOpacity={0.9}
-              onPress={() =>
-                router.push(`/post-details?postId=${item._id}`)
-              }
-            >
-              {/* Thumbnail */}
-              {item.imageUrl ? (
-                <Image source={{ uri: item.imageUrl }} style={styles.thumb} />
-              ) : (
-                <View style={[styles.thumb, { backgroundColor: "#ccc" }]} />
-              )}
+            <View style={styles.card}>
+              {/* Open post details and pass where we came from */}
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() =>
+                  router.push({
+                    pathname: "/post-details",
+                    params: {
+                      postId: item._id,
+                      from: "likes",
+                    },
+                  })
+                }
+              >
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={styles.thumb} />
+                ) : (
+                  <View style={[styles.thumb, { backgroundColor: "#ccc" }]} />
+                )}
+              </TouchableOpacity>
 
-              {/* Text Info */}
-              <View style={styles.info}>
+              <TouchableOpacity
+                style={styles.info}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push({
+                    pathname: "/post-details",
+                    params: { postId: item._id, from: "likes" },
+                  })
+                }
+              >
                 <Text style={styles.title} numberOfLines={2}>
                   {item.title}
                 </Text>
 
-                {item.eventDate ? (
+                {item.eventDate && (
                   <Text style={styles.meta}>{item.eventDate}</Text>
-                ) : null}
-
-                {item.location ? (
+                )}
+                {item.location && (
                   <Text style={styles.meta}>{item.location}</Text>
-                ) : null}
-              </View>
-            </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => handleUnlike(item._id)}
+                style={styles.unlikeBtn}
+              >
+                <Ionicons name="heart" size={24} color="#ff3b30" />
+              </TouchableOpacity>
+            </View>
           )}
         />
       )}
@@ -78,47 +123,45 @@ export default function LikesScreen() {
 }
 
 const styles = StyleSheet.create({
-  listContent: {
-    paddingHorizontal: wp(5),
-    paddingTop: 10,
-    paddingBottom: 30,
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+  emptyBox: { marginTop: hp(15), alignItems: "center" },
+  emptyText: { fontSize: wp(4), color: COLORS.textSecondary },
 
-  emptyContainer: { marginTop: 100, alignItems: "center" },
-  emptyText: { color: COLORS.textSecondary, fontSize: 16 },
+  listContent: { paddingHorizontal: wp(5), paddingBottom: hp(3) },
 
   card: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 10,
-    marginBottom: 14,
+    borderRadius: wp(3),
+    padding: wp(3),
+    marginBottom: hp(1.8),
     alignItems: "center",
-    elevation: 2,
+    elevation: Platform.OS === "android" ? 3 : 0,
+    shadowColor: "#000",
+    shadowOpacity: 0.07,
+    shadowOffset: { width: 0, height: 3 },
   },
 
   thumb: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
+    width: wp(18),
+    height: wp(18),
+    borderRadius: wp(3),
     backgroundColor: "#eee",
   },
 
-  info: {
-    marginLeft: 12,
-    flex: 1,
-  },
+  info: { flex: 1, marginLeft: wp(4) },
 
   title: {
-    fontSize: 15,
+    fontSize: wp(4),
     fontWeight: "700",
     color: COLORS.text,
-    marginBottom: 4,
   },
 
   meta: {
-    fontSize: 12,
+    marginTop: wp(1),
+    fontSize: wp(3.3),
     color: COLORS.textSecondary,
-    marginTop: 2,
   },
+
+  unlikeBtn: { padding: wp(2) },
 });

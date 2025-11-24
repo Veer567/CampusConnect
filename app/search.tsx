@@ -1,6 +1,6 @@
 // app/search.tsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  Dimensions,
+  StyleSheet,
+  SafeAreaView,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -16,17 +20,18 @@ import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/clerk-expo";
 import { COLORS } from "@/constants/themes";
 
+const { width } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
+
 /* -------------------------------------------------------
-   🔄 Debounce Hook — Instant Search with Delay
+   🔄 Debounce Hook
 ------------------------------------------------------- */
 function useDebounce(value: string, delay = 300) {
   const [debounced, setDebounced] = useState(value);
-
   useEffect(() => {
-    const handler = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(handler);
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
   }, [value]);
-
   return debounced;
 }
 
@@ -39,21 +44,19 @@ export default function SearchScreen() {
   const { user } = useUser();
   const clerkId = user?.id;
 
-  // My Convex user
   const me = useQuery(api.users.getUserByClerkId, {
     clerkId: clerkId || "",
   });
 
   // Queries
-  const users = useQuery(api.users.searchUsers, { q: trimmed || "" });
-  const posts = useQuery(api.posts.searchPosts, { q: trimmed || "" });
+  const users = useQuery(api.users.searchUsers, { q: trimmed });
+  const posts = useQuery(api.posts.searchPosts, { q: trimmed });
   const recentPosts = useQuery(api.posts.getRecentPosts, { limit: 12 });
   const recentSearches = useQuery(
     api.users.getRecentSearches,
     me ? { userId: me._id } : "skip"
   );
 
-  // Save search
   const saveRecentSearch = useMutation(api.users.saveRecentSearch);
 
   const isHashtag = query.startsWith("#");
@@ -62,34 +65,36 @@ export default function SearchScreen() {
   /* -------------------------------------------------------
      👤 Filter Users
   ------------------------------------------------------- */
-  const filteredUsers =
-    trimmed.length > 0 && !isHashtag
-      ? users?.filter(
-          (u: any) =>
-            u.clerkId !== clerkId &&
-            u.fullname?.toLowerCase().includes(trimmed)
-        ) ?? []
-      : [];
+  const filteredUsers = useMemo(() => {
+    if (!trimmed || isHashtag) return [];
+    return (
+      users?.filter(
+        (u: any) =>
+          u.clerkId !== clerkId &&
+          u.fullname?.toLowerCase().includes(trimmed)
+      ) ?? []
+    );
+  }, [users, trimmed]);
 
   /* -------------------------------------------------------
      📝 Filter Posts
   ------------------------------------------------------- */
-  const filteredPosts =
-    trimmed.length > 0
-      ? isHashtag
-        ? posts?.filter((p: any) =>
-            p.tags?.some((t: string) =>
-              t.toLowerCase().startsWith(tagLower)
-            )
-          ) ?? []
-        : posts?.filter((p: any) =>
-            p.title?.toLowerCase().includes(trimmed)
-          ) ?? []
-      : [];
+  const filteredPosts = useMemo(() => {
+    if (!trimmed) return [];
+    if (isHashtag) {
+      return (
+        posts?.filter((p: any) =>
+          p.tags?.some((t: string) => t.toLowerCase().startsWith(tagLower))
+        ) ?? []
+      );
+    }
+    return (
+      posts?.filter((p: any) =>
+        p.title?.toLowerCase().includes(trimmed)
+      ) ?? []
+    );
+  }, [posts, trimmed]);
 
-  /* -------------------------------------------------------
-     💾 Save Search
-  ------------------------------------------------------- */
   const saveSearch = () => {
     if (me && trimmed.length > 0) {
       saveRecentSearch({ userId: me._id, query: trimmed });
@@ -97,17 +102,11 @@ export default function SearchScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff", paddingTop: 20 }}>
+    <SafeAreaView style={styles.container}>
       {/* -------------------------------------------------------
-         🔙 HEADER + SEARCH INPUT
+           HEADER + SEARCH BAR
       ------------------------------------------------------- */}
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          paddingHorizontal: 16,
-        }}
-      >
+      <View style={styles.searchBarContainer}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={26} color={COLORS.text} />
         </TouchableOpacity>
@@ -117,199 +116,113 @@ export default function SearchScreen() {
           value={query}
           onChangeText={setQuery}
           placeholder="Search users, posts or #tags..."
-          style={{
-            flex: 1,
-            marginLeft: 12,
-            backgroundColor: "#f2f2f2",
-            borderRadius: 10,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            fontSize: 16,
-          }}
+          style={styles.searchInput}
+          placeholderTextColor="#999"
         />
       </View>
 
-      <ScrollView style={{ marginTop: 20 }}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* -------------------------------------------------------
            🕒 RECENT SEARCHES
         ------------------------------------------------------- */}
-        {!trimmed && Array.isArray(recentSearches) && recentSearches.length > 0 && (
-          <View>
-            <Text
-              style={{
-                marginLeft: 16,
-                fontWeight: "700",
-                fontSize: 16,
-              }}
-            >
-              Recent Searches
-            </Text>
+        {!trimmed &&
+          Array.isArray(recentSearches) &&
+          recentSearches.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Recent Searches</Text>
 
-            {recentSearches?.map((r: any) => (
-              <TouchableOpacity
-                key={r._id}
-                onPress={() => setQuery(r.query)}
-                style={{
-                  flexDirection: "row",
-                  padding: 14,
-                  alignItems: "center",
-                }}
-              >
-                <Ionicons name="time-outline" size={20} color="#999" />
-                <Text style={{ marginLeft: 10, fontSize: 16 }}>
-                  {r.query}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+              {recentSearches.map((r: any) => (
+                <TouchableOpacity
+                  key={r._id}
+                  onPress={() => setQuery(r.query)}
+                  style={styles.recentRow}
+                >
+                  <Ionicons name="time-outline" size={19} color="#999" />
+                  <Text style={styles.recentText}>{r.query}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
         {/* -------------------------------------------------------
-           🔥 RECENTLY ADDED POSTS — GRID LAYOUT
+           🔥 RECENT POSTS GRID
         ------------------------------------------------------- */}
         {!trimmed && Array.isArray(recentPosts) && recentPosts.length > 0 && (
-          <>
-            <Text
-              style={{
-                marginLeft: 16,
-                marginTop: 20,
-                marginBottom: 10,
-                fontWeight: "700",
-                fontSize: 16,
-              }}
-            >
-              Recently Added Posts
-            </Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recently Added Posts</Text>
 
-            <View
-              style={{
-                flexDirection: "row",
-                flexWrap: "wrap",
-                justifyContent: "space-between",
-                paddingHorizontal: 10,
-              }}
-            >
-              {recentPosts?.map((post: any) => (
+            <View style={styles.grid}>
+              {recentPosts.map((post: any) => (
                 <TouchableOpacity
                   key={post._id}
                   onPress={() => {
                     saveSearch();
                     router.push(`/post-details?postId=${post._id}`);
                   }}
-                  style={{ width: "32%", marginBottom: 10 }}
+                  style={styles.gridItem}
                 >
                   <Image
                     source={{ uri: post.imageUrl }}
-                    style={{
-                      width: "100%",
-                      height: 120,
-                      borderRadius: 8,
-                      backgroundColor: "#eee",
-                    }}
+                    style={styles.gridImage}
                   />
                 </TouchableOpacity>
               ))}
             </View>
-          </>
+          </View>
         )}
 
         {/* -------------------------------------------------------
-           👤 USERS SECTION
+           👤 USERS
         ------------------------------------------------------- */}
-        {filteredUsers?.length > 0 && (
-          <>
-            <Text
-              style={{
-                marginLeft: 16,
-                fontWeight: "700",
-                fontSize: 16,
-              }}
-            >
-              Users
-            </Text>
+        {filteredUsers.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Users</Text>
 
-            {filteredUsers?.map((u: any) => (
+            {filteredUsers.map((u: any) => (
               <TouchableOpacity
                 key={u._id}
+                style={styles.userRow}
                 onPress={() => {
                   saveSearch();
                   router.push(`/other-profile?userId=${u._id}`);
                 }}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  padding: 14,
-                }}
               >
-                <Image
-                  source={{ uri: u.image }}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    marginRight: 12,
-                  }}
-                />
-                <Text style={{ fontSize: 17 }}>{u.fullname}</Text>
+                <Image source={{ uri: u.image }} style={styles.userAvatar} />
+                <Text style={styles.userName}>{u.fullname}</Text>
               </TouchableOpacity>
             ))}
-          </>
+          </View>
         )}
 
         {/* -------------------------------------------------------
-           📝 POSTS SECTION
+           📝 POSTS
         ------------------------------------------------------- */}
-        {filteredPosts?.length > 0 && (
-          <>
-            <Text
-              style={{
-                marginLeft: 16,
-                marginTop: 20,
-                fontWeight: "700",
-                fontSize: 16,
-              }}
-            >
-              Posts
-            </Text>
+        {filteredPosts.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Posts</Text>
 
-            {filteredPosts?.map((p: any) => (
+            {filteredPosts.map((p: any) => (
               <TouchableOpacity
                 key={p._id}
+                style={styles.postRow}
                 onPress={() => {
                   saveSearch();
                   router.push(`/post-details?postId=${p._id}`);
                 }}
-                style={{
-                  flexDirection: "row",
-                  padding: 14,
-                  alignItems: "center",
-                }}
               >
-                <View
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 8,
-                    backgroundColor: "#eee",
-                    marginRight: 12,
-                    overflow: "hidden",
-                  }}
-                >
-                  <Image
-                    source={{ uri: p.imageUrl }}
-                    style={{ width: "100%", height: "100%" }}
-                  />
-                </View>
+                <Image
+                  source={{ uri: p.imageUrl }}
+                  style={styles.postThumb}
+                />
 
-                <View>
-                  <Text style={{ fontSize: 16 }}>{p.title ?? "Untitled"}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.postTitle}>
+                    {p.title ?? "Untitled"}
+                  </Text>
 
-                  <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                  <View style={styles.tagRow}>
                     {p.tags?.slice(0, 3).map((t: string, i: number) => (
-                      <Text
-                        key={i}
-                        style={{ color: COLORS.primary, marginRight: 6 }}
-                      >
+                      <Text key={i} style={styles.tag}>
                         #{t}
                       </Text>
                     ))}
@@ -317,26 +230,126 @@ export default function SearchScreen() {
                 </View>
               </TouchableOpacity>
             ))}
-          </>
+          </View>
         )}
 
         {/* -------------------------------------------------------
-           ❌ NO RESULTS FOUND
+           ❌ NO RESULTS
         ------------------------------------------------------- */}
         {trimmed &&
-          filteredUsers?.length === 0 &&
-          filteredPosts?.length === 0 && (
-            <Text
-              style={{
-                textAlign: "center",
-                marginTop: 40,
-                color: COLORS.textSecondary,
-              }}
-            >
-              No results found
-            </Text>
+          filteredUsers.length === 0 &&
+          filteredPosts.length === 0 && (
+            <Text style={styles.noResults}>No results found</Text>
           )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
+
+/*────────────────────────────────────────
+ ⬇️ UPDATED RESPONSIVE STYLES
+────────────────────────────────────────*/
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+
+  /* Header + Search Bar */
+  searchBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: wp(4),
+    paddingTop: Platform.OS === "ios" ? 8 : 12,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 12,
+    backgroundColor: "#f2f2f2",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === "android" ? 10 : 12,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+
+  /* Sections */
+  section: {
+    marginTop: 20,
+    paddingHorizontal: wp(4),
+  },
+  sectionTitle: {
+    fontWeight: "700",
+    fontSize: 16,
+    marginBottom: 10,
+  },
+
+  /* Recent searches */
+  recentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  recentText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+
+  /* Grid (recent posts) */
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  gridItem: {
+    width: "32%",
+    marginBottom: 10,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  gridImage: {
+    width: "100%",
+    height: wp(30),
+    borderRadius: 10,
+    backgroundColor: "#eee",
+  },
+
+  /* User Rows */
+  userRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+  userAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  userName: { fontSize: 17, color: COLORS.text },
+
+  /* Post Rows */
+  postRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+  postThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: "#eee",
+    marginRight: 12,
+  },
+  postTitle: { fontSize: 16, fontWeight: "600" },
+  tagRow: { flexDirection: "row", marginTop: 3 },
+  tag: { color: COLORS.primary, marginRight: 6 },
+
+  noResults: {
+    textAlign: "center",
+    marginTop: 40,
+    color: COLORS.textSecondary,
+    fontSize: 15,
+  },
+});

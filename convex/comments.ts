@@ -72,6 +72,7 @@ export const addComment = mutation({
         postId: targetType === "post" ? (targetId as Id<"posts">) : undefined,
         commentId,
         createdAt: now,
+        read: false,
       });
 
       // PUSH Notification
@@ -92,7 +93,7 @@ export const addComment = mutation({
         },
       });
     }
-    
+
     return commentId;
   },
 });

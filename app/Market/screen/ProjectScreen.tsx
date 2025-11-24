@@ -13,7 +13,6 @@ import SearchBar from "../components/SearchBar";
 export default function ProjectsScreen() {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
-
   const [search, setSearch] = useState("");
 
   const me = useQuery(
@@ -24,15 +23,11 @@ export default function ProjectsScreen() {
 
   const posts =
     useQuery(api.marketplace.getMarketplacePosts, { type: "project" }) ?? [];
-
   const deletePost = useMutation(api.marketplace.deleteMarketplacePost);
 
-  /* 🔍 SEARCH FILTER LOGIC */
   const filtered = useMemo(() => {
     if (!search.trim()) return posts;
-
     const q = search.toLowerCase();
-
     return posts.filter((item: any) => {
       return (
         item.title?.toLowerCase()?.includes(q) ||
@@ -44,7 +39,6 @@ export default function ProjectsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-
       <SearchBar
         value={search}
         onChange={setSearch}
@@ -77,7 +71,7 @@ export default function ProjectsScreen() {
               onLearnMore={(post: { _id: any }) =>
                 router.push({
                   pathname: "/Market/post/[id]",
-                  params: { id: post._id },
+                  params: { id: post._id, from: "project" },
                 })
               }
               interestedAvatars={
@@ -116,7 +110,6 @@ export default function ProjectsScreen() {
       >
         <Ionicons name="add" size={24} color="#fff" />
       </TouchableOpacity>
-
     </View>
   );
 }

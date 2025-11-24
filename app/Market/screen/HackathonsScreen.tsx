@@ -15,58 +15,44 @@ export default function HackathonsScreen() {
   const { userId: clerkId } = useAuth();
 
   const [search, setSearch] = useState("");
-
-  // Convex user for current Clerk user
   const me = useQuery(
     api.users.getUserByClerkId,
     clerkId ? { clerkId } : "skip"
   );
   const safeUserId = me?._id;
 
-  // IMPORTANT: screenType is the single source of truth for this screen
   const screenType: "project" | "hackathon" | "startup" = "hackathon";
-
-  // Load marketplace posts filtered by type
-  const posts = useQuery(api.marketplace.getMarketplacePosts, {
-    type: screenType,
-  }) ?? [];
+  const posts =
+    useQuery(api.marketplace.getMarketplacePosts, { type: screenType }) ?? [];
 
   const startConversation = useMutation(api.chat.getOrStartConversation);
   const deletePost = useMutation(api.marketplace.deleteMarketplacePost);
 
-  /* -------------------------------------------------------
-    🔍 SEARCH LOGIC (Filters title, skills, location, desc)
-  --------------------------------------------------------*/
   const filtered = useMemo(() => {
     if (!search.trim()) return posts;
-
     const q = search.toLowerCase();
-
     return posts.filter((item) => {
       const skills = (item as any).skills;
       const hasSkillMatch =
         Array.isArray(skills) &&
         skills.some((skill: any) => String(skill).toLowerCase().includes(q));
-
       return (
         item.title?.toLowerCase().includes(q) ||
         item.location?.toLowerCase().includes(q) ||
-       item.tags?.some((s: string) => s.toLowerCase().includes(q))
+        item.tags?.some((s: string) => s.toLowerCase().includes(q)) ||
+        hasSkillMatch
       );
     });
   }, [posts, search]);
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-
-      {/* 🔍 SEARCH BAR */}
       <SearchBar
         value={search}
         onChange={setSearch}
         placeholder="Looking for hackathons..."
       />
 
-      {/* LIST */}
       <FlatList
         data={filtered}
         keyExtractor={(item) => item._id}
@@ -91,7 +77,7 @@ export default function HackathonsScreen() {
               if (!post?._id) return;
               router.push({
                 pathname: "/Market/post/[id]",
-                params: { id: post._id },
+                params: { id: post._id, from: "hackathon" },
               });
             }}
             interestedAvatars={
@@ -112,7 +98,6 @@ export default function HackathonsScreen() {
         initialNumToRender={6}
       />
 
-      {/* FAB - Create new hackathon */}
       <TouchableOpacity
         onPress={() =>
           router.push(`/Market/create/CreateMarketplace?type=${screenType}`)

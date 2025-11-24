@@ -1,55 +1,185 @@
-// components/profile/ProfileBottomSheet.tsx
-import { Animated, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
+import React from "react";
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+  Dimensions,
+} from "react-native";
 import { COLORS } from "@/constants/themes";
 
 export function ProfileBottomSheet({
-  visible, type, input, setInput, suggestions, slideAnim, closeSheet, addItem, handleAddManual
+  visible,
+  type,
+  input,
+  setInput,
+  suggestions,
+  slideAnim,
+  closeSheet,
+  addItem,
+  handleAddManual,
 }: any) {
-  const translateY = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [420, 0] });
+  const screenHeight = Dimensions.get("window").height;
+
+  // Responsive height → 40% of screen OR 300px minimum
+  const sheetHeight = Math.max(screenHeight * 0.42, 300);
+
+  const translateY = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [sheetHeight, 0],
+  });
+
+  const title =
+    type === "department"
+      ? "Add Department"
+      : type === "interest"
+      ? "Add Interest"
+      : "Add Email";
 
   return (
-    <Modal transparent visible={visible} animationType="fade">
+    <Modal visible={visible} transparent animationType="fade">
+      {/* DARK BACKDROP */}
       <TouchableWithoutFeedback onPress={closeSheet}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ width: "100%" }}>
-            <Animated.View style={{ backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, minHeight: 220, transform: [{ translateY }] }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ fontSize: 16, fontWeight: "700" }}>
-                  {type === "department" ? "Add Department" : type === "interest" ? "Add Interest" : "Add Email"}
-                </Text>
-                <TouchableOpacity onPress={closeSheet}><Text style={{ color: "#888" }}>Close</Text></TouchableOpacity>
-              </View>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            justifyContent: "flex-end",
+          }}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ width: "100%" }}
+          >
+            <TouchableWithoutFeedback>
+              <Animated.View
+                style={[
+                  {
+                    backgroundColor: "#fff",
+                    borderTopLeftRadius: 18,
+                    borderTopRightRadius: 18,
+                    padding: 18,
+                    minHeight: sheetHeight,
+                    maxHeight: screenHeight * 0.85,
+                    transform: [{ translateY }],
+                  },
+                ]}
+              >
+                {/* HEADER */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ fontSize: 18, fontWeight: "700" }}>
+                    {title}
+                  </Text>
 
-              <TextInput
-                placeholder={type === "email" ? "Enter email local part" : `Search ${type}s...`}
-                value={input}
-                onChangeText={setInput}
-                style={{ borderWidth: 1, borderColor: "#f1f1f1", padding: 10, borderRadius: 8, marginTop: 10, fontSize: 16 }}
-                autoFocus
-              />
-
-              <ScrollView style={{ maxHeight: 220, marginTop: 8 }}>
-                {suggestions.length === 0 && input.trim().length > 0 && (
-                  <TouchableOpacity onPress={handleAddManual} style={{ padding: 10 }}>
-                    <Text style={{ color: COLORS.primary }}>Add "{input}"</Text>
+                  <TouchableOpacity onPress={closeSheet}>
+                    <Text style={{ color: COLORS.grey }}>Close</Text>
                   </TouchableOpacity>
-                )}
-                {suggestions.map((s: string, i: number) => (
-                  <TouchableOpacity key={i} onPress={() => addItem(s)} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f1f1f1" }}>
-                    <Text style={{ color: "#333" }}>{s}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                </View>
 
-              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 12 }}>
-                <TouchableOpacity onPress={closeSheet} style={{ flex: 1, padding: 12, borderRadius: 8, backgroundColor: "#eee", alignItems: "center", marginRight: 8 }}>
-                  <Text>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleAddManual} style={{ flex: 1, padding: 12, borderRadius: 8, backgroundColor: COLORS.primary, alignItems: "center" }}>
-                  <Text style={{ color: "#fff" }}>Add</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
+                {/* INPUT */}
+                <TextInput
+                  placeholder={
+                    type === "email"
+                      ? "Enter email local part"
+                      : `Search ${type}s...`
+                  }
+                  value={input}
+                  onChangeText={setInput}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "#f1f1f1",
+                    padding: 12,
+                    fontSize: 16,
+                    borderRadius: 10,
+                    marginTop: 14,
+                  }}
+                  autoFocus
+                />
+
+                {/* SUGGESTIONS */}
+                <ScrollView
+                  style={{ marginTop: 12, maxHeight: screenHeight * 0.35 }}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {suggestions.length === 0 && input.trim().length > 0 && (
+                    <TouchableOpacity
+                      onPress={handleAddManual}
+                      style={{ paddingVertical: 12 }}
+                    >
+                      <Text style={{ color: COLORS.primary }}>
+                        Add "{input}"
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {suggestions.map((s: string, i: number) => (
+                    <TouchableOpacity
+                      key={i}
+                      onPress={() => addItem(s)}
+                      style={{
+                        paddingVertical: 12,
+                        borderBottomWidth: 1,
+                        borderBottomColor: "#efefef",
+                      }}
+                    >
+                      <Text style={{ fontSize: 15 }}>{s}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                {/* ACTION BUTTONS */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    marginTop: 16,
+                    gap: 12,
+                  }}
+                >
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: "#eee",
+                      paddingVertical: 14,
+                      borderRadius: 10,
+                      alignItems: "center",
+                    }}
+                    onPress={closeSheet}
+                  >
+                    <Text style={{ fontWeight: "600", color: "#444" }}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: COLORS.primary,
+                      paddingVertical: 14,
+                      borderRadius: 10,
+                      alignItems: "center",
+                    }}
+                    onPress={handleAddManual}
+                  >
+                    <Text style={{ color: "#fff", fontWeight: "700" }}>
+                      Add
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
         </View>
       </TouchableWithoutFeedback>

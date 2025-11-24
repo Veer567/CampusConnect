@@ -1,22 +1,17 @@
-import {
-  createMaterialTopTabNavigator,
-  MaterialTopTabBar,
-  MaterialTopTabNavigationProp,
-} from "@react-navigation/material-top-tabs";
-import { LinearGradient } from "expo-linear-gradient";
+// app/Market/index.tsx
 import React, { useEffect } from "react";
-import { View } from "react-native";
-import HackathonsScreen from "../screen/HackathonsScreen";
-import ProjectsScreen from "../screen/ProjectScreen";
-import StartupsScreen from "../screen/StartupsSreen";
+import { createMaterialTopTabNavigator, MaterialTopTabBar } from "@react-navigation/material-top-tabs";
+import { LinearGradient } from "expo-linear-gradient";
+import { Dimensions, Platform, View } from "react-native";
+import ProjectsScreen from "../screen/ProjectScreen"
+import HackathonsScreen from "../screen/HackathonsScreen"
+import StartupsScreen from "../screen/StartupsSreen"
 
 const Tab = createMaterialTopTabNavigator();
+const { width } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
 
-type TopTabsProps = {
-  initialTab?: string;
-};
-
-export default function TopTabs({ initialTab }: TopTabsProps) {
+export default function MarketIndex() {
   return (
     <Tab.Navigator
       initialRouteName="Projects"
@@ -26,39 +21,36 @@ export default function TopTabs({ initialTab }: TopTabsProps) {
         tabBarActiveTintColor: "#fff",
         tabBarInactiveTintColor: "rgba(255,255,255,0.7)",
         tabBarIndicatorStyle: {
-          backgroundColor: "#fff",
-          height: 3,
-          borderRadius: 3,
+          backgroundColor: "rgba(255,255,255,0.25)",
+          height: "70%",
+          borderRadius: 12,
+          marginVertical: 6,
         },
         tabBarStyle: {
           backgroundColor: "transparent",
           elevation: 0,
+          shadowOpacity: 0,
         },
       }}
       tabBar={(props) => {
-        // ⭐ Run the effect inside tabBar so we get props.navigation
-        useEffect(() => {
-          if (!initialTab) return;
-
-          const routeName =
-            initialTab === "project"
-              ? "Projects"
-              : initialTab === "hackathon"
-                ? "Hackathons"
-                : "Startups";
-
-          // ⭐ Cast navigation to the correct type so TS knows jumpTo() exists
-          const nav = props.navigation as unknown as MaterialTopTabNavigationProp<any>;
-          nav.jumpTo(routeName);
-        }, [initialTab]);
-
+        // small effect to jump to initialTab if needed - not required in most cases
+        useEffect(() => {}, []);
         return (
           <LinearGradient
             colors={["#3B82F6", "#0EA5E9"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
+            style={{
+              paddingTop: Platform.OS === "ios" ? 6 : 0,
+              paddingBottom: 4,
+              elevation: 4,
+              shadowColor: "#000",
+              shadowOpacity: 0.1,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 3 },
+            }}
           >
-            <View style={{ backgroundColor: "transparent", elevation: 0 }}>
+            <View style={{ backgroundColor: "transparent" }}>
               <MaterialTopTabBar {...props} />
             </View>
           </LinearGradient>

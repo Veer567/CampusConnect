@@ -59,7 +59,6 @@ export default defineSchema({
     .index("by_user_and_post", ["userId", "postId"])
     .index("by_user", ["userId"]),
 
-
   /*───────────────────────────────
    🔹 Comments Table
   ───────────────────────────────*/
@@ -101,17 +100,19 @@ export default defineSchema({
       v.literal("like"),
       v.literal("comment"),
       v.literal("follow"),
-      v.literal("message") // 🔥 added for chat notifications
+      v.literal("message")
     ),
     postId: v.optional(v.id("posts")),
     commentId: v.optional(v.id("comments")),
     createdAt: v.number(),
+    read: v.optional(v.boolean()),
+    conversationId: v.optional(v.id("conversations")),
   })
     .index("by_receiver", ["receiverId"])
     .index("by_post", ["postId"]),
 
   /*───────────────────────────────
-   🔹 Bookmarks Table
+   🔹 Bookmarks Tabl
   ───────────────────────────────*/
   bookmarks: defineTable({
     userId: v.id("users"),
@@ -144,11 +145,9 @@ export default defineSchema({
   messages: defineTable({
     conversationId: v.id("conversations"),
     senderId: v.id("users"),
-
     text: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     storageId: v.optional(v.id("_storage")),
-
     createdAt: v.number(),
     readBy: v.optional(v.array(v.id("users"))),
   })

@@ -148,12 +148,12 @@ export const toggleLikePost = mutation({
 
     if (!post) throw new Error("Post not found");
 
-    // ❌ Don't allow liking your own post
+    // ❌ block liking own posts
     if (post.userId === currentUser._id) {
       return { liked: false, likes: post.likes };
     }
 
-    // Check existing like
+    // check existing like
     const existing = await ctx.db
       .query("likes")
       .withIndex("by_user_and_post", (q) =>
@@ -164,9 +164,7 @@ export const toggleLikePost = mutation({
     // ✅ UNLIKE
     if (existing) {
       await ctx.db.delete(existing._id);
-
       const newLikes = Math.max(0, (post.likes ?? 1) - 1);
-
       await ctx.db.patch(args.postId, { likes: newLikes });
 
       return { liked: false, likes: newLikes };
@@ -182,16 +180,16 @@ export const toggleLikePost = mutation({
     });
 
     const newLikes = (post.likes ?? 0) + 1;
-
     await ctx.db.patch(args.postId, { likes: newLikes });
 
-    // Create DB + Push notification
+    // push notification
     await ctx.db.insert("notifications", {
       receiverId: post.userId,
       senderId: currentUser._id,
       type: "like",
       postId: args.postId,
       createdAt: now,
+      read: false,
     });
 
     await ctx.runMutation(api.push.sendPushNotification, {
@@ -373,5 +371,97 @@ export const getLikedPosts = query({
     );
 
     return posts.filter(Boolean);
+  },
+});
+/*───────────────────────────────────────────────
+ 🔹 Get a single post by ID (full details)
+───────────────────────────────────────────────*/
+export const getPostById = query({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, { postId }) => {
+    const user = await getAuthenticatedUser(ctx);
+
+    const post = await ctx.db.get(postId);
+    if (!post) return null;
+
+    const author = await ctx.db.get(post.userId);
+
+    // Check like
+    const like = await ctx.db
+      .query("likes")
+      .withIndex("by_user_and_post", (q) =>
+        q.eq("userId", user._id).eq("postId", postId)
+      )
+      .first();
+
+    // Check bookmark
+    const bookmark = await ctx.db
+      .query("bookmarks")
+      .withIndex("by_user_and_post", (q) =>
+        q.eq("userId", user._id).eq("postId", postId)
+      )
+      .first();
+
+    return {
+      ...post,
+      author: author
+        ? {
+            _id: author._id,
+            username: author.username,
+            image: author.image,
+          }
+        : null,
+      tags: post.tags ?? [],
+      isLiked: !!like,
+      isBookmarked: !!bookmark,
+      isOwner: post.userId === user._id,
+    };
+  },
+});
+export const toggleBookmark = mutation({
+  args: { postId: v.id("posts") },
+  handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+
+    const existing = await ctx.db
+      .query("bookmarks")
+      .withIndex("by_user_and_post", (q) =>
+        q.eq("userId", user._id).eq("postId", args.postId)
+      )
+      .first();
+
+    // 🔄 Unbookmark
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return { bookmarked: false };
+    }
+
+    // ⭐ Bookmark
+    await ctx.db.insert("bookmarks", {
+      userId: user._id,
+      postId: args.postId,
+    });
+
+    return { bookmarked: true };
+  },
+});
+export const getActivityStats = query({
+  handler: async (ctx) => {
+    const user = await getAuthenticatedUser(ctx);
+
+    const likes = await ctx.db
+      .query("likes")
+      .withIndex("by_user", q => q.eq("userId", user._id))
+      .collect();
+
+    const bookmarks = await ctx.db
+      .query("bookmarks")
+      .withIndex("by_user", q => q.eq("userId", user._id))
+      .collect();
+
+    return {
+      likes: likes.length,
+      bookmarks: bookmarks.length,
+    };
   },
 });

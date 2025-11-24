@@ -20,35 +20,40 @@ import { COLORS } from "../../../constants/themes";
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
 
-type Props = {
-  post: {
+/* ============================================================
+   ✔ TYPES — clean, strict, no more TS errors
+============================================================ */
+export interface MarketplacePost {
+  _id: string;
+  title: string;
+  description: string;
+  creatorId: string;
+  creatorName: string;
+  creatorImage?: string;
+  createdAt: number;
+  tags?: string[];
+  imageUrl?: string;
+  type: string;
+  location?: string;
+  interestedUsers?: {
     _id: string;
-    title: string;
-    description: string;
-    creatorId: string;
-    creatorName: string;
-    creatorImage?: string;
-    createdAt: number;
-    tags?: string[];
-    imageUrl?: string;
-    type: string;
-    location?: string;
-  interestedUsers?: (
-  | {
-      _id: string;
-      fullname: string;
-      image?: string;
-    }
-  | null
-)[];
-  };
-  onLearnMore?: (post?: any) => void;
+    fullname: string;
+    image?: string;
+  }[] | null;
+}
+
+export interface PostCardProps {
+  post: MarketplacePost;
+  onLearnMore?: (post: MarketplacePost) => void;
   interestedAvatars?: string[];
   currentUserId?: string;
   onEdit?: (postId: string) => void;
   onDelete?: (postId: string) => void;
-};
+}
 
+/* ============================================================
+   COMPONENT
+============================================================ */
 export default function PostCard({
   post,
   onLearnMore,
@@ -56,10 +61,9 @@ export default function PostCard({
   currentUserId,
   onEdit,
   onDelete,
-}: Props) {
+}: PostCardProps) {
   const isSelf = post.creatorId === currentUserId;
   const actionSheetRef = useRef<ActionSheetRef>(null);
-
   const [commentsVisible, setCommentsVisible] = useState(false);
 
   const handleEditSelected = () => {
@@ -71,10 +75,6 @@ export default function PostCard({
     actionSheetRef.current?.hide();
     onDelete?.(post._id);
   };
-
-  /* ============================================================
-     CARD UI
-  ============================================================= */
 
   return (
     <>
@@ -89,7 +89,7 @@ export default function PostCard({
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
           android_ripple={{ color: "rgba(0,0,0,0.06)" }}
         >
-          {/* OPTIONS BUTTON */}
+          {/* OPTIONS (Ellipsis) */}
           {isSelf && (
             <View style={styles.actionBar}>
               <Pressable onPress={() => actionSheetRef.current?.show()}>
@@ -102,7 +102,7 @@ export default function PostCard({
             </View>
           )}
 
-          {/* HEADER IMAGE */}
+          {/* IMAGE */}
           {post.imageUrl && (
             <View style={styles.imageWrap}>
               <Image source={{ uri: post.imageUrl }} style={styles.image} />
@@ -127,16 +127,16 @@ export default function PostCard({
 
             {/* TAGS */}
             <View style={styles.tagsRow}>
-              {(post.tags ?? []).slice(0, 6).map((t) => (
+              {(post.tags ?? []).slice(0, 6).map((t: string) => (
                 <View key={t} style={styles.chip}>
                   <Text style={styles.chipText}>{t}</Text>
                 </View>
               ))}
             </View>
 
-            {/* META ROW */}
+            {/* BOTTOM META ROW */}
             <View style={styles.metaRow}>
-              {/* LEFT: CREATOR */}
+              {/* Left — Creator */}
               <View style={styles.creatorRow}>
                 {post.creatorImage ? (
                   <Image
@@ -146,7 +146,7 @@ export default function PostCard({
                 ) : (
                   <View style={styles.creatorAvatarPlaceholder}>
                     <Text style={styles.creatorInitial}>
-                      {(post.creatorName?.charAt(0) ?? "U").toUpperCase()}
+                      {post.creatorName?.charAt(0).toUpperCase() ?? "U"}
                     </Text>
                   </View>
                 )}
@@ -159,9 +159,9 @@ export default function PostCard({
                 </View>
               </View>
 
-              {/* RIGHT: INTERESTED MEMBERS + COMMENTS */}
+              {/* Right — Interested & Comments */}
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                {/* INTERESTED AVATARS */}
+                {/* Interested avatars */}
                 <View style={styles.avatarRow}>
                   {interestedAvatars.slice(0, 4).map((img, idx) => (
                     <Image
@@ -180,7 +180,7 @@ export default function PostCard({
                   )}
                 </View>
 
-                {/* COMMENT BUTTON */}
+                {/* Comments Button */}
                 <TouchableOpacity
                   onPress={() => setCommentsVisible(true)}
                   style={styles.iconBtn}
@@ -202,6 +202,7 @@ export default function PostCard({
         <View style={sheetStyles.sheetContainer}>
           <Text style={sheetStyles.sheetTitle}>Post Options</Text>
 
+          {/* EDIT */}
           <TouchableOpacity
             style={sheetStyles.sheetOption}
             onPress={handleEditSelected}
@@ -210,6 +211,7 @@ export default function PostCard({
             <Text style={sheetStyles.sheetText}>Edit Post</Text>
           </TouchableOpacity>
 
+          {/* DELETE */}
           <TouchableOpacity
             style={sheetStyles.sheetOption}
             onPress={handleDeleteSelected}
@@ -220,6 +222,7 @@ export default function PostCard({
             </Text>
           </TouchableOpacity>
 
+          {/* CANCEL */}
           <TouchableOpacity
             style={[
               sheetStyles.sheetOption,
@@ -274,12 +277,10 @@ const styles = StyleSheet.create({
   imageGradient: { position: "absolute", width: "100%", height: "100%" },
 
   content: { padding: 14 },
-
   title: { fontSize: 18, fontWeight: "800", color: COLORS.text },
   description: { color: COLORS.textSecondary, marginTop: 4 },
 
   tagsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
-
   chip: {
     backgroundColor: COLORS.surfaceLight,
     paddingHorizontal: 10,
@@ -310,11 +311,7 @@ const styles = StyleSheet.create({
   creatorName: { fontSize: 14, fontWeight: "700" },
   creatorMeta: { fontSize: 12, color: COLORS.textSecondary },
 
-  avatarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 4,
-  },
+  avatarRow: { flexDirection: "row", alignItems: "center", marginRight: 4 },
   smallAvatar: {
     width: 28,
     height: 28,
@@ -335,11 +332,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
-  moreText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-  },
+  moreText: { color: "#fff", fontSize: 12, fontWeight: "700" },
 
   iconBtn: {
     width: 40,

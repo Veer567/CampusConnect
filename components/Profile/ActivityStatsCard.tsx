@@ -1,42 +1,55 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+// app/components/ActivityStatsCard.tsx
 import { COLORS } from "@/constants/themes";
+import { api } from "@/convex/_generated/api";
+import { useQuery } from "convex/react";
+import { useRouter } from "expo-router";
+import React from "react";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
-export function ActivityStatsCard({
-  stats,
-}: {
-  stats?: { likes?: number; bookmarks?: number };
-}) {
+export function ActivityStatsCard() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
 
-  const likes = stats?.likes ?? 0;
-  const bookmarks = stats?.bookmarks ?? 0;
+  const stats = useQuery(api.users.getActivityStats) ?? {
+    likes: 0,
+    bookmarks: 0,
+  };
 
-  const navItems: { label: string; value: number; route: "/likes" | "/bookmarks" }[] = [
-    { label: "Likes", value: likes, route: "/likes" },
-    { label: "Bookmarks", value: bookmarks, route: "/bookmarks" },
+  const likes = stats.likes ?? 0;
+  const bookmarks = stats.bookmarks ?? 0;
+
+  const navItems = [
+    { label: "Likes", value: likes, route: "/likes" as const },
+    { label: "Bookmarks", value: bookmarks, route: "/bookmarks" as const },
   ];
 
+  const cardWidth = (width - 60) / 2;
+
   return (
-    <View style={{ marginTop: 20 }}>
+    <View style={styles.container}>
       <Text style={styles.heading}>Activity Stats</Text>
 
       <View style={styles.row}>
         {navItems.map((item) => (
           <TouchableOpacity
             key={item.label}
-            style={{ width: "31%" }}
+            style={[styles.card, { width: cardWidth }]}
+            activeOpacity={0.85}
             onPress={() =>
               router.push({
-                pathname: item.route, // FIXED: No more unmatched route
+                pathname: item.route,
+                params: { from: "profile" },
               })
             }
           >
-            <View style={styles.card}>
-              <Text style={styles.value}>{item.value}</Text>
-              <Text style={styles.label}>{item.label}</Text>
-            </View>
+            <Text style={styles.value}>{item.value}</Text>
+            <Text style={styles.label}>{item.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -45,34 +58,33 @@ export function ActivityStatsCard({
 }
 
 const styles = StyleSheet.create({
+  container: { marginTop: 24 },
   heading: {
     color: COLORS.primary,
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-  },
+  row: { flexDirection: "row", justifyContent: "space-between" },
   card: {
     backgroundColor: "#fff",
     borderRadius: 14,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
-    width: "100%",
   },
   value: {
     color: COLORS.primary,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800",
+    marginBottom: 4,
   },
   label: {
     color: COLORS.grey,
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: "500",
   },
 });

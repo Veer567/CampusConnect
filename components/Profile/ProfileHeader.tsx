@@ -1,20 +1,25 @@
-// components/profile/ProfileHeader.tsx
 import { COLORS } from "@/constants/themes";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import React from "react";
 import {
   Image,
- 
   Text,
   TextInput,
   TouchableOpacity,
-  useWindowDimensions,
   View,
+  StyleSheet,
+  Dimensions,
 } from "react-native";
+
+const { width, height } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
+const hp = (p: number) => (height * p) / 100;
 
 interface ProfileHeaderProps {
   imageUrl?: string;
+  imageCacheBuster: number;
   fullname: string;
   year: string;
   editing: boolean;
@@ -28,35 +33,36 @@ interface ProfileHeaderProps {
   userId: string;
 }
 
-export function ProfileHeader({
-  imageUrl,
-  imageCacheBuster,
-  fullname,
-  year,
-  editing,
-  setFullname,
-  setYear,
-  openImageCropper,
-  isOwner,
-  posts,
-  followers,
-  following,
-  userId,
-}: ProfileHeaderProps & { imageCacheBuster: number }) {
-  const { width } = useWindowDimensions();
-  const size = width * 0.32;
+export function ProfileHeader(props: ProfileHeaderProps) {
+  const {
+    imageUrl,
+    imageCacheBuster,
+    fullname,
+    year,
+    editing,
+    setFullname,
+    setYear,
+    openImageCropper,
+    isOwner,
+    posts,
+    followers,
+    following,
+    userId,
+  } = props;
+
   const router = useRouter();
+  const imageSize = wp(32); // responsive avatar size
 
   return (
     <>
       <StatusBar style="dark" />
 
-      <View style={{ alignItems: "center" }}>
-        {/* Avatar */}
+      <View style={styles.container}>
+        {/* AVATAR */}
         <TouchableOpacity
           onPress={openImageCropper}
-          activeOpacity={isOwner ? 0.7 : 1}
           disabled={!isOwner}
+          activeOpacity={0.8}
         >
           <View style={{ position: "relative" }}>
             <Image
@@ -65,132 +71,193 @@ export function ProfileHeader({
                   ? `${imageUrl}?t=${imageCacheBuster}`
                   : "https://i.pravatar.cc/300",
               }}
-              style={{
-                width: size,
-                height: size,
-                borderRadius: size / 2,
-                borderWidth: 4,
-                borderColor: COLORS.primary,
-              }}
+              style={[
+                styles.avatar,
+                {
+                  width: imageSize,
+                  height: imageSize,
+                  borderRadius: imageSize / 2,
+                },
+              ]}
             />
+
             {isOwner && (
-              <View
-                style={{
-                  position: "absolute",
-                  bottom: 6,
-                  right: -6,
-                  backgroundColor: COLORS.primary,
-                  borderRadius: 20,
-                  padding: 7,
-                }}
-              >
-                <Ionicons name="camera" size={18} color="#fff" />
+              <View style={styles.cameraBadge}>
+                <Ionicons name="camera" size={wp(4.5)} color="#fff" />
               </View>
             )}
           </View>
         </TouchableOpacity>
 
-        {/* Name */}
+        {/* NAME */}
         {editing ? (
           <TextInput
             value={fullname}
             onChangeText={setFullname}
-            style={{
-              marginTop: 12,
-              fontSize: 24,
-              fontWeight: "700",
-              color: COLORS.primary,
-              backgroundColor: "#f0f7ff",
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 12,
-              minWidth: 200,
-              textAlign: "center",
-            }}
+            style={styles.nameInput}
+            placeholder="Full Name"
           />
         ) : (
-          <Text style={{ marginTop: 12, fontSize: 24, fontWeight: "700", color: COLORS.primary }}>
-            {fullname || "No Name"}
-          </Text>
+          <Text style={styles.nameText}>{fullname || "No Name"}</Text>
         )}
 
-        {/* Year */}
+        {/* YEAR */}
         {editing ? (
           <TextInput
             value={year}
             onChangeText={setYear}
             placeholder="e.g. 2026"
-            style={{
-              marginTop: 8,
-              backgroundColor: "#f0f7ff",
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 12,
-              fontWeight: "600",
-              color: COLORS.primary,
-            }}
+            style={styles.yearInput}
           />
         ) : (
-          <View
-            style={{
-              marginTop: 8,
-              backgroundColor: COLORS.secondary,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 20,
-            }}
-          >
-            <Text style={{ color: "#fff", fontWeight: "600" }}>
-              Year: {year || "—"}
-            </Text>
+          <View style={styles.yearBadge}>
+            <Text style={styles.yearBadgeText}>Year: {year || "—"}</Text>
           </View>
         )}
 
-        {/* Stats */}
-        <View style={{ flexDirection: "row", gap: 42, marginTop: 20 }}>
-          <TouchableOpacity
+        {/* STATS ROW */}
+        <View style={styles.statsRow}>
+          <Stat
+            label="Followers"
+            value={followers}
             onPress={() =>
               router.push({
                 pathname: "/followers",
                 params: { userId, from: "profile" },
               })
             }
-          >
-            <Text style={{ fontSize: 19, fontWeight: "700", textAlign: "center" }}>
-              {followers}
-            </Text>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 13 }}>Followers</Text>
-          </TouchableOpacity>
+          />
 
-          <TouchableOpacity
+          <Stat
+            label="Following"
+            value={following}
             onPress={() =>
               router.push({
                 pathname: "/following",
                 params: { userId, from: "profile" },
               })
             }
-          >
-            <Text style={{ fontSize: 19, fontWeight: "700", textAlign: "center" }}>
-              {following}
-            </Text>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 13 }}>Following</Text>
-          </TouchableOpacity>
+          />
 
-          <TouchableOpacity
+          <Stat
+            label="Posts"
+            value={posts}
             onPress={() =>
               router.push({
                 pathname: "/user-posts",
                 params: { userId, from: "profile" },
               })
             }
-          >
-            <Text style={{ fontSize: 19, fontWeight: "700", textAlign: "center" }}>
-              {posts}
-            </Text>
-            <Text style={{ color: COLORS.textSecondary, fontSize: 13 }}>Posts</Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
     </>
   );
 }
+
+/* ===== STAT COMPONENT ===== */
+function Stat({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value: number;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.6}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/* ===== STYLES ===== */
+const styles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+    paddingHorizontal: wp(4),
+  },
+
+  avatar: {
+    borderWidth: 3,
+    borderColor: COLORS.primary,
+  },
+
+  cameraBadge: {
+    position: "absolute",
+    bottom: hp(0.8),
+    right: -hp(0.8),
+    backgroundColor: COLORS.primary,
+    borderRadius: 20,
+    padding: wp(2.2),
+    elevation: 3,
+  },
+
+  nameText: {
+    marginTop: hp(1.2),
+    fontSize: wp(6),
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+
+  nameInput: {
+    marginTop: hp(1.2),
+    fontSize: wp(5),
+    fontWeight: "700",
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1),
+    borderRadius: 12,
+    backgroundColor: "#f0f7ff",
+    textAlign: "center",
+    width: wp(70),
+    color: COLORS.primary,
+  },
+
+  yearInput: {
+    marginTop: hp(1),
+    backgroundColor: "#f0f7ff",
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1),
+    borderRadius: 12,
+    fontSize: wp(4),
+    fontWeight: "600",
+    color: COLORS.primary,
+    width: wp(40),
+    textAlign: "center",
+  },
+
+  yearBadge: {
+    marginTop: hp(1),
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: wp(5),
+    paddingVertical: hp(1),
+    borderRadius: 20,
+  },
+
+  yearBadgeText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: wp(4),
+  },
+
+  statsRow: {
+    flexDirection: "row",
+    gap: wp(12),
+    marginTop: hp(2.2),
+  },
+
+  statValue: {
+    fontSize: wp(5),
+    fontWeight: "700",
+    textAlign: "center",
+  },
+
+  statLabel: {
+    fontSize: wp(3.3),
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    marginTop: hp(0.4),
+  },
+});

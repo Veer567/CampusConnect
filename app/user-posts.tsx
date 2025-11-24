@@ -13,10 +13,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
-const IMAGE_SIZE = (width - 8 * 4) / 3; // responsive 3 grid layout
+const GAP = 6; // spacing between tiles
+const IMAGE_SIZE = (width - GAP * 4) / 3; // fully responsive 3-grid layout
 
 export default function UserPosts() {
   const router = useRouter();
@@ -29,11 +31,11 @@ export default function UserPosts() {
   if (!posts) return null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <SafeAreaView style={styles.container}>
       <AppHeader
         title="Posts"
         showBackButton={true}
-        onBackPress={() => router.push("/(tabs)/profile")}
+        onBackPress={() => router.back()}
       />
 
       {posts.length === 0 ? (
@@ -49,9 +51,11 @@ export default function UserPosts() {
           contentContainerStyle={styles.gridContainer}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.card}
               activeOpacity={0.85}
-              onPress={() => router.push(`/post-details?postId=${item._id}`)}
+              style={styles.card}
+              onPress={() =>
+                router.push(`/post-details?postId=${item._id}`)
+              }
             >
               <Image
                 source={{ uri: item.imageUrl }}
@@ -66,7 +70,15 @@ export default function UserPosts() {
   );
 }
 
+/*──────────────────────────
+        ⭐ STYLES
+──────────────────────────*/
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+
   emptyBox: {
     marginTop: 120,
     alignItems: "center",
@@ -77,22 +89,27 @@ const styles = StyleSheet.create({
   },
 
   gridContainer: {
-    paddingHorizontal: 6,
-    paddingVertical: 10,
+    paddingHorizontal: GAP,
+    paddingTop: 8,
+    paddingBottom: 20,
   },
 
   card: {
     width: IMAGE_SIZE,
     height: IMAGE_SIZE,
-    margin: 4,
+    margin: GAP,
     borderRadius: 12,
+    backgroundColor: "#f3f3f3",
     overflow: "hidden",
-    backgroundColor: "#f2f2f2",
-    elevation: 3,
+
+    // iOS shadow
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
+
+    // Android elevation
+    elevation: Platform.OS === "android" ? 3 : 0,
   },
 
   image: {

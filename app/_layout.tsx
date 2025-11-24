@@ -7,6 +7,7 @@ import { COLORS } from "@/constants/themes";
 import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
 import InitalLayout from "@/components/initalLayout";
 import CustomStatusBar from "@/components/CustomStatusBar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function RootLayout() {
   const pathname = usePathname();
@@ -31,10 +32,11 @@ export default function RootLayout() {
           />
         )}
       
-
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <InitalLayout>
           <Slot />
         </InitalLayout>
+        </GestureHandlerRootView>
 
         <Toast />
       </SafeAreaProvider>

@@ -1,20 +1,29 @@
-import React from "react";
-import { View, Text, TouchableOpacity, Image } from "react-native";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { router } from "expo-router";
-import { useAuth } from "@clerk/clerk-expo";
-import { COLORS } from "@/constants/themes";
+// app/chat.tsx
 import AppHeader from "@/components/AppHeader";
+import { COLORS } from "@/constants/themes";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@clerk/clerk-expo";
+import { useQuery } from "convex/react";
+import { router } from "expo-router";
+import React from "react";
+import {
+  Dimensions,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+const { width } = Dimensions.get("window");
+const AVATAR_SIZE = width * 0.15;
 
 function formatTime(ts?: number) {
   if (!ts) return " ";
   const diff = Date.now() - ts;
-
   const mins = Math.floor(diff / 60000);
   const hrs = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-
   if (mins < 1) return "now";
   if (mins < 60) return `${mins}m`;
   if (hrs < 24) return `${hrs}h`;
@@ -25,122 +34,77 @@ function formatTime(ts?: number) {
 export default function ChatList() {
   const { userId: clerkId } = useAuth();
 
+  // get Convex user for current Clerk identity
   const me = useQuery(
     api.users.getUserByClerkId,
     clerkId ? { clerkId } : "skip"
   );
 
-  const conversations = useQuery(
-    api.chat.getMyConversations,
-    me ? {} : "skip"
-  );
+  // get conversations only after we have me
+  const conversations = useQuery(api.chat.getMyConversations, me ? {} : "skip");
 
+  // lightweight user list to resolve other user's profile (client-side cache). You can replace with a better query.
   const users = useQuery(api.users.searchUsers, { q: "" });
-  
-
 
   if (!me || !conversations || !users) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Loading chats…</Text>
+      <View style={styles.center}>
+        <Text style={styles.loading}>Loading chats…</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fff" }}>
+    <View style={styles.screen}>
       <AppHeader title="Chats" rightIcon="chatbubbles" />
-
-      {conversations.map((c) => {
+      {conversations.map((c: any) => {
         const otherUserId = c.participants.find(
           (p: any) => String(p) !== String(me._id)
         );
-
-        const other = users.find((u) => String(u._id) === String(otherUserId));
+        const other = users.find(
+          (u: any) => String(u._id) === String(otherUserId)
+        );
 
         return (
           <TouchableOpacity
             key={c._id}
+            activeOpacity={0.8}
             onPress={() =>
-              router.push(
-                `/chat-screen?conversationId=${c._id}&currentUserId=${me._id}&otherUserId=${otherUserId}`
-              )
+              router.push({
+                pathname: "/chat-screen",
+                params: {
+                  conversationId: String(c._id),
+                  currentUserId: String(me._id),
+                  otherUserId: String(otherUserId),
+                },
+              })
             }
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              paddingVertical: 14,
-              paddingHorizontal: 12,
-              borderBottomColor: "#f1f1f1",
-              borderBottomWidth: 1,
-            }}
+            style={styles.chatRow}
           >
-            {/* Avatar + online dot */}
             <View style={{ position: "relative" }}>
               <Image
-                source={{ uri: other?.image ?? "https://cdn-icons-png.flaticon.com/512/149/149071.png" }}
-                style={{
-                  width: 58,
-                  height: 58,
-                  borderRadius: 30,
+                source={{
+                  uri:
+                    other?.image ??
+                    "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                 }}
+                style={styles.avatar}
               />
-
-              <View
-                style={{
-                  width: 13,
-                  height: 13,
-                  borderRadius: 7,
-                  backgroundColor: COLORS.primary,
-                  borderWidth: 2,
-                  borderColor: "#fff",
-                  position: "absolute",
-                  right: -1,
-                  bottom: -1,
-                }}
-              />
+              <View style={styles.onlineDot} />
             </View>
 
-            <View style={{ flex: 1, marginLeft: 14 }}>
-              <Text style={{ fontSize: 16, fontWeight: "600" }}>
-                {other?.fullname}
-              </Text>
-
-              <Text
-                numberOfLines={1}
-                style={{ color: "#777", marginTop: 4, maxWidth: "92%" }}
-              >
+            <View style={styles.middle}>
+              <Text style={styles.name}>{other?.fullname || "Unknown"}</Text>
+              <Text numberOfLines={1} style={styles.lastMsg}>
                 {c.lastMessage || "Say hi 👋"}
               </Text>
             </View>
 
-            {/* Time + unread badge */}
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ fontSize: 12, color: "#777" }}>
-                {formatTime(c.lastMessageAt)}
-              </Text>
-
+            <View style={styles.right}>
+              <Text style={styles.time}>{formatTime(c.lastMessageAt)}</Text>
               {c.unreadCount > 0 && (
-                <View
-                  style={{
-                    backgroundColor: COLORS.primary,
-                    minWidth: 24,
-                    paddingHorizontal: 7,
-                    paddingVertical: 2,
-                    borderRadius: 12,
-                    marginTop: 6,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: "#fff",
-                      fontWeight: "700",
-                      fontSize: 13,
-                      textAlign: "center",
-                    }}
-                  >
-                    {c.unreadCount}
-                  </Text>
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadText}>{c.unreadCount}</Text>
                 </View>
               )}
             </View>
@@ -150,3 +114,52 @@ export default function ChatList() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: "#fff" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loading: { fontSize: 16, color: COLORS.textSecondary },
+  chatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F2F2F2",
+  },
+  avatar: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+  },
+  onlineDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: COLORS.primary,
+    borderWidth: 2,
+    borderColor: "#fff",
+    position: "absolute",
+    right: -1,
+    bottom: -2,
+  },
+  middle: { flex: 1, marginLeft: 14, justifyContent: "center" },
+  name: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  lastMsg: { marginTop: 4, fontSize: 14, color: "#777", maxWidth: "92%" },
+  right: { alignItems: "flex-end", justifyContent: "center" },
+  time: { fontSize: 12, color: "#999" },
+  unreadBadge: {
+    backgroundColor: COLORS.primary,
+    minWidth: 22,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginTop: 6,
+  },
+  unreadText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
+  },
+});

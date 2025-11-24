@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import {
+  Dimensions,
   FlatList,
   Image,
   SafeAreaView,
@@ -14,13 +15,18 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
+
+const { width, height } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
+const hp = (p: number) => (height * p) / 100;
 
 export default function FollowersScreen() {
   const router = useRouter();
   const { userId, from } = useLocalSearchParams();
 
-  // Fetch followers
+  // Query followers
   const rawFollowers = useQuery(api.users.getFollowers, {
     userId: userId === "me" ? undefined : (userId as any),
   });
@@ -34,27 +40,23 @@ export default function FollowersScreen() {
      SMART BACK HANDLING
   ──────────────────────────────*/
   const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      const fallback =
-        from === "profile"
-          ? "/(tabs)/profile"
-          : from === "other"
-            ? `/other-profile?userId=${userId}`
-            : "/(tabs)";
-      router.replace(fallback as any);
-    }
+    if (router.canGoBack()) return router.back();
+
+    const fallback =
+      from === "profile"
+        ? "/(tabs)/profile"
+        : from === "other"
+        ? `/other-profile?userId=${userId}`
+        : "/(tabs)";
+
+    router.replace(fallback as any);
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <AppHeader
-        title="Followers"
-        showBackButton={true}
-        onBackPress={() => router.push("/(tabs)/profile")}
-      />
+    <SafeAreaView style={styles.container}>
+      <AppHeader title="Followers" showBackButton onBackPress={handleBack} />
 
+      {/* Empty */}
       {followers.length === 0 ? (
         <View style={styles.emptyBox}>
           <Text style={styles.emptyText}>No followers yet</Text>
@@ -62,41 +64,53 @@ export default function FollowersScreen() {
       ) : (
         <FlatList
           data={followers}
+          showsVerticalScrollIndicator={false}
           keyExtractor={(item) => item._id}
+          contentContainerStyle={{ paddingBottom: hp(2) }}
           renderItem={({ item }) => (
             <View style={styles.row}>
-              {/* Profile Image */}
+              {/* Avatar */}
               <TouchableOpacity
-                onPress={() => router.push(`/other-profile?userId=${item._id}`)}
+                onPress={() =>
+                  router.push(`/other-profile?userId=${item._id}`)
+                }
+                activeOpacity={0.7}
               >
                 <Image
                   source={{
-                    uri: item.image || "https://i.pravatar.cc/150",
+                    uri:
+                      item.image ||
+                      "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                   }}
                   style={styles.avatar}
                 />
               </TouchableOpacity>
 
-              {/* Name + username */}
+              {/* Name + Username */}
               <TouchableOpacity
-                style={{ flex: 1 }}
-                onPress={() => router.push(`/other-profile?userId=${item._id}`)}
+                style={styles.userInfo}
+                onPress={() =>
+                  router.push(`/other-profile?userId=${item._id}`)
+                }
               >
-                <Text style={styles.name}>{item.fullname}</Text>
-                <Text style={styles.username}>@{item.username}</Text>
+                <Text numberOfLines={1} style={styles.name}>
+                  {item.fullname}
+                </Text>
+                <Text numberOfLines={1} style={styles.username}>
+                  @{item.username}
+                </Text>
               </TouchableOpacity>
 
-              {/* Message Button */}
+              {/* Message */}
               <TouchableOpacity
                 style={styles.msgBtn}
+                activeOpacity={0.8}
                 onPress={async () => {
                   const conv = await startConversation({
                     otherUserId: item._id,
                   });
-                  if (!conv || !conv._id) {
-                    // Conversation wasn't created/found, don't navigate
-                    return;
-                  }
+                  if (!conv || !conv._id) return;
+
                   router.push(
                     `/chat-screen?conversationId=${conv._id}&otherUserId=${item._id}`
                   );
@@ -105,8 +119,9 @@ export default function FollowersScreen() {
                 <Text style={styles.msgBtnText}>Message</Text>
               </TouchableOpacity>
 
-              {/* Remove / Unfollow Button */}
+              {/* Unfollow / Remove */}
               <TouchableOpacity
+                activeOpacity={0.8}
                 style={styles.removeBtn}
                 onPress={() => toggleFollow({ followingId: item._id })}
               >
@@ -121,60 +136,72 @@ export default function FollowersScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#fff" },
+
   emptyBox: {
-    marginTop: 100,
+    marginTop: hp(15),
     alignItems: "center",
   },
   emptyText: {
     color: COLORS.textSecondary,
-    fontSize: 16,
+    fontSize: wp(4),
   },
+
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: hp(1.8),
+    paddingHorizontal: wp(4),
     borderBottomWidth: 1,
-    borderColor: "#f2f2f2",
+    borderColor: "#f1f1f1",
   },
+
   avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 999,
-    marginRight: 12,
+    width: wp(14),
+    height: wp(14),
+    borderRadius: wp(7),
+    marginRight: wp(4),
   },
+
+  userInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+
   name: {
     fontWeight: "700",
-    fontSize: 15,
+    fontSize: wp(4),
     color: COLORS.text,
   },
   username: {
-    fontSize: 13,
+    fontSize: wp(3.4),
     color: COLORS.textSecondary,
     marginTop: 2,
   },
+
   msgBtn: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginRight: 10,
+    paddingHorizontal: wp(3.2),
+    paddingVertical: hp(0.9),
+    borderRadius: wp(2),
+    marginRight: wp(2),
   },
   msgBtnText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: wp(3.2),
     fontWeight: "600",
   },
+
   removeBtn: {
     backgroundColor: "#eee",
-    width: 30,
-    height: 30,
-    borderRadius: 999,
+    width: wp(8),
+    height: wp(8),
+    borderRadius: wp(4),
     justifyContent: "center",
     alignItems: "center",
   },
   removeX: {
-    fontSize: 16,
+    fontSize: wp(4.4),
     color: "#444",
     fontWeight: "700",
   },

@@ -1,16 +1,16 @@
-// FEED SCREEN — UPDATED WITH CHAT + NOTIFICATIONS BUTTONS
+// FEED SCREEN — WITH BADGE FOR UNREAD NOTIFICATIONS + MESSAGES
 
 import AppHeader from "@/components/AppHeader";
 import { Loader } from "@/components/Loader";
 import Post from "@/components/Posts";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
-import { styles } from "@/styles/feed.styles";
+import { feedStyles } from "@/styles/feed.styles";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -18,14 +18,17 @@ import {
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 const { height } = Dimensions.get("window");
 
+// Categories list
 const categories = [
   { id: 0, name: "All", icon: "📄" },
   { id: 1, name: "Placements", icon: "👨‍💼" },
@@ -36,24 +39,32 @@ const categories = [
   { id: 6, name: "Other", icon: "✨" },
 ];
 
-export default function Index() {
+export default function FeedScreen() {
+  const { width } = useWindowDimensions();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
 
-  // Feed posts
+  /* --------------------------------------------------
+     UNREAD COUNTS (Convex auto-updated)
+  -------------------------------------------------- */
+  const unreadMessages = useQuery(api.chat.getUnreadMessageCount) ?? 0;
+  const unreadNotifications = useQuery(api.notifications.getUnreadCount) ?? 0;
+
+  // Fetch posts
   const posts = useQuery(api.posts.getFeedPosts) || [];
 
+  // Map posts for frontend use
   const mappedPosts = useMemo(
     () =>
       posts.map((post) => ({
         _id: post._id,
-        title: post.title || "Untitled",
-        caption: post.caption || "",
-        category: post.category || "Other",
+        title: post.title ?? "Untitled",
+        caption: post.caption ?? "",
+        category: post.category ?? "Other",
         imageUrl: post.imageUrl ?? undefined,
         author: {
           _id: post.author._id,
-          username: post.author.username || "Anonymous",
+          username: post.author.username ?? "Anonymous",
           image: post.author.image ?? "",
         },
         likes: post.likes ?? 0,
@@ -69,13 +80,18 @@ export default function Index() {
     [posts]
   );
 
-  const categoryScales = categories.map(() => new Animated.Value(1));
+  // Category animation
+  const categoryScales = useRef(
+    categories.map(() => new Animated.Value(1))
+  ).current;
 
+  // Filter posts by category
   const filteredPosts = useMemo(() => {
     if (selectedCategory.name === "All") return mappedPosts;
     return mappedPosts.filter((p) => p.category === selectedCategory.name);
   }, [mappedPosts, selectedCategory]);
 
+  // Pull-to-refresh
   const onRefresh = () => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 1200);
@@ -86,91 +102,93 @@ export default function Index() {
 
   return (
     <SafeAreaProvider>
-      <LinearGradient
-        colors={["#EFF6FF", "#FFFFFF"]}
-        style={{ flex: 1 }}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <SafeAreaView style={styles.container}>
-          {/* TOP HEADER WITH CHAT + NOTIFICATION BUTTONS */}
-          {/* Custom Header Only for Feed Screen */}
+      <LinearGradient colors={["#EFF6FF", "#FFFFFF"]} style={{ flex: 1 }}>
+        <SafeAreaView style={feedStyles.container}>
+          {/* HEADER */}
           <View style={{ position: "relative" }}>
-            <AppHeader title="Campus Connect 🎓" alignLeft />
+            <AppHeader title="Campus Connect 🎓" alignLeft   
+            showBackButton={false}
+            />
 
-            {/* Right-side Icons over Header */}
-            <View
-              style={{
-                position: "absolute",
-                right: 16,
-                top: 18, // adjust for perfect alignment
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 18,
-              }}
-            >
-              {/* Notifications */}
-              <TouchableOpacity onPress={() => router.push("/notifications")}>
+            {/* TOP RIGHT ICONS */}
+            <View style={feedStyles.headerRightContainer}>
+              {/* NOTIFICATION BUTTON */}
+              <TouchableOpacity
+                style={{ marginRight: 18 }}
+                onPress={() => router.push("/notifications")}
+              >
                 <Ionicons
                   name="notifications-outline"
                   size={24}
                   color="white"
                 />
+
+                {/* BADGE */}
+                {unreadNotifications > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
 
-              {/* Chat */}
+              {/* CHAT BUTTON */}
               <TouchableOpacity onPress={() => router.push("/chat")}>
                 <Ionicons
                   name="chatbubble-ellipses-outline"
                   size={24}
                   color="white"
                 />
+
+                {/* BADGE */}
+                {unreadMessages > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {unreadMessages > 9 ? "9+" : unreadMessages}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* SEARCH BAR */}
           <TouchableOpacity
             onPress={() => router.push("/search")}
-            activeOpacity={0.8}
-            style={{
-              marginTop: 10,
-              marginHorizontal: 16,
-              backgroundColor: "#f2f2f2",
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              borderRadius: 10,
-              flexDirection: "row",
-              alignItems: "center",
-            }}
+            activeOpacity={0.7}
+            style={feedStyles.searchBar}
           >
             <Ionicons name="search-outline" size={20} color="#777" />
-            <Text style={{ marginLeft: 10, fontSize: 16, color: "#777" }}>
+            <Text style={feedStyles.searchText}>
               Search users, posts or #tags...
             </Text>
           </TouchableOpacity>
 
-          {/* Categories */}
-          <View style={styles.categoryContainer}>
+          {/* CATEGORIES */}
+          <View style={feedStyles.categoryContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {categories.map((cat, index) => {
-                const isActive = selectedCategory.id === cat.id;
+                const active = selectedCategory.id === cat.id;
+
                 return (
                   <Animated.View
                     key={cat.id}
                     style={{ transform: [{ scale: categoryScales[index] }] }}
                   >
                     <TouchableOpacity
-                      onPress={() => setSelectedCategory(cat)}
                       activeOpacity={0.85}
+                      onPress={() => setSelectedCategory(cat)}
                       style={[
-                        styles.categoryButton,
-                        isActive && styles.categoryButtonActive,
+                        feedStyles.categoryButton,
+                        active && feedStyles.categoryButtonActive,
                       ]}
                     >
-                      <Text style={styles.categoryIcon}>{cat.icon}</Text>
+                      <Text style={feedStyles.categoryIcon}>{cat.icon}</Text>
                       <Text
                         style={[
-                          styles.categoryText,
-                          isActive && styles.categoryTextActive,
+                          feedStyles.categoryText,
+                          active && feedStyles.categoryTextActive,
                         ]}
                       >
                         {cat.name}
@@ -182,14 +200,14 @@ export default function Index() {
             </ScrollView>
           </View>
 
-          {/* Posts Feed */}
+          {/* POSTS */}
           <FlatList
             data={filteredPosts}
             renderItem={({ item }) => <Post post={item} />}
             keyExtractor={(item) => item._id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
-              styles.postsList,
+              feedStyles.postsList,
               { minHeight: height * 0.5 },
             ]}
             refreshControl={
@@ -206,8 +224,31 @@ export default function Index() {
   );
 }
 
+/* EMPTY POST COMPONENT */
 const NoPostsFound = () => (
-  <View style={styles.emptyContainer}>
-    <Text style={styles.emptyText}>No posts yet</Text>
+  <View style={feedStyles.emptyContainer}>
+    <Text style={feedStyles.emptyText}>No posts yet</Text>
   </View>
 );
+
+/* BADGE STYLES */
+const styles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    right: -6,
+    top: -4,
+    backgroundColor: "#ff3b30",
+    minWidth: 17,
+    height: 17,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+});

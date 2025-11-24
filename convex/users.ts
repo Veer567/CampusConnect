@@ -181,6 +181,7 @@ export const toggleFollow = mutation({
         senderId: currentUser._id,
         type: "follow",
         createdAt: Date.now(),
+        read: false,
       });
 
       // PUSH Notification
@@ -214,38 +215,28 @@ async function updateFollowCounts(
 }
 
 export const getActivityStats = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, { userId }) => {
-    const posts = await ctx.db
-      .query("posts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+  handler: async (ctx) => {
+    const me = await getAuthenticatedUser(ctx);
+    if (!me) return { likes: 0, bookmarks: 0 };
+
+    // Count likes by user
+    const likes = await ctx.db
+      .query("likes")
+      .withIndex("by_user", (q) => q.eq("userId", me._id))
       .collect();
 
-    let likes = 0;
-    let bookmarks = 0;
-
-    for (const post of posts) {
-      const postLikes = await ctx.db
-        .query("likes")
-        .withIndex("by_post", (q) => q.eq("postId", post._id))
-        .collect();
-      likes += postLikes.length;
-
-      const postBookmarks = await ctx.db
-        .query("bookmarks")
-        .withIndex("by_post", (q) => q.eq("postId", post._id))
-        .collect();
-      bookmarks += postBookmarks.length;
-    }
+    // Count bookmarks by user
+    const bookmarks = await ctx.db
+      .query("bookmarks")
+      .withIndex("by_user", (q) => q.eq("userId", me._id))
+      .collect();
 
     return {
-      posts: posts.length,
-      likes,
-      bookmarks,
+      likes: likes.length,
+      bookmarks: bookmarks.length,
     };
   },
 });
-
 export const updateProfilePicture = mutation({
   args: {
     storageId: v.id("_storage"),
@@ -400,4 +391,3 @@ export const getFollowing = query({
     );
   },
 });
-

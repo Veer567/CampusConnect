@@ -1,8 +1,9 @@
 import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Image,
   ScrollView,
@@ -13,10 +14,19 @@ import {
   View,
   BackHandler,
   Alert,
+  Dimensions,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../../constants/themes";
 import { api } from "../../../convex/_generated/api";
+
+/* ---------------------------
+   Responsive helpers
+----------------------------*/
+const { width, height } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
+const hp = (p: number) => (height * p) / 100;
 
 export default function EditMarketplace() {
   const router = useRouter();
@@ -30,7 +40,9 @@ export default function EditMarketplace() {
   const updatePost = useMutation(api.marketplace.updateMarketplacePost);
   const deletePost = useMutation(api.marketplace.deleteMarketplacePost);
 
-  // ⭐ HOOKS MUST COME FIRST → NEVER DEPEND ON post
+  /* ---------------------------
+     Local form states
+----------------------------*/
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
@@ -39,24 +51,29 @@ export default function EditMarketplace() {
   const [lastDateToJoin, setLastDateToJoin] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [location, setLocation] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // ⭐ When post loads → populate all fields
+  /* ---------------------------
+     Load post into state
+----------------------------*/
   useEffect(() => {
-    if (!post) return;
-
-    setTitle(post.title);
-    setDescription(post.description);
-    setTags((post.tags ?? []).join(", "));
-    setLookingFor(post.lookingFor ?? "");
-    setEventDate(post.eventDate ?? "");
-    setLastDateToJoin(post.lastDateToJoin ?? "");
-    setLocation(post.location ?? "");
-    setImage(post.imageUrl ?? null);
+    if (post) {
+      setTitle(post.title);
+      setDescription(post.description);
+      setTags((post.tags ?? []).join(", "));
+      setLookingFor(post.lookingFor ?? "");
+      setEventDate(post.eventDate ?? "");
+      setLastDateToJoin(post.lastDateToJoin ?? "");
+      setLocation(post.location ?? "");
+      setImage(post.imageUrl ?? null);
+    }
   }, [post]);
 
   const postType = post?.type ?? "project";
 
-  // Handle back button
+  /* ---------------------------
+     Android back override
+----------------------------*/
   useEffect(() => {
     const backAction = () => {
       router.replace(`/marketplace?tab=${postType}`);
@@ -64,45 +81,87 @@ export default function EditMarketplace() {
     };
     const sub = BackHandler.addEventListener("hardwareBackPress", backAction);
     return () => sub.remove();
-  }, [postType]);
+  }, [postType, router]);
 
-  // Pick Image
+  /* ---------------------------
+     Image Picker + Compression
+----------------------------*/
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      quality: 0.8,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    });
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission required", "Allow gallery access to pick an image.");
+        return;
+      }
 
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        quality: 0.7,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      });
+
+      if (!result.canceled && result.assets[0]?.uri) {
+        const compressed = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 1080 } }],
+          { compress: 0.7 }
+        );
+        setImage(compressed.uri);
+      }
+    } catch (err) {
+      console.log("Image pick error:", err);
     }
   };
 
-  // Submit Edited Post
-  const submit = async () => {
+  /* ---------------------------
+     SAVE CHANGES
+----------------------------*/
+  const submit = useCallback(async () => {
     if (!post) return;
+
     if (!title.trim() || !description.trim()) {
-      alert("Title and description are required.");
+      Alert.alert("Missing fields", "Please fill title & description.");
       return;
     }
 
-    await updatePost({
-      id: id as any,
-      title,
-      description,
-      tags: tags.split(",").map((t) => t.trim()),
-      lookingFor,
-      eventDate,
-      lastDateToJoin,
-      imageUrl: image ?? undefined,
-      location,
-    });
+    setLoading(true);
 
-    router.replace(`/marketplace?tab=${postType}`);
-  };
+    try {
+      await updatePost({
+        id: id as any,
+        title: title.trim(),
+        description: description.trim(),
+        tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+        lookingFor: lookingFor.trim() || undefined,
+        eventDate: eventDate || undefined,
+        lastDateToJoin: lastDateToJoin || undefined,
+        imageUrl: image || undefined,
+        location: location.trim() || "Remote",
+      });
 
-  // Delete Post
+      router.replace(`/marketplace?tab=${postType}`);
+    } catch (err) {
+      console.log("Update error:", err);
+      Alert.alert("Failed", "Could not update post. Please try again.");
+    }
+
+    setLoading(false);
+  }, [
+    id,
+    title,
+    description,
+    tags,
+    lookingFor,
+    eventDate,
+    lastDateToJoin,
+    image,
+    location,
+    postType,
+  ]);
+
+  /* ---------------------------
+     DELETE POST
+----------------------------*/
   const deleteConfirm = () => {
     Alert.alert(
       "Delete Post?",
@@ -121,113 +180,68 @@ export default function EditMarketplace() {
     );
   };
 
-  // ⭐ SHOW LOADING WITHOUT BREAKING HOOK ORDER
+  /* ---------------------------
+     Loading state
+----------------------------*/
   if (!post) {
     return (
-      <View style={{ padding: 20 }}>
+      <View style={{ padding: wp(5) }}>
         <Text>Loading...</Text>
       </View>
     );
   }
 
+  /* ---------------------------
+     UI
+----------------------------*/
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Back Button */}
       <TouchableOpacity
         onPress={() => router.replace(`/marketplace?tab=${postType}`)}
-        style={{ marginBottom: 10, flexDirection: "row", alignItems: "center" }}
+        style={styles.backRow}
       >
         <Ionicons name="arrow-back" size={26} color={COLORS.text} />
-        <Text style={{ fontSize: 17, marginLeft: 6, color: COLORS.text }}>
-          Back
-        </Text>
+        <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
 
       <Text style={styles.header}>Edit {postType.toUpperCase()}</Text>
 
-      {/* Cover Image */}
+      {/* Image */}
       <Text style={styles.label}>Cover Image</Text>
       <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
         {!image ? (
           <>
             <Text style={styles.uploadText}>Upload Cover Image</Text>
-            <Text style={styles.uploadSub}>Tap to select an image</Text>
+            <Text style={styles.uploadSub}>Tap to select</Text>
           </>
         ) : (
           <Image source={{ uri: image }} style={styles.previewImage} />
         )}
       </TouchableOpacity>
 
-      {/* Title */}
-      <Text style={styles.label}>Title</Text>
-      <TextInput
-        value={title}
-        onChangeText={setTitle}
-        style={styles.input}
-        placeholder="Enter title..."
-      />
-
-      {/* Description */}
-      <Text style={styles.label}>Description</Text>
-      <TextInput
-        value={description}
-        onChangeText={setDescription}
-        style={[styles.input, { minHeight: 120 }]}
-        multiline
-        placeholder="Description..."
-      />
-
-      {/* Tags */}
-      <Text style={styles.label}>Skills & Tags</Text>
-      <TextInput
-        value={tags}
-        onChangeText={setTags}
-        style={styles.input}
-        placeholder="React, UI Design..."
-      />
-
-      {/* Looking For */}
-      <Text style={styles.label}>Looking For</Text>
-      <TextInput
-        value={lookingFor}
-        onChangeText={setLookingFor}
-        style={styles.input}
-        placeholder="Backend dev, designer..."
-      />
-
-      {/* Dates */}
-      <Text style={styles.label}>Event Date</Text>
-      <TextInput
-        value={eventDate}
-        onChangeText={setEventDate}
-        style={styles.input}
-        placeholder="YYYY-MM-DD"
-      />
-
-      <Text style={styles.label}>Last Date to Join</Text>
-      <TextInput
+      {/* Inputs */}
+      <Input label="Title" value={title} onChange={setTitle} />
+      <Input label="Description" value={description} onChange={setDescription} multiline />
+      <Input label="Skills / Tags" value={tags} onChange={setTags} />
+      <Input label="Looking For" value={lookingFor} onChange={setLookingFor} />
+      <Input label="Event Date" value={eventDate} onChange={setEventDate} placeholder="YYYY-MM-DD" />
+      <Input
+        label="Last Date to Join"
         value={lastDateToJoin}
-        onChangeText={setLastDateToJoin}
-        style={styles.input}
+        onChange={setLastDateToJoin}
         placeholder="YYYY-MM-DD"
       />
+      <Input label="Location" value={location} onChange={setLocation} />
 
-      {/* Location */}
-      <Text style={styles.label}>Location</Text>
-      <TextInput
-        value={location}
-        onChangeText={setLocation}
-        style={styles.input}
-        placeholder="Mumbai, Delhi, Remote..."
-      />
-
-      {/* Save Button */}
-      <TouchableOpacity style={styles.submitBtn} onPress={submit}>
-        <LinearGradient
-          colors={[COLORS.primary, COLORS.secondary]}
-          style={styles.submitGradient}
-        >
-          <Text style={styles.submitText}>Save Changes</Text>
+      {/* Save Changes */}
+      <TouchableOpacity
+        disabled={loading}
+        style={[styles.submitBtn, loading && { opacity: 0.6 }]}
+        onPress={submit}
+      >
+        <LinearGradient colors={[COLORS.primary, COLORS.secondary]} style={styles.submitGradient}>
+          <Text style={styles.submitText}>{loading ? "Saving..." : "Save Changes"}</Text>
         </LinearGradient>
       </TouchableOpacity>
 
@@ -239,56 +253,116 @@ export default function EditMarketplace() {
   );
 }
 
+/* ---------------------------
+   Reusable input component
+----------------------------*/
+function Input({
+  label,
+  value,
+  onChange,
+  multiline = false,
+  placeholder,
+}: any) {
+  return (
+    <>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        multiline={multiline}
+        placeholderTextColor={COLORS.textSecondary}
+        style={[styles.input, multiline && styles.multilineInput]}
+      />
+    </>
+  );
+}
+
+/* ---------------------------
+   Styles (fully responsive)
+----------------------------*/
 const styles = StyleSheet.create({
   container: {
-    padding: 18,
-    paddingBottom: 160,
+    padding: wp(5),
+    paddingBottom: hp(10),
     backgroundColor: COLORS.background,
   },
+  backRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: hp(1.5),
+  },
+  backText: {
+    fontSize: wp(4),
+    marginLeft: wp(2),
+    color: COLORS.text,
+  },
   header: {
-    fontSize: 26,
+    fontSize: wp(7),
     fontWeight: "800",
-    marginBottom: 18,
+    marginBottom: hp(2),
     color: COLORS.text,
   },
   label: {
-    fontSize: 14,
+    fontSize: wp(3.7),
     fontWeight: "700",
-    marginTop: 14,
-    marginBottom: 8,
+    marginTop: hp(1),
+    marginBottom: hp(0.6),
     color: COLORS.text,
   },
   uploadBox: {
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 18,
+    borderRadius: wp(3),
+    padding: hp(2),
     alignItems: "center",
-    justifyContent: "center",
     backgroundColor: COLORS.surface,
   },
   uploadText: { fontWeight: "700", color: COLORS.text },
-  uploadSub: { color: COLORS.textSecondary, marginTop: 6 },
-  previewImage: { width: "100%", height: 220, borderRadius: 12 },
+  uploadSub: { color: COLORS.textSecondary, marginTop: 4 },
+  previewImage: {
+    width: "100%",
+    height: hp(25),
+    borderRadius: wp(3),
+  },
   input: {
     backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 12,
-    fontSize: 15,
+    padding: wp(4),
+    borderRadius: wp(3),
+    fontSize: wp(4),
     borderWidth: 1,
     borderColor: COLORS.border,
     elevation: 1,
   },
-  submitBtn: { marginTop: 24, borderRadius: 14, overflow: "hidden" },
-  submitGradient: { padding: 16, borderRadius: 14, alignItems: "center" },
-  submitText: { color: "#fff", fontWeight: "800", fontSize: 16 },
-  deleteBtn: {
-    marginTop: 20,
-    padding: 14,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: 12,
+  multilineInput: {
+    minHeight: hp(15),
+    textAlignVertical: "top",
+  },
+  submitBtn: {
+    marginTop: hp(3),
+    borderRadius: wp(3),
+    overflow: "hidden",
+  },
+  submitGradient: {
+    padding: hp(2),
     alignItems: "center",
   },
-  deleteText: { color: "red", fontWeight: "700", fontSize: 15 },
+  submitText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: wp(4.5),
+  },
+  deleteBtn: {
+    marginTop: hp(3),
+    padding: hp(1.8),
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: wp(3),
+    alignItems: "center",
+  },
+  deleteText: {
+    color: "red",
+    fontWeight: "700",
+    fontSize: wp(4),
+  },
 });

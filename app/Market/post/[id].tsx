@@ -1,3 +1,5 @@
+// app/Market/post/[id].tsx
+
 import { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,7 +22,7 @@ import { COLORS } from "../../../constants/themes";
 import { api } from "../../../convex/_generated/api";
 
 export default function MarketplacePostDetail() {
-  const { id, scrollTo } = useLocalSearchParams();
+  const { id, scrollTo, from } = useLocalSearchParams();
   const router = useRouter();
 
   const { userId: clerkId } = useAuth();
@@ -28,7 +30,6 @@ export default function MarketplacePostDetail() {
     api.users.getUserByClerkId,
     clerkId ? { clerkId } : "skip"
   );
-
   const safeUserId = me?._id;
 
   const post = useQuery(
@@ -46,7 +47,7 @@ export default function MarketplacePostDetail() {
     if (scrollTo === "comments") {
       setTimeout(() => {
         scrollRef.current?.scrollToEnd({ animated: true });
-      }, 400);
+      }, 300);
     }
   }, [scrollTo]);
 
@@ -57,19 +58,32 @@ export default function MarketplacePostDetail() {
       </View>
     );
 
-  const isSelf = safeUserId && String(post.creatorId) === String(safeUserId);
-
+  const isSelf = safeUserId === post.creatorId;
   const isJoined =
     safeUserId &&
     post.interestedUsers?.some(
       (u: any) => String(u._id) === String(safeUserId)
     );
 
-  const navigateBack = () => {
-    const tab = post.type?.toLowerCase() || "project";
-    router.replace(`/marketplace?tab=${tab}`);
-  };
+  /** ------------------------------
+   *    PERFECTLY SAFE BACK
+   *    - works with gesture
+   *    - works with back button
+   *    - returns to correct tab because user came from there
+   * ------------------------------ */
+  function navigateBack() {
+    // normal back → ensures gestures work
+    router.back();
 
+    // after going back, correct the tab
+    if (from) {
+      setTimeout(() => {
+        router.replace(`/Market?tab=${from}`);
+      }, 50);
+    }
+  }
+
+  /** JOIN / UNJOIN */
   const handleJoinToggle = async () => {
     Animated.sequence([
       Animated.timing(joinAnim, {
@@ -87,6 +101,7 @@ export default function MarketplacePostDetail() {
     await toggleInterest({ postId: post._id as Id<"marketplacePosts"> });
   };
 
+  /** MESSAGE CREATOR */
   const handleMessageCreator = async () => {
     if (!safeUserId || safeUserId === post.creatorId) return;
 
@@ -113,7 +128,7 @@ export default function MarketplacePostDetail() {
         <Ionicons name="arrow-back" size={24} color="#fff" />
       </TouchableOpacity>
 
-      {/* HERO IMAGE */}
+      {/* IMAGE */}
       <View style={styles.heroContainer}>
         <Image
           source={{ uri: post.imageUrl || "https://via.placeholder.com/400" }}
@@ -121,7 +136,7 @@ export default function MarketplacePostDetail() {
         />
       </View>
 
-      {/* TYPE LABEL */}
+      {/* TYPE */}
       <View style={styles.typePill}>
         <Text style={styles.typeText}>{post.type.toUpperCase()}</Text>
       </View>
@@ -188,12 +203,11 @@ export default function MarketplacePostDetail() {
       <Text style={styles.description}>{post.description}</Text>
 
       {/* SKILLS */}
-      {/* ------------ SKILLS ------------ */}
       {(post.tags?.length ?? 0) > 0 && (
         <>
           <Text style={styles.sectionTitle}>Required Skills</Text>
           <View style={styles.tagsRow}>
-            {(post.tags ?? []).map((t: string) => (
+            {(post.tags ?? []).map((t) => (
               <View key={t} style={styles.skillPill}>
                 <Text style={styles.skillText}>{t}</Text>
               </View>
@@ -202,9 +216,8 @@ export default function MarketplacePostDetail() {
         </>
       )}
 
-      {/* INTERESTED AVATARS */}
+      {/* INTERESTED USERS */}
       <Text style={styles.sectionTitle}>Interested Members</Text>
-
       <View style={styles.avatarRow}>
         {(post.interestedUsers ?? []).slice(0, 5).map((user: any) => (
           <Image
@@ -213,7 +226,6 @@ export default function MarketplacePostDetail() {
             style={styles.interestedAvatar}
           />
         ))}
-
         {(post.interestedUsers ?? []).length > 5 && (
           <View style={styles.moreCircle}>
             <Text style={{ color: "#fff", fontWeight: "700" }}>
@@ -245,12 +257,9 @@ export default function MarketplacePostDetail() {
 }
 
 /* ========================= STYLES ========================= */
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
-
   heroContainer: {
     width: "100%",
     height: 260,
@@ -259,13 +268,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 26,
     backgroundColor: "#ddd",
   },
-
-  headerImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-
+  headerImage: { width: "100%", height: "100%", resizeMode: "cover" },
   backBtn: {
     position: "absolute",
     top: Platform.OS === "android" ? 40 : 50,
@@ -275,7 +278,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 30,
   },
-
   typePill: {
     marginTop: -20,
     marginLeft: 16,
@@ -285,9 +287,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
   },
-
   typeText: { color: "#fff", fontWeight: "700" },
-
   title: {
     fontSize: 26,
     fontWeight: "800",
@@ -296,7 +296,6 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     marginRight: 16,
   },
-
   creatorCard: {
     marginHorizontal: 16,
     marginTop: 20,
@@ -307,18 +306,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 3,
   },
-
   creatorCardAvatar: {
     width: 52,
     height: 52,
     borderRadius: 26,
     marginRight: 14,
   },
-
   creatorCardName: { fontSize: 17, fontWeight: "700", color: COLORS.text },
-
   creatorCardRole: { fontSize: 14, color: COLORS.textSecondary },
-
   messageBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -330,13 +325,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     gap: 6,
   },
-
-  messageBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.primary,
-  },
-
+  messageBtnText: { fontSize: 14, fontWeight: "700", color: COLORS.primary },
   statsBox: {
     marginHorizontal: 16,
     marginTop: 22,
@@ -346,19 +335,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-
   statCol: { flex: 1, alignItems: "center" },
-
   statNumber: { fontSize: 18, fontWeight: "700", marginTop: 6 },
-
   statLabel: { color: COLORS.textSecondary, marginTop: 4 },
-
   divider: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderColor: COLORS.surfaceLight,
   },
-
   sectionTitle: {
     marginTop: 26,
     marginLeft: 16,
@@ -366,21 +350,18 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: COLORS.text,
   },
-
   description: {
     marginHorizontal: 16,
     marginTop: 6,
     lineHeight: 20,
     color: COLORS.textSecondary,
   },
-
   tagsRow: {
     marginTop: 10,
     marginHorizontal: 16,
     flexDirection: "row",
     flexWrap: "wrap",
   },
-
   skillPill: {
     backgroundColor: "#fff",
     borderRadius: 999,
@@ -391,23 +372,14 @@ const styles = StyleSheet.create({
     marginRight: 10,
     marginBottom: 10,
   },
-
   skillText: { color: COLORS.primary, fontWeight: "700" },
-
   avatarRow: {
     marginHorizontal: 16,
     marginTop: 10,
     flexDirection: "row",
     alignItems: "center",
   },
-
-  interestedAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 8,
-  },
-
+  interestedAvatar: { width: 44, height: 44, borderRadius: 22, marginRight: 8 },
   moreCircle: {
     width: 44,
     height: 44,
@@ -416,19 +388,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   joinBtn: {
     marginTop: 30,
     marginHorizontal: 16,
     borderRadius: 18,
     overflow: "hidden",
   },
-
   joinGradient: {
     paddingVertical: 16,
     justifyContent: "center",
     alignItems: "center",
   },
-
   joinText: { color: "#fff", fontSize: 17, fontWeight: "800" },
 });

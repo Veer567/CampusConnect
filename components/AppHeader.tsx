@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 
 // Get screen dimensions for responsive layout
 const { width, height } = Dimensions.get("window");
@@ -25,22 +26,29 @@ interface HeaderProps {
   title: string;
   showBackButton?: boolean;
   rightIcon?: string;
-  onBackPress?: () => void;
+  onBackPress?: () => void;   // <── CUSTOM BACK HANDLER
   onRightPress?: () => void;
-  alignLeft?: boolean; // enables left-aligned title when true
+  alignLeft?: boolean;        // enables left-aligned title
 }
 
 // Main AppHeader component
 export default function AppHeader({
   title,
-  showBackButton = false,
+  showBackButton = true,
   rightIcon,
   onBackPress,
   onRightPress,
-  alignLeft = false, // default behavior keeps title centered
+  alignLeft = false,
 }: HeaderProps) {
+  const router = useRouter();
+
+  // Default back behavior if user did not pass custom handler
+  const handleBack = () => {
+    if (onBackPress) onBackPress();
+    else router.back();
+  };
+
   return (
-    // Background gradient across the header
     <LinearGradient
       colors={[COLORS.primary, COLORS.secondary]}
       start={{ x: 0, y: 0 }}
@@ -48,17 +56,17 @@ export default function AppHeader({
       style={styles.header}
     >
       <View style={styles.headerContent}>
-        {/* Left side: back button (optional) */}
+        
+        {/* LEFT: Back button */}
         {showBackButton ? (
-          <TouchableOpacity onPress={onBackPress} style={styles.iconButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.iconButton}>
             <Ionicons name="chevron-back" size={26} color={COLORS.white} />
           </TouchableOpacity>
         ) : (
-          // Placeholder ensures title stays centered when no back icon
           <View style={styles.placeholder} />
         )}
 
-        {/* Center or left-aligned title */}
+        {/* CENTER / LEFT TITLE */}
         <View
           style={[
             styles.titleContainer,
@@ -71,7 +79,7 @@ export default function AppHeader({
               alignLeft && {
                 textAlign: "left",
                 alignSelf: "flex-start",
-                marginLeft: wp(-7.5), // slightly shifts title toward the left edge
+                marginLeft: wp(-7.5),
                 fontFamily: "Poppins_700Bold",
                 fontSize: wp(6.2),
                 letterSpacing: 0.3,
@@ -82,21 +90,21 @@ export default function AppHeader({
           </Text>
         </View>
 
-        {/* Right side: optional icon (e.g., bookmark, notification, etc.) */}
+        {/* RIGHT ICON */}
         {rightIcon ? (
           <TouchableOpacity onPress={onRightPress} style={styles.iconButton}>
             <Ionicons name={rightIcon as any} size={22} color={COLORS.white} />
           </TouchableOpacity>
         ) : (
-          // Placeholder balances layout when no right icon
           <View style={styles.placeholder} />
         )}
+
       </View>
     </LinearGradient>
   );
 }
 
-// Styles for layout and visual consistency
+// Styles
 const styles = StyleSheet.create({
   header: {
     width: "100%",
@@ -105,7 +113,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 6,
-    elevation: 3, // subtle elevation for depth on Android
+    elevation: 3,
   },
   headerContent: {
     flexDirection: "row",
@@ -116,7 +124,7 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     flex: 1,
-    alignItems: "center", // centers title by default
+    alignItems: "center",
   },
   title: {
     color: COLORS.white,
@@ -129,6 +137,6 @@ const styles = StyleSheet.create({
     padding: wp(0.5),
   },
   placeholder: {
-    width: wp(6), // keeps spacing consistent even without icons
+    width: wp(6),
   },
 });

@@ -2,6 +2,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
+import { styles } from "@/styles/lost.styles";
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
@@ -18,9 +19,7 @@ import {
   Animated,
   FlatList,
   Modal,
-  Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -29,7 +28,6 @@ import {
 } from "react-native";
 
 import { COLORS } from "@/constants/themes";
-import { StatusBar } from "expo-status-bar";
 
 /**
  * NOTE: you uploaded two sample images earlier; included as fallbacks.
@@ -136,7 +134,8 @@ export default function LostFoundScreen() {
 
   const handleEditSelected = () => {
     actionSheetRef.current?.hide();
-    if (selectedItem) router.push(`/edit-lost-item?id=${selectedItem._id}`);
+    if (selectedItem) router.push(`/lost-found/edit-lost-item?id=${selectedItem._id}`);
+
   };
 
   const handleDeleteSelected = () => {
@@ -147,8 +146,6 @@ export default function LostFoundScreen() {
     setConfirmAction("delete");
     openConfirmModal();
   };
-
-
 
   // open confirm modal animation
   function openConfirmModal() {
@@ -220,7 +217,7 @@ export default function LostFoundScreen() {
         duration: 100,
         useNativeDriver: true,
       }),
-    ]).start(() => router.push("/add"));
+    ]).start(() => router.push("/lost-found/add"));
   };
 
   return (
@@ -236,7 +233,7 @@ export default function LostFoundScreen() {
               <Ionicons name="cube-outline" size={22} color="#fff" />
             </View>
 
-            <View style={styles.headerTextSection}>
+            <View>
               <Text style={styles.headerTitle}>Lost & Found</Text>
               <Text style={styles.headerSubtitle}>Help find missing items</Text>
             </View>
@@ -341,8 +338,6 @@ export default function LostFoundScreen() {
         </ScrollView>
       </View>
 
-
-
       {/* Items list */}
       <FlatList
         data={filtered}
@@ -385,51 +380,53 @@ export default function LostFoundScreen() {
         ]}
       >
         <TouchableOpacity
-          style={styles.fab}
           onPress={handleCreatePress}
-          activeOpacity={0.9}
+          style={{
+            position: "absolute",
+            bottom: 7,
+            right: 1,
+            backgroundColor: COLORS.primary,
+            paddingHorizontal: 15,
+            paddingVertical: 15,
+            borderRadius: 30,
+            elevation: 6,
+          }}
         >
-          <LinearGradient
-            colors={[COLORS.primary, COLORS.secondary]}
-            style={styles.fabGradient}
-          >
-            <Text style={styles.fabIcon}>+</Text>
-          </LinearGradient>
+          <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>
       </Animated.View>
 
       {/* ActionSheet (3-dots) - shows Edit/Delete/Mark found/Reunited */}
       <ActionSheet ref={actionSheetRef}>
-        <View style={sheetStyles.sheetContainer}>
-          <Text style={sheetStyles.sheetTitle}>Item Options</Text>
+        <View style={styles.sheetContainer}>
+          <Text style={styles.sheetTitle}>Item Options</Text>
 
           <TouchableOpacity
-            style={sheetStyles.sheetOption}
+            style={styles.sheetOption}
             onPress={handleEditSelected}
           >
             <Ionicons name="create-outline" size={20} color={COLORS.primary} />
-            <Text style={sheetStyles.sheetText}>Edit Item</Text>
+            <Text style={styles.sheetText}>Edit Item</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={sheetStyles.sheetOption}
+            style={styles.sheetOption}
             onPress={handleDeleteSelected}
           >
             <Ionicons name="trash-outline" size={20} color={COLORS.red} />
-            <Text style={[sheetStyles.sheetText, { color: COLORS.red }]}>
+            <Text style={[styles.sheetText, { color: COLORS.red }]}>
               Delete Item
             </Text>
           </TouchableOpacity>
 
-
           <TouchableOpacity
             style={[
-              sheetStyles.sheetOption,
+              styles.sheetOption,
               { justifyContent: "center", marginTop: 8 },
             ]}
             onPress={() => actionSheetRef.current?.hide()}
           >
-            <Text style={[sheetStyles.sheetText, { fontWeight: "700" }]}>
+            <Text style={[styles.sheetText, { fontWeight: "700" }]}>
               Cancel
             </Text>
           </TouchableOpacity>
@@ -444,15 +441,15 @@ export default function LostFoundScreen() {
         onRequestClose={closeConfirmModal}
       >
         <TouchableWithoutFeedback onPress={closeConfirmModal}>
-          <View style={confirmStyles.backdrop}>
+          <View style={styles.confirmBackdrop}>
             {/* clicking backdrop invokes close */}
           </View>
         </TouchableWithoutFeedback>
 
-        <View style={confirmStyles.centerWrapper} pointerEvents="box-none">
+        <View style={styles.confirmCenter} pointerEvents="box-none">
           <Animated.View
             style={[
-              confirmStyles.card,
+              styles.confirmCard,
               {
                 transform: [
                   {
@@ -467,8 +464,8 @@ export default function LostFoundScreen() {
             ]}
           >
             {/* color-accent header */}
-            <View style={confirmStyles.headerAccent}>
-              <Text style={confirmStyles.headerTitle}>
+            <View style={styles.confirmHeader}>
+              <Text style={styles.headerTitle}>
                 {confirmAction === "delete"
                   ? "Delete Item?"
                   : confirmAction === "reunite"
@@ -479,8 +476,8 @@ export default function LostFoundScreen() {
               </Text>
             </View>
 
-            <View style={confirmStyles.content}>
-              <Text style={confirmStyles.message}>
+            <View style={styles.confirmContent}>
+              <Text style={styles.confirmMessage}>
                 {confirmAction === "delete"
                   ? "This will permanently delete the post. Are you sure?"
                   : confirmAction === "reunite"
@@ -490,19 +487,19 @@ export default function LostFoundScreen() {
                       : ""}
               </Text>
 
-              <View style={confirmStyles.buttonsRow}>
+              <View style={styles.confirmButtons}>
                 <TouchableOpacity
-                  style={confirmStyles.btnCancel}
+                  style={styles.confirmCancel}
                   onPress={closeConfirmModal}
                 >
-                  <Text style={confirmStyles.btnCancelText}>Cancel</Text>
+                  <Text style={styles.confirmCancelText}>Cancel</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={confirmStyles.btnConfirm}
+                  style={styles.confirmConfirm}
                   onPress={performConfirmAction}
                 >
-                  <Text style={confirmStyles.btnConfirmText}>
+                  <Text style={styles.confirmConfirmText}>
                     {confirmAction === "delete"
                       ? "Delete"
                       : confirmAction === "reunite"
@@ -518,7 +515,6 @@ export default function LostFoundScreen() {
     </View>
   );
 }
-
 
 function LostItemCard({
   item,
@@ -564,23 +560,21 @@ function LostItemCard({
   };
 
   return (
-  
-      <View style={cardStyles.card}>
-        
-        <View style={cardStyles.cardImageContainer}>
-          <Image
-            source={{ uri: item.imageUrl || FALLBACK_IMG_2 }}
-            style={cardStyles.cardImage}
+    <View style={styles.card}>
+      <View style={styles.cardImageContainer}>
+        <Image
+          source={{ uri: item.imageUrl || FALLBACK_IMG_2 }}
+          style={styles.cardImage}
           contentFit="cover"
         />
         <LinearGradient
           colors={["rgba(0,0,0,0.45)", "transparent"]}
-          style={cardStyles.imageGradient}
+          style={styles.imageGradient}
         />
 
         <View
           style={[
-            cardStyles.statusBadge,
+            styles.statusBadge,
             { backgroundColor: isLost ? "#FF6B9D" : "#10B981" },
           ]}
         >
@@ -589,16 +583,15 @@ function LostItemCard({
             size={14}
             color="#fff"
           />
-          <Text style={cardStyles.statusBadgeText}>
+          <Text style={styles.statusBadgeText}>
             {isLost ? "Lost" : "Found"}
           </Text>
         </View>
 
-
         {/* 3-dots menu (owner-only) - top-right */}
         {isOwner && (
           <TouchableOpacity
-            style={cardStyles.topMenuBtn}
+            style={styles.topMenuBtn}
             onPress={() => onOpenOptions(item)}
           >
             <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
@@ -606,8 +599,8 @@ function LostItemCard({
         )}
       </View>
 
-      <View style={cardStyles.cardContent}>
-        <View style={cardStyles.userRowTop}>
+      <View style={styles.cardContent}>
+        <View style={styles.userRowTop}>
           <TouchableOpacity
             onPress={() =>
               router.push(`/other-profile?userId=${item.reporterId}`)
@@ -615,16 +608,16 @@ function LostItemCard({
           >
             <Image
               source={{ uri: avatarUri }}
-              style={cardStyles.avatar}
+              style={styles.avatar}
               contentFit="cover"
             />
           </TouchableOpacity>
 
           <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={cardStyles.userName}>
+            <Text style={styles.userName}>
               {userProfile?.fullname || item.reporterName}
             </Text>
-            <Text style={cardStyles.timeText}>{createdAgo}</Text>
+            <Text style={styles.timeText}>{createdAgo}</Text>
           </View>
 
           {/* owner quick actions */}
@@ -632,7 +625,7 @@ function LostItemCard({
             <>
               {isLost ? (
                 <TouchableOpacity
-                  style={[cardStyles.actionBtn, { backgroundColor: "#FF4F91" }]}
+                  style={[styles.actionBtn, { backgroundColor: "#FF4F91" }]}
                   onPress={() => onCardOwnerMarkFound(item)}
                 >
                   <Ionicons
@@ -641,13 +634,13 @@ function LostItemCard({
                     color="#fff"
                     style={{ marginRight: 8 }}
                   />
-                  <Text style={[cardStyles.actionBtnText, { color: "#fff" }]}>
+                  <Text style={[styles.actionBtnText, { color: "#fff" }]}>
                     I Found It
                   </Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
-                  style={[cardStyles.actionBtn, { backgroundColor: "#10B981" }]}
+                  style={[styles.actionBtn, { backgroundColor: "#10B981" }]}
                   onPress={() => onCardOwnerReturnToOwner(item)}
                 >
                   <Ionicons
@@ -656,17 +649,14 @@ function LostItemCard({
                     color="#fff"
                     style={{ marginRight: 8 }}
                   />
-                  <Text style={[cardStyles.actionBtnText, { color: "#fff" }]}>
+                  <Text style={[styles.actionBtnText, { color: "#fff" }]}>
                     Returned to Owner
                   </Text>
                 </TouchableOpacity>
               )}
             </>
           ) : (
-            <TouchableOpacity
-              style={cardStyles.chatIconBtn}
-              onPress={startChat}
-            >
+            <TouchableOpacity style={styles.chatIconBtn} onPress={startChat}>
               <Ionicons
                 name="chatbubble-ellipses-outline"
                 size={18}
@@ -676,35 +666,35 @@ function LostItemCard({
           )}
         </View>
 
-        <Text style={cardStyles.cardTitle} numberOfLines={2}>
+        <Text style={styles.cardTitle} numberOfLines={2}>
           {item.title}
         </Text>
 
         {item.description ? (
-          <Text style={cardStyles.cardDescription} numberOfLines={2}>
+          <Text style={styles.cardDescription} numberOfLines={2}>
             {item.description}
           </Text>
         ) : null}
 
-        <View style={cardStyles.metaContainer}>
-          <View style={cardStyles.metaRow}>
+        <View style={styles.metaContainer}>
+          <View style={styles.metaRow}>
             <Ionicons
               name="location-outline"
               size={14}
               color={COLORS.textSecondary}
             />
-            <Text style={cardStyles.metaText} numberOfLines={1}>
+            <Text style={styles.metaText} numberOfLines={1}>
               {item.location || "Unknown location"}
             </Text>
           </View>
 
-          <View style={cardStyles.metaRow}>
+          <View style={styles.metaRow}>
             <Ionicons
               name="calendar-outline"
               size={14}
               color={COLORS.textSecondary}
             />
-            <Text style={cardStyles.metaText}>
+            <Text style={styles.metaText}>
               {new Date(item.createdAt).toDateString()}
             </Text>
           </View>
@@ -713,314 +703,3 @@ function LostItemCard({
     </View>
   );
 }
-
-/* =========================
-   Styles
-   ========================= */
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: 20, paddingBottom: 20 },
-  headerContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  headerLeft: { flexDirection: "row", alignItems: "center" },
-  iconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  headerTextSection: {},
-  headerTitle: { fontSize: 22, fontWeight: "700", color: "#fff" },
-  headerSubtitle: { fontSize: 13, color: "rgba(255,255,255,0.9)" },
-  sparklesBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  searchWrapper: { marginTop: 8 },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: Platform.OS === "web" ? 12 : 14,
-    gap: 10,
-  },
-  searchInput: { flex: 1, fontSize: 15, color: COLORS.text },
-
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    marginTop: 12,
-  },
-  statCard: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 12,
-    width: "32%",
-    alignItems: "center",
-    elevation: 2,
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.primary,
-    marginTop: 6,
-  },
-  statLabel: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
-
-  filtersSection: { marginTop: 12, paddingHorizontal: 16 },
-  filterScrollContent: { paddingVertical: 4, gap: 10 },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 24,
-    gap: 8,
-    borderWidth: 1.2,
-    borderColor: COLORS.border,
-    marginRight: 10,
-  },
-  filterChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  filterText: { fontSize: 14, fontWeight: "600", color: COLORS.textSecondary },
-  filterTextActive: { color: "#fff" },
-
-  categoriesSection: { marginTop: 10, paddingHorizontal: 12 },
-  categoryScrollContent: { paddingVertical: 4, gap: 8 },
-  categoryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
-    marginRight: 10,
-  },
-  categoryChipActive: {
-    backgroundColor: "#EEF4FF",
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  categoryText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: COLORS.textSecondary,
-  },
-  categoryTextActive: { color: COLORS.primary, fontWeight: "600" },
-
-  listContent: { paddingHorizontal: 12, paddingTop: 16, paddingBottom: 140 },
-
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.text,
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-
-  fabContainer: { position: "absolute", right: 24 },
-  fab: { width: 62, height: 62, borderRadius: 31, overflow: "hidden" },
-  fabGradient: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  fabIcon: { fontSize: 32, color: "#fff", fontWeight: "300" },
-});
-
-/* card styles */
-const cardStyles = StyleSheet.create({
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    marginBottom: 16,
-    overflow: "hidden",
-    marginHorizontal: 8,
-  },
-  cardImageContainer: {
-    width: "100%",
-    height: 200,
-    position: "relative",
-    backgroundColor: "#F3F4F6",
-  },
-  cardImage: { width: "100%", height: "100%" },
-  imageGradient: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
-
-  statusBadge: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    flexDirection: "row",
-    gap: 6,
-    alignItems: "center",
-  },
-  statusBadgeText: { color: "#fff", fontSize: 12, fontWeight: "700" },
-
-  categoryBadge: {
-    position: "absolute",
-    top: 12,
-    right: 50,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-  },
-  categoryBadgeText: { fontSize: 11, fontWeight: "600", color: COLORS.text },
-
-  topMenuBtn: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    padding: 8,
-    borderRadius: 18,
-    backgroundColor: "rgba(0,0,0,0.28)",
-  },
-
-  cardContent: { padding: 14 },
-  userRowTop: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#F3F4F6",
-  },
-  userName: { fontSize: 15, fontWeight: "700", color: COLORS.text },
-  timeText: { fontSize: 12, color: COLORS.textSecondary },
-
-  chatIconBtn: {
-    marginLeft: 10,
-    padding: 8,
-    borderRadius: 30,
-    backgroundColor: "#EEF4FF",
-  },
-  menuBtn: { marginLeft: 10, padding: 8, borderRadius: 30 },
-
-  actionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-    flexDirection: "row",
-  },
-  actionBtnText: { fontSize: 13, fontWeight: "700", color: COLORS.text },
-
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.text,
-    marginTop: 8,
-  },
-  cardDescription: { fontSize: 14, color: COLORS.textSecondary, marginTop: 6 },
-
-  metaContainer: { flexDirection: "row", marginTop: 10, gap: 12 },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1 },
-  metaText: { fontSize: 13, color: COLORS.textSecondary },
-});
-
-/* Action sheet styles */
-const sheetStyles = StyleSheet.create({
-  sheetContainer: { padding: 20, backgroundColor: "#fff" },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 15,
-    color: COLORS.text,
-  },
-  sheetOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 15,
-  },
-  sheetText: {
-    marginLeft: 12,
-    fontSize: 16,
-    fontWeight: "500",
-    color: COLORS.text,
-  },
-});
-
-/* Confirm modal styles (color-accent header — you chose Royal Blue #3B82F6) */
-const confirmStyles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
-  centerWrapper: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 520,
-    borderRadius: 16,
-    backgroundColor: "#fff",
-    overflow: "hidden",
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  headerAccent: {
-    backgroundColor: "#3B82F6", // Royal Blue (Option 4)
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  headerTitle: { color: "#fff", fontSize: 16, fontWeight: "800" },
-  content: { padding: 18 },
-  message: { fontSize: 15, color: "#222", marginBottom: 18, lineHeight: 20 },
-  buttonsRow: { flexDirection: "row", justifyContent: "flex-end", gap: 12 },
-  btnCancel: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: "#F3F4F6",
-  },
-  btnCancelText: { color: "#333", fontWeight: "700" },
-  btnConfirm: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: "#3B82F6",
-  },
-  btnConfirmText: { color: "#fff", fontWeight: "800" },
-});

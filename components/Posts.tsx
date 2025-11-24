@@ -325,9 +325,20 @@ export default function Post({ post, onDeleted }: PostProps) {
         </View>
       )}
 
-      {post.imageUrl && (
-        <Image source={{ uri: post.imageUrl }} style={styles.image} />
-      )}
+  {post.imageUrl && (
+  <TouchableOpacity
+    activeOpacity={0.9}
+    onPress={() =>
+      router.push({
+        pathname: "/post-details",
+        params: { postId: post._id },
+      })
+    }
+  >
+    <Image source={{ uri: post.imageUrl }} style={styles.image} />
+  </TouchableOpacity>
+)}
+
 
       {(post.eventDate || post.location) && (
         <View style={styles.metaRow}>
@@ -474,7 +485,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   threeDotButton: { padding: 6, alignSelf: "flex-start" },
-  categoryTag: { position: "absolute", top: wp(0), right: wp(6) },
+  categoryTag: { position: "absolute", top: wp(0), right: wp(5) },
   categoryBadge: {
     flexDirection: "row",
     alignItems: "center",

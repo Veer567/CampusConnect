@@ -6,16 +6,19 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Dimensions,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/themes";
-import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
-/*───────────────────────────────────────────────
- 🔹 Comment Type (must match CommentsModal)
-───────────────────────────────────────────────*/
+/* Responsive helpers */
+const { width, height } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
+const hp = (p: number) => (height * p) / 100;
+
+/* Comment type (same as CommentsModal) */
 export interface CommentType {
   _id: Id<"comments">;
   content: string;
@@ -26,10 +29,9 @@ export interface CommentType {
     username: string;
     fullname: string;
     image: string | null;
-    _id: Id<"users"> | undefined;  // ✅ MATCH CommentsModal
+    _id: Id<"users"> | undefined;
   };
 }
-
 
 type Props = {
   comment: CommentType;
@@ -38,17 +40,12 @@ type Props = {
   onDelete: (c: CommentType) => void;
 };
 
-export default function CommentItem({
-  comment,
-  onReply,
-  onEdit,
-  onDelete,
-}: Props) {
+export default function CommentItem({ comment, onReply, onEdit, onDelete }: Props) {
   const replies: CommentType[] =
     useQuery(api.comments.getReplies, { parentId: comment._id }) ?? [];
 
   return (
-    <View style={{ marginBottom: 18 }}>
+    <View style={{ marginBottom: hp(2.2) }}>
       {/* MAIN COMMENT */}
       <View style={styles.row}>
         <Image
@@ -77,10 +74,7 @@ export default function CommentItem({
               onPress={() =>
                 Alert.alert("Edit Comment", "", [
                   { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Edit",
-                    onPress: () => onEdit(comment, comment.content),
-                  },
+                  { text: "Edit", onPress: () => onEdit(comment, comment.content) },
                 ])
               }
             >
@@ -122,28 +116,52 @@ export default function CommentItem({
   );
 }
 
+/* ------------------ STYLES ------------------ */
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    gap: 10,
+    gap: wp(3),
   },
-  avatar: { width: 40, height: 40, borderRadius: 20 },
-  name: { fontWeight: "700", fontSize: 14 },
-  text: { marginTop: 2, fontSize: 14 },
+
+  avatar: {
+    width: wp(10),      // 40px → responsive
+    height: wp(10),
+    borderRadius: wp(5),
+  },
+
+  name: {
+    fontWeight: "700",
+    fontSize: wp(3.8),
+  },
+
+  text: {
+    marginTop: hp(0.5),
+    fontSize: wp(3.7),
+    lineHeight: wp(4.8),
+    color: "#222",
+  },
+
   actions: {
     flexDirection: "row",
-    gap: 16,
-    marginTop: 6,
+    gap: wp(5),
+    marginTop: hp(0.9),
   },
+
   reply: {
     color: COLORS.primary,
-    fontSize: 12,
+    fontSize: wp(3.2),
   },
+
   replyRow: {
     flexDirection: "row",
-    marginTop: 8,
-    marginLeft: 50,
-    gap: 10,
+    marginTop: hp(1),
+    marginLeft: wp(13), // 50px → responsive
+    gap: wp(3),
   },
-  replyAvatar: { width: 32, height: 32, borderRadius: 16 },
+
+  replyAvatar: {
+    width: wp(8),     // 32px → responsive
+    height: wp(8),
+    borderRadius: wp(4),
+  },
 });

@@ -15,12 +15,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Dimensions,
 } from "react-native";
 import CommentItem from "./Comment";
 
-/*───────────────────────────────────────────────
- 🔹 Comment Type
-───────────────────────────────────────────────*/
+/* Responsive helpers */
+const { width, height } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
+const hp = (p: number) => (height * p) / 100;
+
 export interface CommentType {
   _id: Id<"comments">;
   content: string;
@@ -50,46 +53,32 @@ export default function CommentsModal({
   targetType,
   visible,
   onClose,
-  currentUserId,
-  postOwnerId,
   onCommentAdded,
 }: Props) {
   const [newComment, setNewComment] = useState("");
   const [replyTo, setReplyTo] = useState<null | { id: Id<"comments">; username: string }>(null);
 
-  // Load top-level comments
   const comments: CommentType[] =
     useQuery(api.comments.getComments, { targetId }) ?? [];
 
-  // Mutations
   const addComment = useMutation(api.comments.addComment);
   const editComment = useMutation(api.comments.editComment);
   const deleteComment = useMutation(api.comments.deleteComment);
 
-  /*───────────────────────────────────────────────
-   🔹 Mentions: followers + following
-  ───────────────────────────────────────────────*/
+  /* Mention system */
   const [mentionUsers, setMentionUsers] = useState<any[]>([]);
   const [showMentionList, setShowMentionList] = useState(false);
-
   const mentionList = useQuery(api.users.getMentionUsers);
 
   useEffect(() => {
     if (mentionList) setMentionUsers(mentionList);
   }, [mentionList]);
 
-  // Detect "@" and open mention list
   const handleTyping = (text: string) => {
     setNewComment(text);
-
-    if (text.endsWith("@")) {
-      setShowMentionList(true);
-    }
+    if (text.endsWith("@")) setShowMentionList(true);
   };
 
-  /*───────────────────────────────────────────────
-   🔹 SEND COMMENT OR REPLY
-  ───────────────────────────────────────────────*/
   const handleSend = async () => {
     if (!newComment.trim()) return;
 
@@ -108,18 +97,18 @@ export default function CommentsModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide">
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+          keyboardVerticalOffset={Platform.OS === "ios" ? hp(8) : 0}
         >
           {/* HEADER */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Comments</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={26} color={COLORS.text} />
+              <Ionicons name="close" size={wp(6.5)} color={COLORS.text} />
             </TouchableOpacity>
           </View>
 
@@ -127,7 +116,10 @@ export default function CommentsModal({
           <FlatList
             data={comments}
             keyExtractor={(item) => item._id}
-            contentContainerStyle={{ padding: 14, paddingBottom: 100 }}
+            contentContainerStyle={{
+              padding: wp(4),
+              paddingBottom: hp(12),
+            }}
             renderItem={({ item }) => (
               <CommentItem
                 comment={item}
@@ -144,12 +136,12 @@ export default function CommentsModal({
             )}
           />
 
-          {/* REPLY BANNER */}
+          {/* REPLY INDICATOR */}
           {replyTo && (
             <View style={styles.replyBanner}>
               <Text style={styles.replyText}>Replying to @{replyTo.username}</Text>
               <TouchableOpacity onPress={() => setReplyTo(null)}>
-                <Ionicons name="close-circle" size={20} color={COLORS.red} />
+                <Ionicons name="close-circle" size={wp(5.5)} color={COLORS.red} />
               </TouchableOpacity>
             </View>
           )}
@@ -162,12 +154,16 @@ export default function CommentsModal({
                   key={u._id}
                   style={styles.mentionItem}
                   onPress={() => {
-                    setNewComment(prev => prev + u.username + " ");
+                    setNewComment((prev) => prev + u.username + " ");
                     setShowMentionList(false);
                   }}
                 >
-                  <Ionicons name="person-circle-outline" size={26} color={COLORS.primary} />
-                  <View style={{ marginLeft: 10 }}>
+                  <Ionicons
+                    name="person-circle-outline"
+                    size={wp(7)}
+                    color={COLORS.primary}
+                  />
+                  <View style={{ marginLeft: wp(2.5) }}>
                     <Text style={styles.mentionName}>{u.fullname}</Text>
                     <Text style={styles.mentionUsername}>@{u.username}</Text>
                   </View>
@@ -188,7 +184,7 @@ export default function CommentsModal({
             <TouchableOpacity onPress={handleSend} disabled={!newComment.trim()}>
               <Ionicons
                 name="send"
-                size={24}
+                size={wp(6)}
                 color={newComment.trim() ? COLORS.primary : "#bbb"}
               />
             </TouchableOpacity>
@@ -200,37 +196,51 @@ export default function CommentsModal({
 }
 
 /*───────────────────────────────────────────────
- 🔹 STYLES
+ 🔹 RESPONSIVE STYLES
 ───────────────────────────────────────────────*/
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
 
+  /* HEADER */
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.5),
     flexDirection: "row",
     justifyContent: "space-between",
-    borderBottomColor: "#eee",
     borderBottomWidth: 1,
+    borderColor: "#eee",
   },
-  headerTitle: { fontSize: 20, fontWeight: "700" },
+  headerTitle: {
+    fontSize: wp(5),
+    fontWeight: "700",
+  },
 
+  /* REPLY INFO */
   replyBanner: {
-    padding: 10,
+    padding: wp(3),
     backgroundColor: "#eef4ff",
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
   },
-  replyText: { color: COLORS.primary, fontWeight: "500" },
+  replyText: {
+    fontSize: wp(3.7),
+    color: COLORS.primary,
+    fontWeight: "600",
+  },
 
+  /* MENTION LIST */
   mentionList: {
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 70,
+    bottom: hp(11),
     backgroundColor: "#fff",
-    paddingVertical: 6,
-    maxHeight: 220,
+    paddingVertical: hp(0.8),
+    maxHeight: hp(28),
     borderTopWidth: 1,
     borderColor: "#eee",
   },
@@ -238,27 +248,36 @@ const styles = StyleSheet.create({
   mentionItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
+    padding: wp(3),
   },
-  mentionName: { fontSize: 14, fontWeight: "600" },
-  mentionUsername: { fontSize: 12, color: "#666" },
+  mentionName: {
+    fontSize: wp(3.7),
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  mentionUsername: {
+    fontSize: wp(3.2),
+    color: "#666",
+    marginTop: hp(0.2),
+  },
 
+  /* INPUT BAR */
   inputContainer: {
     flexDirection: "row",
-    padding: 12,
+    padding: wp(3.5),
     borderTopWidth: 1,
-    borderTopColor: "#eee",
-    backgroundColor: "#fff",
+    borderColor: "#eee",
     alignItems: "center",
+    backgroundColor: "#fff",
   },
-
   input: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    paddingVertical: hp(1.4),
+    paddingHorizontal: wp(3),
+    borderRadius: wp(3),
     borderWidth: 1,
     borderColor: "#ccc",
-    marginRight: 10,
+    fontSize: wp(3.8),
+    marginRight: wp(3),
   },
 });

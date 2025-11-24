@@ -16,8 +16,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Dimensions,
   View,
 } from "react-native";
+
+const { width } = Dimensions.get("window");
+const wp = (p: number) => (width * p) / 100;
 
 export default function EditLostItem() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,7 +50,7 @@ export default function EditLostItem() {
   }, [item]);
 
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
       quality: 0.8,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -68,7 +72,7 @@ export default function EditLostItem() {
       });
 
       Alert.alert("Updated!", "Your item was successfully updated.");
-      router.replace("/lost-found");
+     router.back();
     } catch (err: any) {
       Alert.alert("Error", err.message || "Update failed");
     }
@@ -76,55 +80,67 @@ export default function EditLostItem() {
 
   if (!item)
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
+      style={{ flex: 1, backgroundColor: "#F8FAFC" }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.header}>Edit Lost & Found Item</Text>
 
         {/* Title */}
-        <Text style={styles.label}>Title</Text>
-        <TextInput style={styles.input} value={title} onChangeText={setTitle} />
+        <Text style={styles.label}>Item Title *</Text>
+        <TextInput
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Black Laptop Bag"
+          placeholderTextColor="#aaa"
+        />
 
         {/* Description */}
-        <Text style={styles.label}>Description</Text>
+        <Text style={styles.label}>Description *</Text>
         <TextInput
-          style={[styles.input, { height: 100 }]}
+          style={[styles.input, styles.textArea]}
           value={description}
           multiline
           onChangeText={setDescription}
+          placeholder="Describe the item..."
+          placeholderTextColor="#aaa"
         />
 
         {/* Location */}
-        <Text style={styles.label}>Location</Text>
+        <Text style={styles.label}>Location *</Text>
         <TextInput
           style={styles.input}
           value={location}
           onChangeText={setLocation}
+          placeholder="Library 2nd Floor"
+          placeholderTextColor="#aaa"
         />
 
         {/* Status */}
         <Text style={styles.label}>Status</Text>
-        <View style={{ flexDirection: "row" }}>
-          {(["lost", "found"] as const).map((s) => (
+        <View style={styles.statusRow}>
+          {["lost", "found"].map((s) => (
             <TouchableOpacity
               key={s}
-              onPress={() => setStatus(s)}
               style={[
                 styles.chip,
-                status === s && { backgroundColor: COLORS.primary },
+                status === s && styles.chipActive,
               ]}
+              onPress={() => setStatus(s as "lost" | "found")}
             >
               <Text
-                style={[styles.chipText, status === s && { color: "white" }]}
+                style={[
+                  styles.chipText,
+                  status === s && { color: "#fff" },
+                ]}
               >
                 {s.toUpperCase()}
               </Text>
@@ -139,7 +155,10 @@ export default function EditLostItem() {
           {imageUrl ? (
             <Image source={{ uri: imageUrl }} style={styles.image} />
           ) : (
-            <Ionicons name="image-outline" size={40} color="#444" />
+            <>
+              <Ionicons name="image-outline" size={42} color="#777" />
+              <Text style={styles.imageText}>Upload Image</Text>
+            </>
           )}
         </TouchableOpacity>
 
@@ -151,11 +170,36 @@ export default function EditLostItem() {
   );
 }
 
+/*───────────────────────────────────────────────
+   RESPONSIVE PREMIUM STYLES
+───────────────────────────────────────────────*/
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 10 },
-  header: { fontSize: 26, fontWeight: "700", marginBottom: 20, color: "#222" },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-  label: { fontSize: 16, fontWeight: "600", marginTop: 12, marginBottom: 6 },
+  container: {
+    paddingHorizontal: wp(5),
+    paddingTop: 20,
+    paddingBottom: 30,
+  },
+
+  header: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: "#222",
+    marginBottom: 22,
+  },
+
+  label: {
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 6,
+    marginTop: 14,
+    color: "#333",
+  },
 
   input: {
     backgroundColor: "#fff",
@@ -163,43 +207,70 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#E1E5EB",
   },
 
-  chip: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: "#eee",
-    marginRight: 10,
+  textArea: {
+    height: 110,
+    paddingTop: 12,
+    textAlignVertical: "top",
   },
 
-  chipText: { fontSize: 14, fontWeight: "500" },
-
-  imagePicker: {
-    height: 180,
-    backgroundColor: "#eee",
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-    marginBottom: 20,
+  statusRow: {
+    flexDirection: "row",
     marginTop: 6,
   },
 
-  image: { width: "100%", height: "100%" },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#E5E7EB",
+    marginRight: 12,
+  },
+
+  chipActive: {
+    backgroundColor: COLORS.primary,
+  },
+
+  chipText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
+  },
+
+  imagePicker: {
+    height: 190,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 8,
+    overflow: "hidden",
+  },
+
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+
+  imageText: {
+    color: "#666",
+    fontSize: 15,
+    marginTop: 6,
+  },
 
   submitBtn: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 14,
+    paddingVertical: 16,
+    marginTop: 28,
     borderRadius: 12,
-    marginTop: 20,
   },
 
   submitText: {
-    color: "#fff",
     textAlign: "center",
+    color: "#fff",
     fontSize: 17,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });

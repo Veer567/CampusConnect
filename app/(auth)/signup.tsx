@@ -1,47 +1,60 @@
-// Import core dependencies and UI components
-import { COLORS } from "@/constants/themes";
-import { styles } from "@/styles/auth.styles";
-import { useSignUp } from "@clerk/clerk-expo";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+// SignupScreen.tsx
+import React, { useRef, useState } from "react";
 import {
   Alert,
   Image,
   KeyboardAvoidingView,
-  Pressable,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Pressable,
+  SafeAreaView,
+  Platform,
+  ActivityIndicator,
+  StyleSheet,
+  useWindowDimensions,
 } from "react-native";
+import { useSignUp } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { COLORS } from "@/constants/themes";
+import { styles as authStyles } from "@/styles/auth.styles";
 
-// Main component for user registration
 export default function SignupScreen() {
-  // Clerk authentication hook
   const { isLoaded, signUp, setActive } = useSignUp();
   const router = useRouter();
+  const { width } = useWindowDimensions();
 
-  // Form state management
+  // Form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [code, setCode] = useState("");
-  const [isCodeSent, setIsCodeSent] = useState(false); // Controls UI between sign-up and verification
+  const [isCodeSent, setIsCodeSent] = useState(false);
+
+  // UI states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [verificationLoading, setVerificationLoading] = useState(false);
 
-  // Restrict users to institutional email domain
-  const isAllowedEmail = (email: string) =>
-    email.endsWith("@marwadiuniversity.ac.in");
+  const passRef = useRef<TextInput | null>(null);
+  const confirmPassRef = useRef<TextInput | null>(null);
+  const codeRef = useRef<TextInput | null>(null);
 
-  // Handles user registration
+  // Allow only Marwadi emails
+  const isAllowedEmail = (e: string) =>
+    e.trim().toLowerCase().endsWith("@marwadiuniversity.ac.in");
+
+  // SIGN UP
   const handleSignUp = async () => {
     if (!isLoaded || !signUp) return;
 
-    // Validate institutional email
-    if (!isAllowedEmail(email)) {
+    const normalized = email.trim().toLowerCase();
+
+    if (!isAllowedEmail(normalized)) {
       Alert.alert(
         "Access Denied",
         "Only @marwadiuniversity.ac.in emails are allowed."
@@ -49,258 +62,290 @@ export default function SignupScreen() {
       return;
     }
 
-    // Validate password confirmation
     if (password !== confirmPassword) {
       Alert.alert("Password Mismatch", "Passwords do not match.");
       return;
     }
 
-    try {
-      // Create a new user in Clerk
-      await signUp.create({ emailAddress: email, password });
-      // Trigger email verification code
-      await signUp.prepareEmailAddressVerification();
-      setIsCodeSent(true);
-      Alert.alert(
-        "Verify your email",
-        "A verification code has been sent to your Marwadi University inbox."
-      );
-    } catch (err: any) {
-      // Display relevant error message if sign-up fails
-      Alert.alert(
-        "Sign-up failed",
-        err.errors ? err.errors[0].message : "Something went wrong"
-      );
-    }
-  };
-
-  // Handles email verification process
-  const handleVerifyCode = async () => {
-    if (!signUp) return;
-
-    if (!code) {
-      Alert.alert("Enter Code", "Please enter the verification code.");
+    if (password.length < 6) {
+      Alert.alert("Weak Password", "Password must be at least 6 characters.");
       return;
     }
 
     try {
-      // Verify code entered by user
-      const result = await signUp.attemptEmailAddressVerification({ code });
-      // On success, activate session and navigate to main app
-      if (result.status === "complete" && result.createdSessionId) {
-        await setActive({ session: result.createdSessionId });
-        router.replace("/(tabs)");
-      } else {
-        Alert.alert("Verification failed", "Invalid or expired code.");
-      }
-    } catch (err: any) {
-      // Handle invalid or expired verification codes
+      setLoading(true);
+
+      await signUp.create({
+        emailAddress: normalized,
+        password,
+      });
+
+      await signUp.prepareEmailAddressVerification();
+      setIsCodeSent(true);
+
+      setTimeout(() => codeRef.current?.focus(), 400);
+
       Alert.alert(
-        "Verification failed",
-        err.errors ? err.errors[0].message : "Something went wrong"
+        "Email Verification",
+        "A verification code has been sent to your inbox."
       );
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.message || err.message || "Something went wrong";
+      Alert.alert("Sign-up failed", msg);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // UI rendering section
-  return (
-    <KeyboardAvoidingView style={styles.container} behavior="height">
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "center",
-          paddingHorizontal: 24,
-          backgroundColor: COLORS.background,
-        }}
-      >
-        {/* App branding section */}
-        <View style={styles.brandSection}>
-          <View style={styles.logoContainer}>
-             <Image
-                style = {styles.logoContainer}
-                source={require('@/assets/images/education.png')} /> 
-          </View>
-          <Text style={styles.appName}>CampusConnect</Text>
-          <Text style={styles.tagline}>Lets Connect</Text>
-        </View>
+  // VERIFY
+  const handleVerifyCode = async () => {
+    if (!signUp || !code.trim()) {
+      Alert.alert("Missing Code", "Please enter the 6-digit code.");
+      return;
+    }
 
-        {/* Sign-up / Verification form container */}
-        <View
-          style={{
-            marginTop: 40,
-            backgroundColor: COLORS.white,
-            borderRadius: 20,
-            padding: 24,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 6,
+    try {
+      setVerificationLoading(true);
+
+      const result = await signUp.attemptEmailAddressVerification({
+        code: code.trim(),
+      });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.replace("/(tabs)");
+      } else {
+        Alert.alert("Verification failed", "Invalid verification code.");
+      }
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.message || err.message || "Invalid or expired code.";
+      Alert.alert("Verification failed", msg);
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  const horizontalPadding = width > 420 ? 40 : 24;
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            paddingHorizontal: horizontalPadding,
+            paddingVertical: 24,
           }}
         >
-          {/* Conditional rendering between Sign Up and Verification steps */}
-          {!isCodeSent ? (
-            <>
-              {/* Sign-up section */}
-              <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 16 }}>
-                Create Account
-              </Text>
-
-              {/* Email field */}
-              <Text style={{ color: COLORS.grey }}>Email</Text>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholder="Enter your Marwadi email"
-                placeholderTextColor="#aaa"
-                style={{
-                  borderWidth: 1,
-                  borderColor: COLORS.grey + "40",
-                  borderRadius: 10,
-                  padding: 12,
-                  marginVertical: 8,
-                }}
+          {/* Branding */}
+          <View style={authStyles.brandSection}>
+            <View style={authStyles.logoContainer}>
+              <Image
+                style={authStyles.logoContainer}
+                resizeMode="contain"
+                source={require("@/assets/images/education.png")}
               />
+            </View>
+            <Text style={authStyles.appName}>CampusConnect</Text>
+            <Text style={authStyles.tagline}>Let's Connect</Text>
+          </View>
 
-              {/* Password field with visibility toggle */}
-              <Text style={{ color: COLORS.grey }}>Password</Text>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: COLORS.grey + "40",
-                  borderRadius: 10,
-                  marginVertical: 8,
-                  paddingHorizontal: 12,
-                }}
-              >
+          {/* Card */}
+          <View style={localStyles.card}>
+            {!isCodeSent ? (
+              <>
+                <Text style={localStyles.title}>Create Account</Text>
+
+                {/* Email */}
+                <Text style={localStyles.label}>Email</Text>
                 <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  placeholder="Enter password"
-                  placeholderTextColor="#aaa"
-                  style={{ flex: 1, paddingVertical: 10 }}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  placeholder="Enter your Marwadi email"
+                  placeholderTextColor="#999"
+                  style={localStyles.input}
+                  returnKeyType="next"
+                  onSubmitEditing={() => passRef.current?.focus()}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={22}
-                    color={COLORS.grey}
-                  />
-                </TouchableOpacity>
-              </View>
 
-              {/* Confirm password field with visibility toggle */}
-              <Text style={{ color: COLORS.grey }}>Confirm Password</Text>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: COLORS.grey + "40",
-                  borderRadius: 10,
-                  marginVertical: 8,
-                  paddingHorizontal: 12,
-                }}
-              >
+                {/* Password */}
+                <Text style={localStyles.label}>Password</Text>
+                <View style={localStyles.passwordRow}>
+                  <TextInput
+                    ref={passRef}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    placeholder="Enter password"
+                    placeholderTextColor="#aaa"
+                    style={localStyles.passwordInput}
+                    returnKeyType="next"
+                    onSubmitEditing={() => confirmPassRef.current?.focus()}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword((p) => !p)}
+                    hitSlop={10}
+                  >
+                    <Ionicons
+                      name={showPassword ? "eye-off" : "eye"}
+                      size={22}
+                      color={COLORS.grey}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Confirm Password */}
+                <Text style={localStyles.label}>Confirm Password</Text>
+                <View style={localStyles.passwordRow}>
+                  <TextInput
+                    ref={confirmPassRef}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    placeholder="Re-enter password"
+                    placeholderTextColor="#aaa"
+                    style={localStyles.passwordInput}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSignUp}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword((p) => !p)}
+                    hitSlop={10}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? "eye-off" : "eye"}
+                      size={22}
+                      color={COLORS.grey}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Sign Up Button */}
+                <Pressable
+                  onPress={handleSignUp}
+                  style={[
+                    localStyles.button,
+                    loading && localStyles.buttonDisabled,
+                  ]}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={localStyles.buttonText}>Sign Up</Text>
+                  )}
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={localStyles.title}>Verify Email</Text>
+                <Text style={{ color: COLORS.grey, marginBottom: 8 }}>
+                  Enter the 6-digit code sent to your Marwadi email:
+                </Text>
+
                 <TextInput
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  placeholder="Re-enter password"
+                  ref={codeRef}
+                  value={code}
+                  onChangeText={setCode}
+                  keyboardType="number-pad"
+                  placeholder="Enter code"
                   placeholderTextColor="#aaa"
-                  style={{ flex: 1, paddingVertical: 10 }}
+                  maxLength={6}
+                  style={localStyles.codeInput}
+                  returnKeyType="done"
+                  onSubmitEditing={handleVerifyCode}
                 />
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <Ionicons
-                    name={showConfirmPassword ? "eye-off" : "eye"}
-                    size={22}
-                    color={COLORS.grey}
-                  />
-                </TouchableOpacity>
-              </View>
 
-              {/* Sign-up button */}
-              <Pressable
-                onPress={handleSignUp}
-                style={{
-                  backgroundColor: COLORS.blue,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  marginTop: 16,
-                }}
-              >
-                <Text
-                  style={{
-                    color: COLORS.white,
-                    textAlign: "center",
-                    fontSize: 16,
-                    fontWeight: "600",
-                  }}
+                <Pressable
+                  onPress={handleVerifyCode}
+                  style={[
+                    localStyles.button,
+                    verificationLoading && localStyles.buttonDisabled,
+                  ]}
+                  disabled={verificationLoading}
                 >
-                  Sign Up
-                </Text>
-              </Pressable>
-            </>
-          ) : (
-            /* Verification code input section */
-            <>
-              <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 16 }}>
-                Verify Your Email
-              </Text>
-              <Text style={{ color: COLORS.grey, marginBottom: 8 }}>
-                Enter the 6-digit code sent to your email:
-              </Text>
-
-              {/* Code input field */}
-              <TextInput
-                value={code}
-                onChangeText={setCode}
-                keyboardType="number-pad"
-                placeholder="Enter verification code"
-                placeholderTextColor="#aaa"
-                style={{
-                  borderWidth: 1,
-                  borderColor: COLORS.grey + "40",
-                  borderRadius: 10,
-                  padding: 12,
-                  marginBottom: 16,
-                  textAlign: "center",
-                  fontSize: 16,
-                  letterSpacing: 2,
-                }}
-              />
-
-              {/* Verify code button */}
-              <Pressable
-                onPress={handleVerifyCode}
-                style={{
-                  backgroundColor: COLORS.blue,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                }}
-              >
-                <Text
-                  style={{
-                    color: COLORS.white,
-                    textAlign: "center",
-                    fontSize: 16,
-                    fontWeight: "600",
-                  }}
-                >
-                  Verify & Continue
-                </Text>
-              </Pressable>
-            </>
-          )}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+                  {verificationLoading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={localStyles.buttonText}>
+                      Verify & Continue
+                    </Text>
+                  )}
+                </Pressable>
+              </>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+const localStyles = StyleSheet.create({
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 24,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 8,
+  },
+  title: { fontSize: 20, fontWeight: "700", marginBottom: 20 },
+  label: { fontSize: 14, color: COLORS.grey },
+  input: {
+    borderWidth: 1,
+    borderColor: COLORS.grey + "40",
+    borderRadius: 10,
+    padding: 12,
+    marginVertical: 8,
+  },
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.grey + "40",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginVertical: 8,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: Platform.OS === "ios" ? 12 : 8,
+  },
+  button: {
+    backgroundColor: COLORS.blue,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 16,
+    alignItems: "center",
+  },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  codeInput: {
+    borderWidth: 1,
+    borderColor: COLORS.grey + "40",
+    borderRadius: 10,
+    padding: 12,
+    textAlign: "center",
+    fontSize: 18,
+    letterSpacing: 2,
+    marginBottom: 20,
+  },
+});

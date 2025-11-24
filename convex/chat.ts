@@ -97,12 +97,13 @@ export const sendMessage = mutation({
     // Create notifications for others
     for (const userId of conversation.participants) {
       if (String(userId) === String(me._id)) continue;
-
       await ctx.db.insert("notifications", {
         receiverId: userId,
         senderId: me._id,
         type: "message",
+        conversationId: args.conversationId,
         createdAt: now,
+        read: false,
       });
     }
 
@@ -348,3 +349,44 @@ export const getUnreadCount = query({
     return unread.length;
   },
 });
+
+/** Count unread messages across all conversations */
+export const getUnreadMessageCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getAuthenticatedUser(ctx);
+
+    // fetch conversations where I'm a participant
+    const conversations = await ctx.db
+      .query("conversations")
+      .collect();
+
+    const myConversations = conversations.filter((c) =>
+      c.participants.map(String).includes(String(me._id))
+    );
+
+    let unreadTotal = 0;
+
+    for (const conv of myConversations) {
+      // fetch only last 200 messages for performance
+      const msgs = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_createdAt", (q) =>
+          q.eq("conversationId", conv._id)
+        )
+        .order("desc")
+        .take(200);
+
+      for (const m of msgs) {
+        const readBy = m.readBy ?? [];
+        const alreadyRead = readBy.map(String).includes(String(me._id));
+        const isMine = String(m.senderId) === String(me._id);
+
+        if (!isMine && !alreadyRead) unreadTotal++;
+      }
+    }
+
+    return unreadTotal;
+  },
+});
+

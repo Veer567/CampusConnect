@@ -155,7 +155,7 @@ export default function ProfileScreen({
           />
 
           {/* ────── ACTIVITY STATS ────── */}
-          <ActivityStatsCard stats={stats} />
+          <ActivityStatsCard {...({ stats } as any)} />
 
           {/* ────── ACTION BUTTONS ────── */}
           <View style={{ marginTop: 22 }}>

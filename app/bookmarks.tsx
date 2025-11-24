@@ -20,16 +20,13 @@ import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 
 // Responsive helpers
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
+const hp = (p: number) => (height * p) / 100;
 
-// ────────────────────────────────────────────────────────────────
-// MAIN COMPONENT
-// ────────────────────────────────────────────────────────────────
 export default function Bookmarks() {
   const router = useRouter();
 
-  // Fetch bookmarks
   const bookmarks = useQuery(api.bookmark.getBookmarks);
   const toggleBookmark = useMutation(api.bookmark.toggleBookmark);
 
@@ -63,7 +60,7 @@ export default function Bookmarks() {
           {/* LOADING */}
           {bookmarks === undefined && (
             <View style={styles.emptyBox}>
-              <Ionicons name="time-outline" size={48} color={COLORS.grey} />
+              <Ionicons name="time-outline" size={wp(15)} color={COLORS.grey} />
               <Text style={styles.emptyText}>Loading...</Text>
             </View>
           )}
@@ -71,7 +68,11 @@ export default function Bookmarks() {
           {/* EMPTY */}
           {bookmarks?.length === 0 && bookmarks !== undefined && (
             <View style={styles.emptyBox}>
-              <Ionicons name="bookmark-outline" size={60} color={COLORS.grey} />
+              <Ionicons
+                name="bookmark-outline"
+                size={wp(18)}
+                color={COLORS.grey}
+              />
               <Text style={styles.emptyText}>No bookmarks yet</Text>
             </View>
           )}
@@ -99,27 +100,27 @@ export default function Bookmarks() {
                   {item.title}
                 </Text>
 
-                {item.eventDate ? (
+                {item.eventDate && (
                   <View style={styles.row}>
                     <Ionicons
                       name="calendar-outline"
-                      size={14}
+                      size={wp(3.6)}
                       color={COLORS.textSecondary}
                     />
                     <Text style={styles.meta}>{item.eventDate}</Text>
                   </View>
-                ) : null}
+                )}
 
-                {item.location ? (
+                {item.location && (
                   <View style={styles.row}>
                     <Ionicons
                       name="location-outline"
-                      size={14}
+                      size={wp(3.6)}
                       color={COLORS.textSecondary}
                     />
                     <Text style={styles.meta}>{item.location}</Text>
                   </View>
-                ) : null}
+                )}
               </View>
 
               {/* Remove */}
@@ -127,11 +128,7 @@ export default function Bookmarks() {
                 onPress={() => handleRemoveBookmark(item._id)}
                 style={styles.removeBtn}
               >
-                <Ionicons
-                  name="bookmark"
-                  size={22}
-                  color={COLORS.primary}
-                />
+                <Ionicons name="bookmark" size={wp(6)} color={COLORS.primary} />
               </TouchableOpacity>
             </TouchableOpacity>
           ))}
@@ -143,71 +140,77 @@ export default function Bookmarks() {
   );
 }
 
-// ────────────────────────────────────────────────────────────────
-// STYLES
-// ────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// RESPONSIVE STYLES
+// ─────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: {
-    paddingHorizontal: wp(5),
-    paddingTop: 10,
-    paddingBottom: 30,
+  container: {
+    flex: 1,
   },
 
-  /* EMPTY */
+  content: {
+    paddingHorizontal: wp(5),
+    paddingTop: hp(1),
+    paddingBottom: hp(5),
+  },
+
+  // EMPTY VIEW
   emptyBox: {
     alignItems: "center",
-    marginTop: 80,
+    marginTop: hp(15),
   },
   emptyText: {
     color: COLORS.textSecondary,
-    fontSize: 16,
-    marginTop: 10,
+    fontSize: wp(4),
+    marginTop: hp(1.5),
   },
 
-  /* CARD */
+  // CARD
   card: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 10,
-    marginBottom: 14,
+    borderRadius: wp(3.5),
+    padding: wp(3),
+    marginBottom: hp(1.8),
     alignItems: "center",
     elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: wp(2),
   },
 
   thumb: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
+    width: wp(15),
+    height: wp(15),
+    borderRadius: wp(2.5),
     backgroundColor: "#eee",
   },
 
   info: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: wp(3),
   },
 
   title: {
-    fontSize: 15,
+    fontSize: wp(4),
     fontWeight: "700",
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: hp(0.4),
   },
 
   row: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 2,
+    marginBottom: hp(0.3),
   },
 
   meta: {
-    fontSize: 12,
+    fontSize: wp(3.3),
     color: COLORS.textSecondary,
-    marginLeft: 4,
+    marginLeft: wp(1),
   },
 
   removeBtn: {
-    padding: 4,
+    padding: wp(1),
   },
 });
