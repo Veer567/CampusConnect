@@ -30,8 +30,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  SafeAreaView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 
 // Get screen height for layout responsiveness
 const { height } = Dimensions.get("window");

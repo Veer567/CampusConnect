@@ -7,12 +7,13 @@ import {
   StyleSheet,
   View,
   BackHandler,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { ComponentProps } from "react";
 import { useAuth } from "@clerk/clerk-expo";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 
 export default function SettingsDrawer() {
   const router = useRouter();

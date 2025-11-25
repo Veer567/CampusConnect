@@ -13,7 +13,7 @@ type MarketplaceTabsProps = {
 export default function MarketplaceTabs({ initialTab }: MarketplaceTabsProps) {
   const TopTabsAny = TopTabs as any;
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={[]}>
       <LinearGradient
         colors={[COLORS.primary, COLORS.secondary]}
         start={{ x: 0, y: 0 }}

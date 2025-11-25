@@ -52,7 +52,7 @@ export default function Bookmarks() {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={[]}>
         <AppHeader title="Bookmarks" rightIcon="bookmark" />
 
         <ScrollView

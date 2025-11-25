@@ -1,5 +1,6 @@
-import LostFoundScreen from "../lost-found/LostFoundScreen";
+// app/(tabs)/lost-found.tsx
+import { Redirect } from "expo-router";
 
 export default function LostFoundTab() {
-  return <LostFoundScreen />;
+  return <Redirect href="/lost-found" />;
 }

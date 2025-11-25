@@ -216,37 +216,11 @@ export default function ProfileScreen({
               </View>
             )}
 
-            {!editing && (
-              <TouchableOpacity
-                style={{
-                  marginTop: 12,
-                  backgroundColor: "#fff",
-                  borderRadius: 12,
-                  paddingVertical: 12,
-                  borderWidth: 1,
-                  borderColor: "#f0f0f0",
-                }}
-                onPress={async () => {
-                  await signOut();
-                  router.replace("/(auth)/login");
-                }}
-              >
-                <Text
-                  style={{
-                    textAlign: "center",
-                    color: "red",
-                    fontWeight: "700",
-                    fontSize: 16,
-                  }}
-                >
-                  Log Out
-                </Text>
-              </TouchableOpacity>
-            )}
+        
           </View>
 
           {/* Extra bottom padding */}
-          <View style={{ height: insets.bottom + 30 }} />
+          <View style={{ height: insets.bottom + 40 }} />
         </ScrollView>
 
         {/* ────── BOTTOM SHEET ────── */}

@@ -54,7 +54,7 @@ export default function FollowingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container}edges={[]}>
       <AppHeader title="Following" showBackButton onBackPress={handleBack} />
 
       {following.length === 0 ? (

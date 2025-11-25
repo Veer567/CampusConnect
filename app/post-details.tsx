@@ -6,13 +6,16 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Linking from "expo-linking"; // ← NEW
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   Dimensions,
   Image,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
@@ -21,8 +24,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  KeyboardAvoidingView,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -34,7 +35,6 @@ export default function PostDetailsScreen() {
   const router = useRouter();
   const { postId, scrollTo, from } = useLocalSearchParams();
 
-  // Normalize ID
   const normalizedPostId = Array.isArray(postId) ? postId[0] : postId;
 
   // Fetch post
@@ -43,16 +43,13 @@ export default function PostDetailsScreen() {
     normalizedPostId ? { postId: normalizedPostId as Id<"posts"> } : "skip"
   );
 
-  // Fetch comments (Convex getComments)
+  // Fetch comments
   const comments =
     useQuery(
       api.comments.getComments,
-      normalizedPostId
-        ? { targetId: normalizedPostId as Id<"posts"> }
-        : "skip"
+      normalizedPostId ? { targetId: normalizedPostId as Id<"posts"> } : "skip"
     ) ?? [];
 
-  // Mutations
   const toggleLike = useMutation(api.posts.toggleLikePost);
   const toggleBookmark = useMutation(api.posts.toggleBookmark);
   const addComment = useMutation(api.comments.addComment);
@@ -64,7 +61,7 @@ export default function PostDetailsScreen() {
   const [commentText, setCommentText] = useState("");
   const [replyTarget, setReplyTarget] = useState<any>(null);
 
-  // Fade-in animation
+  // Fade animation
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -73,7 +70,7 @@ export default function PostDetailsScreen() {
     }).start();
   }, []);
 
-  // Auto scroll when clicking comment notification
+  // Scroll to comments when opened from notification
   useEffect(() => {
     if (scrollTo === "comments") {
       setTimeout(() => {
@@ -85,22 +82,18 @@ export default function PostDetailsScreen() {
   if (!post) {
     return (
       <SafeAreaView style={styles.loadingWrap}>
-       <Loader />
+        <Loader />
       </SafeAreaView>
     );
   }
 
   // LIKE
-  const handleLike = () => {
-    toggleLike({ postId: post._id });
-  };
+  const handleLike = () => toggleLike({ postId: post._id });
 
   // BOOKMARK
-  const handleBookmark = () => {
-    toggleBookmark({ postId: post._id });
-  };
+  const handleBookmark = () => toggleBookmark({ postId: post._id });
 
-  // SEND COMMENT / REPLY
+  // ADD COMMENT
   const handleSendComment = async () => {
     const text = commentText.trim();
     if (!text) return;
@@ -134,18 +127,51 @@ export default function PostDetailsScreen() {
     ]);
   };
 
-  // BACK BUTTON LOGIC
+  // BACK BUTTON
   const handleBack = () => {
     if (from === "likes") {
-      router.push("/profile"); // ← BACK TO PROFILE
+      router.push("/profile");
     } else {
       router.back();
     }
   };
 
+  /* -------------------------------------------------
+     ADD TO GOOGLE CALENDAR
+  -------------------------------------------------- */
+
+  const addToGoogleCalendar = () => {
+    if (!post.eventDate) {
+      alert("No event date available.");
+      return;
+    }
+
+    // Convert event date to YYYYMMDDTHHMMSSZ format
+    const startISO = new Date(post.eventDate).toISOString();
+    const start = startISO.replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+
+    // End time = +1 hour
+    const endISO = new Date(
+      new Date(post.eventDate).getTime() + 60 * 60 * 1000
+    ).toISOString();
+    const end = endISO.replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+
+    const url =
+      "https://www.google.com/calendar/render?action=TEMPLATE" +
+      `&text=${encodeURIComponent(post.title || "Event")}` +
+      `&details=${encodeURIComponent(post.caption || "")}` +
+      `&location=${encodeURIComponent(post.location || "")}` +
+      `&dates=${start}/${end}`;
+
+    Linking.openURL(url);
+  };
+
+  /* -------------------------------------------------
+     RENDER SCREEN
+  -------------------------------------------------- */
+
   return (
     <View style={{ flex: 1 }}>
-      {/* Background Blur */}
       <LinearGradient
         colors={["rgba(0,0,0,0.7)", "rgba(0,0,0,0.35)"]}
         style={StyleSheet.absoluteFill}
@@ -165,7 +191,7 @@ export default function PostDetailsScreen() {
           ],
         }}
       >
-        <SafeAreaView style={styles.cardContainer}>
+        <SafeAreaView style={styles.cardContainer}edges={[]}>
           <StatusBar translucent barStyle="light-content" />
 
           {/* BACK BUTTON */}
@@ -179,10 +205,10 @@ export default function PostDetailsScreen() {
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
           >
-            {/* POST TITLE */}
+            {/* TITLE */}
             <Text style={styles.title}>{post.title}</Text>
 
-            {/* POST IMAGE */}
+            {/* IMAGE */}
             {post.imageUrl && (
               <Image source={{ uri: post.imageUrl }} style={styles.image} />
             )}
@@ -213,11 +239,9 @@ export default function PostDetailsScreen() {
             </View>
 
             {/* CAPTION */}
-            {post.caption && (
-              <Text style={styles.caption}>{post.caption}</Text>
-            )}
+            {post.caption && <Text style={styles.caption}>{post.caption}</Text>}
 
-            {/* META */}
+            {/* META CARD */}
             {(post.eventDate || post.location) && (
               <View style={styles.metaCard}>
                 {post.eventDate && (
@@ -244,6 +268,17 @@ export default function PostDetailsScreen() {
               </View>
             )}
 
+            {/* ADD TO GOOGLE CALENDAR BUTTON */}
+            {post.eventDate && (
+              <TouchableOpacity
+                onPress={addToGoogleCalendar}
+                style={styles.calendarBtn}
+              >
+                <Ionicons name="calendar" size={20} color="#fff" />
+                <Text style={styles.calendarText}>Add to Google Calendar</Text>
+              </TouchableOpacity>
+            )}
+
             {/* COMMENTS TITLE */}
             <Text style={styles.commentsTitle}>Comments</Text>
 
@@ -253,7 +288,14 @@ export default function PostDetailsScreen() {
                 No comments yet — be the first!
               </Text>
             ) : (
-              comments.map((c) => <CommentBlock key={c._id} c={c} onReply={(cm)=>setReplyTarget(cm)} onDelete={confirmDelete} />)
+              comments.map((c) => (
+                <CommentBlock
+                  key={c._id}
+                  c={c}
+                  onReply={(cm: any) => setReplyTarget(cm)}
+                  onDelete={confirmDelete}
+                />
+              ))
             )}
 
             <View style={{ height: 120 }} />
@@ -269,14 +311,19 @@ export default function PostDetailsScreen() {
                 Replying to @{replyTarget.user.username}
               </Text>
             )}
+
             <TextInput
               value={commentText}
               onChangeText={setCommentText}
               placeholder="Write a comment..."
               style={styles.input}
             />
-            <TouchableOpacity onPress={handleSendComment} style={styles.sendBtn}>
-              <Ionicons name="send" size={22} color="white" />
+
+            <TouchableOpacity
+              onPress={handleSendComment}
+              style={styles.sendBtn}
+            >
+              <Ionicons name="send" size={22} color="#fff" />
             </TouchableOpacity>
           </KeyboardAvoidingView>
         </SafeAreaView>
@@ -285,24 +332,14 @@ export default function PostDetailsScreen() {
   );
 }
 
-/* ----------------------------------------------
+/* ---------------------------------------------------------
    COMMENT BLOCK COMPONENT
----------------------------------------------- */
-function CommentBlock({
-  c,
-  onReply,
-  onDelete,
-}: {
-  c: any;
-  onReply: (comment: any) => void;
-  onDelete: (comment: any) => void;
-}) {
-  const replies =
-    useQuery(api.comments.getReplies, { parentId: c._id }) ?? [];
+--------------------------------------------------------- */
+function CommentBlock({ c, onReply, onDelete }: any) {
+  const replies = useQuery(api.comments.getReplies, { parentId: c._id }) ?? [];
 
   return (
     <View style={{ marginBottom: hp(2) }}>
-      {/* MAIN COMMENT */}
       <View style={styles.commentRow}>
         <Ionicons name="person-circle" size={36} color={COLORS.primary} />
         <View style={{ flex: 1 }}>
@@ -313,7 +350,6 @@ function CommentBlock({
             <TouchableOpacity onPress={() => onReply(c)}>
               <Text style={styles.replyBtn}>Reply</Text>
             </TouchableOpacity>
-
             <TouchableOpacity onPress={() => onDelete(c)}>
               <Text style={[styles.replyBtn, { color: COLORS.red }]}>
                 Delete
@@ -323,8 +359,7 @@ function CommentBlock({
         </View>
       </View>
 
-      {/* REPLIES */}
-      {replies.map((r) => (
+      {replies.map((r: any) => (
         <View key={r._id} style={styles.replyRow}>
           <Ionicons name="person-circle" size={28} color={COLORS.primary} />
           <View style={{ flex: 1 }}>
@@ -337,11 +372,11 @@ function CommentBlock({
   );
 }
 
-/* ----------------------------------------------
+/* ---------------------------------------------------------
    STYLES
----------------------------------------------- */
+--------------------------------------------------------- */
 const styles = StyleSheet.create({
-  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" ,},
 
   cardContainer: { flex: 1, backgroundColor: COLORS.surface },
 
@@ -356,7 +391,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingTop: hp(10),
+    paddingTop: hp(4),
     paddingHorizontal: wp(6),
     paddingBottom: hp(5),
   },
@@ -410,6 +445,25 @@ const styles = StyleSheet.create({
   },
 
   metaText: { color: COLORS.textSecondary, fontSize: wp(4) },
+
+  /* GOOGLE CALENDAR BUTTON */
+  calendarBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+    marginBottom: 16,
+  },
+
+  calendarText: {
+    color: "#fff",
+    fontWeight: "700",
+    marginLeft: 10,
+    fontSize: 15,
+  },
 
   commentsTitle: {
     fontSize: wp(5),

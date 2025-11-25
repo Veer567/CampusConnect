@@ -2,9 +2,11 @@ import { COLORS } from "@/constants/themes";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useRef } from "react";
 import {
+  Animated,
   Dimensions,
+  Easing,
   Image,
   StyleSheet,
   Text,
@@ -53,25 +55,62 @@ export function ProfileHeader(props: ProfileHeaderProps) {
   const router = useRouter();
   const imageSize = wp(32);
 
+  /* -----------------------------------
+     ⭐ GEAR ROTATION ANIMATION
+  ----------------------------------- */
+  const rotation = useRef(new Animated.Value(0)).current;
+
+  const animateGear = () => {
+    Animated.sequence([
+      Animated.timing(rotation, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(rotation, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const rotateInterpolate = rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
   return (
     <>
       <StatusBar style="dark" />
 
-      {/* SETTINGS BUTTON */}
-      <View style={styles.topRow}>
-        {isOwner && (
+      {/* SETTINGS BUTTON (FLOATING) */}
+      {isOwner && (
+        <Animated.View
+          style={[
+            styles.settingsFloatingBtn,
+            { transform: [{ rotate: rotateInterpolate }] },
+          ]}
+        >
           <TouchableOpacity
-            onPress={() => router.push("/(settings)/SettingsDrawer")}
-            style={styles.settingsButton}
+            onPress={() => {
+              animateGear();
+              setTimeout(() => {
+                router.push("/(settings)/SettingsDrawer");
+              }, 200); // delay in ms
+            }}
+            activeOpacity={0.9}
           >
             <Ionicons
               name="settings-outline"
-              size={26}
+              size={22}
               color={COLORS.primary}
             />
           </TouchableOpacity>
-        )}
-      </View>
+        </Animated.View>
+      )}
 
       <View style={styles.container}>
         {/* PROFILE IMAGE */}
@@ -191,21 +230,25 @@ function Stat({
 
 /* ===== STYLES ===== */
 const styles = StyleSheet.create({
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: wp(4),
-    paddingTop: hp(1),
-  },
-
-  settingsButton: {
-    padding: 6,
-    borderRadius: 10,
-  },
-
   container: {
     alignItems: "center",
     paddingHorizontal: wp(4),
+  },
+
+  /* Floating Settings Button */
+  settingsFloatingBtn: {
+    position: "absolute",
+    top: hp(1.2),
+    right: wp(4),
+    backgroundColor: "#ffffff",
+    padding: wp(2.2),
+    borderRadius: 50,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    zIndex: 10,
   },
 
   avatar: {
@@ -289,3 +332,5 @@ const styles = StyleSheet.create({
     marginTop: hp(0.4),
   },
 });
+
+export default ProfileHeader;

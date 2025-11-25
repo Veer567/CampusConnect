@@ -445,7 +445,7 @@ export default function NotificationsScreen() {
 
   return (
     <LinearGradient colors={["#EFF6FF", "#FFFFFF"]} style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container}edges={[]}>
         <AppHeader
           title="Notifications"
           rightIcon="checkmark-done-outline"

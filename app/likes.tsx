@@ -47,7 +47,7 @@ export default function LikesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container}edges={[]}>
       <AppHeader
         title="Liked Posts"
         rightIcon="heart"
