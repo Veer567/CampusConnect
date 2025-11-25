@@ -4,13 +4,13 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import {
+  Dimensions,
   Image,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  StyleSheet,
-  Dimensions,
 } from "react-native";
 
 const { width, height } = Dimensions.get("window");
@@ -51,14 +51,32 @@ export function ProfileHeader(props: ProfileHeaderProps) {
   } = props;
 
   const router = useRouter();
-  const imageSize = wp(32); // responsive avatar size
+  const imageSize = wp(32);
 
   return (
     <>
       <StatusBar style="dark" />
 
+      {/* SETTINGS BUTTON */}
+      <View style={styles.topRow}>
+        {isOwner && (
+          <TouchableOpacity
+            onPress={() =>
+              router.navigate("")
+            }
+            style={styles.settingsButton}
+          >
+            <Ionicons
+              name="settings-outline"
+              size={26}
+              color={COLORS.primary}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <View style={styles.container}>
-        {/* AVATAR */}
+        {/* PROFILE IMAGE */}
         <TouchableOpacity
           onPress={openImageCropper}
           disabled={!isOwner}
@@ -115,7 +133,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
           </View>
         )}
 
-        {/* STATS ROW */}
+        {/* STATS */}
         <View style={styles.statsRow}>
           <Stat
             label="Followers"
@@ -175,6 +193,18 @@ function Stat({
 
 /* ===== STYLES ===== */
 const styles = StyleSheet.create({
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: wp(4),
+    paddingTop: hp(1),
+  },
+
+  settingsButton: {
+    padding: 6,
+    borderRadius: 10,
+  },
+
   container: {
     alignItems: "center",
     paddingHorizontal: wp(4),
