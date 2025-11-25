@@ -1,30 +1,112 @@
-// posts.ts
-// Convex backend logic for handling post creation, media upload, and fetching feed posts with user metadata.
-
+// convex/posts.ts
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
 
-/*───────────────────────────────────────────────
- 🔹 Generate a temporary upload URL for images
-───────────────────────────────────────────────*/
-export const generateUploadUrl = mutation(async (ctx) => {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Unauthorized");
+/**
+ * Helper: extract mentions using @Full Name style
+ * Returns array of matched mention strings (trimmed).
+ * Example: "hey @Viral Bhojani and @John Doe" -> ["Viral Bhojani", "John Doe"]
+ */
+function extractFullnameMentions(text: string | undefined): string[] {
+  if (!text) return [];
+  const matches: string[] = [];
+  // match '@' followed by letters, spaces, punctuation allowed in names
+  const re = /@([A-Za-z0-9À-ÖØ-öø-ÿ'’\-\.\s]{2,80}?)\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const raw = m[1].trim();
+    if (raw) {
+      matches.push(raw);
+    }
+  }
+  // unique and preserve order
+  return Array.from(new Set(matches));
+}
 
-  // Convex storage generates a temporary signed URL to upload files
-  return await ctx.storage.generateUploadUrl();
-});
+/**
+ * Helper: find users by fullname (case-insensitive exact match)
+ * NOTE: This is naive because Convex doesn't support robust text search in server-side indexes.
+ * For small user counts this is fine; for large scale implement an index or normalized-fullname field.
+ */
+async function findUsersByFullnames(ctx: any, fullnames: string[]) {
+  if (!fullnames || fullnames.length === 0) return [];
+  const allUsers = await ctx.db.query("users").collect();
+  const lowerMap = new Map<string, any>();
+  for (const u of allUsers) {
+    if (!u?.fullname) continue;
+    lowerMap.set(String(u.fullname).toLowerCase(), u);
+  }
+  const out = [];
+  for (const name of fullnames) {
+    const candidate = lowerMap.get(name.toLowerCase());
+    if (candidate) out.push(candidate);
+  }
+  return out;
+}
 
-/*───────────────────────────────────────────────
- 🔹 Create a new post entry in the database
-───────────────────────────────────────────────*/
+/**
+ * Helper: create notifications + send push via your push mutation
+ * - ctx: mutation context
+ * - receivers: array of user docs (Convex user rows)
+ * - sender: user doc of actor
+ * - opts: { type, postId?, commentId?, conversationId?, title, body, data }
+ */
+async function notifyUsers(
+  ctx: any,
+  receivers: any[],
+  sender: any,
+  opts: {
+    type: "like" | "comment" | "mention" | "reply" | "message" | string;
+    postId?: Id<"posts"> | undefined;
+    commentId?: Id<"comments"> | undefined;
+    conversationId?: Id<"conversations"> | undefined;
+    title: string;
+    body: string;
+    data?: any;
+  }
+) {
+  const now = Date.now();
+  for (const r of receivers) {
+    // skip self
+    if (!r || String(r._id) === String(sender._id)) continue;
+
+    // Insert notification row
+    await ctx.db.insert("notifications", {
+      receiverId: r._id,
+      senderId: sender._id,
+      type: opts.type,
+      postId: opts.postId,
+      commentId: opts.commentId,
+      conversationId: opts.conversationId,
+      createdAt: now,
+      read: false,
+    });
+
+    // Send push (best-effort)
+    try {
+      await ctx.runMutation(api.push.sendPushNotification, {
+        userId: r._id,
+        title: opts.title,
+        body: opts.body,
+        data: opts.data ?? { type: opts.type, postId: opts.postId },
+      });
+    } catch (err) {
+      // don't fail the whole flow if push fails
+      console.error("push send failed:", err);
+    }
+  }
+}
+
+/*──────────────────────────────────────────────────────────
+  Create Post (with mention detection in title/caption)
+──────────────────────────────────────────────────────────*/
 export const createPost = mutation({
   args: {
     caption: v.optional(v.string()),
-    storageId: v.id("_storage"), // uploaded image reference
+    storageId: v.id("_storage"),
     title: v.string(),
     category: v.optional(v.string()),
     location: v.optional(v.string()),
@@ -32,17 +114,16 @@ export const createPost = mutation({
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    // Ensure the user is authenticated
     const currentUser = await getAuthenticatedUser(ctx);
 
-    // Retrieve the image URL from Convex storage
+    // retrieve uploaded image url
     const imageUrl = await ctx.storage.getUrl(args.storageId);
-    if (!imageUrl) throw new Error("Image not found");
+    if (!imageUrl) throw new Error("Image upload not found");
 
-    // Insert the new post record into the "posts" table
+    // insert post
     const postId = await ctx.db.insert("posts", {
       userId: currentUser._id,
-      userClerkId: currentUser.clerkId, // ✅ Add this
+      userClerkId: currentUser.clerkId,
       imageUrl,
       storageId: args.storageId,
       caption: args.caption || "",
@@ -53,20 +134,39 @@ export const createPost = mutation({
       likes: 0,
       comments: 0,
       tags: args.tags || [],
+      createdAt: Date.now(),
     });
 
-    // Update user's total post count
+    // increment post count for user
     await ctx.db.patch(currentUser._id, {
-      posts: currentUser.posts + 1,
+      posts: (currentUser.posts ?? 0) + 1,
     });
+
+    // -------------- mentions in title/caption --------------
+    const mentions = extractFullnameMentions(`${args.title} ${args.caption ?? ""}`);
+    if (mentions.length > 0) {
+      const users = await findUsersByFullnames(ctx, mentions);
+      if (users.length > 0) {
+        await notifyUsers(ctx, users, currentUser, {
+          type: "mention",
+          postId,
+          title: `${currentUser.username || currentUser.fullname} mentioned you`,
+          body:
+            (args.caption && args.caption.length > 100
+              ? args.caption.slice(0, 100) + "…"
+              : args.caption) || args.title || "You were mentioned",
+          data: { type: "mention_post", postId },
+        });
+      }
+    }
 
     return postId;
   },
 });
 
-/*───────────────────────────────────────────────
- 🔹 Fetch posts for the feed (with user data)
-───────────────────────────────────────────────*/
+/*──────────────────────────────────────────────────────────
+  Get feed posts (unchanged logic, plus author map)
+──────────────────────────────────────────*/
 export const getFeedPosts = query({
   handler: async (ctx) => {
     const currentUser = await getAuthenticatedUser(ctx);
@@ -74,33 +174,24 @@ export const getFeedPosts = query({
     const posts = await ctx.db.query("posts").order("desc").collect();
     if (posts.length === 0) return [];
 
-    // 1) Collect authorIds and read them reactively
     const authorIds = posts.map((p) => p.userId);
-
     const authorDocs = await Promise.all(authorIds.map((id) => ctx.db.get(id)));
 
-    // 2) Filter nulls safely and create map
     const authorMap = new Map(
       authorDocs
         .filter((a): a is NonNullable<typeof a> => a !== null)
         .map((a) => [a._id, a])
     );
 
-    // 3) Build posts with author info
     const postsWithInfo = await Promise.all(
       posts.map(async (post) => {
         const postAuthor = authorMap.get(post.userId);
 
-        // TS SAFE: If a user record is missing, skip or fallback
         if (!postAuthor) {
           return {
             ...post,
             tags: post.tags ?? [],
-            author: {
-              _id: { __tableName: "users" } as Id<"users">, // ✅ Correct
-              username: "Unknown User",
-              image: undefined,
-            },
+            author: { _id: null, username: "Unknown", image: undefined },
             isLiked: false,
             isBookmarked: false,
             isOwner: false,
@@ -128,6 +219,7 @@ export const getFeedPosts = query({
             _id: postAuthor._id,
             username: postAuthor.username,
             image: postAuthor.image,
+            fullname: postAuthor.fullname,
           },
           isLiked: !!like,
           isBookmarked: !!bookmark,
@@ -140,20 +232,21 @@ export const getFeedPosts = query({
   },
 });
 
+/*──────────────────────────────────────────────────────────
+  Toggle Like (keeps original behavior, plus notification)
+──────────────────────────────────────────*/
 export const toggleLikePost = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
     const currentUser = await getAuthenticatedUser(ctx);
     const post = await ctx.db.get(args.postId);
-
     if (!post) throw new Error("Post not found");
 
-    // ❌ block liking own posts
-    if (post.userId === currentUser._id) {
-      return { liked: false, likes: post.likes };
+    // Block liking own posts
+    if (String(post.userId) === String(currentUser._id)) {
+      return { liked: false, likes: post.likes ?? 0 };
     }
 
-    // check existing like
     const existing = await ctx.db
       .query("likes")
       .withIndex("by_user_and_post", (q) =>
@@ -161,18 +254,16 @@ export const toggleLikePost = mutation({
       )
       .first();
 
-    // ✅ UNLIKE
     if (existing) {
+      // unlike
       await ctx.db.delete(existing._id);
       const newLikes = Math.max(0, (post.likes ?? 1) - 1);
       await ctx.db.patch(args.postId, { likes: newLikes });
-
       return { liked: false, likes: newLikes };
     }
 
-    // ✅ LIKE
+    // like
     const now = Date.now();
-
     await ctx.db.insert("likes", {
       userId: currentUser._id,
       postId: args.postId,
@@ -182,107 +273,74 @@ export const toggleLikePost = mutation({
     const newLikes = (post.likes ?? 0) + 1;
     await ctx.db.patch(args.postId, { likes: newLikes });
 
-    // push notification
-    await ctx.db.insert("notifications", {
-      receiverId: post.userId,
-      senderId: currentUser._id,
-      type: "like",
-      postId: args.postId,
-      createdAt: now,
-      read: false,
-    });
-
-    await ctx.runMutation(api.push.sendPushNotification, {
-      userId: post.userId,
-      title: `${currentUser.username} liked your post`,
-      body: post.title ?? "Someone liked your post",
-      data: { type: "like", postId: args.postId },
-    });
+    // Notification to post owner (if not self)
+    const postOwner = await ctx.db.get(post.userId);
+    if (postOwner && String(postOwner._id) !== String(currentUser._id)) {
+      await notifyUsers(ctx, [postOwner], currentUser, {
+        type: "like",
+        postId: args.postId,
+        title: `${currentUser.username || currentUser.fullname} liked your post`,
+        body: post.title ?? "Someone liked your post",
+        data: { type: "like", postId: args.postId },
+      });
+    }
 
     return { liked: true, likes: newLikes };
   },
 });
 
-
+/*──────────────────────────────────────────────────────────
+  Delete post (keeps original flow)
+──────────────────────────────────────────*/
 export const deletePost = mutation({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
     const currentUser = await getAuthenticatedUser(ctx);
-
     const post = await ctx.db.get(args.postId);
-
     if (!post) throw new Error("Post not found");
+    if (String(post.userId) !== String(currentUser._id)) throw new Error("Unauthorized");
 
-    // verify user is the owner of the post
-    if (post.userId !== currentUser._id) throw new Error("Unauthorized");
+    // delete likes
+    const likes = await ctx.db.query("likes").withIndex("by_post", (q) => q.eq("postId", args.postId)).collect();
+    for (const l of likes) await ctx.db.delete(l._id);
 
-    // Delete associated likes
-    const likes = await ctx.db
-      .query("likes")
-      .withIndex("by_post", (q) => q.eq("postId", args.postId))
-      .collect();
+    // delete comments
+    const comments = await ctx.db.query("comments").withIndex("by_target", (q) => q.eq("targetId", args.postId)).collect();
+    for (const c of comments) await ctx.db.delete(c._id);
 
-    for (const like of likes) {
-      await ctx.db.delete(like._id);
+    // delete bookmarks
+    const bookmarks = await ctx.db.query("bookmarks").withIndex("by_post", (q) => q.eq("postId", args.postId)).collect();
+    for (const b of bookmarks) await ctx.db.delete(b._id);
+
+    // delete storage file (best-effort)
+    try {
+      if (post.storageId) await ctx.storage.delete(post.storageId);
+    } catch (e) {
+      console.warn("failed to delete storage:", e);
     }
 
-    // Delete associated comments
-    // Delete associated comments
-    const comments = await ctx.db
-      .query("comments")
-      .withIndex("by_target", (q) => q.eq("targetId", args.postId))
-      .collect();
-
-    for (const c of comments) {
-      await ctx.db.delete(c._id);
-    }
-
-    for (const comment of comments) {
-      await ctx.db.delete(comment._id);
-    }
-
-    // Delete associated bookmarks
-    const bookmarks = await ctx.db
-      .query("bookmarks")
-      .withIndex("by_post", (q) => q.eq("postId", args.postId))
-      .collect();
-
-    for (const bookmark of bookmarks) {
-      await ctx.db.delete(bookmark._id);
-    }
-
-    // delete storage file
-    await ctx.storage.delete(post.storageId);
-
-    // delete post
     await ctx.db.delete(args.postId);
 
-    // Decrement user's post count
+    // decrement user's post count
     await ctx.db.patch(currentUser._id, {
-      posts: Math.max(0, (currentUser.posts || 1) - 1),
+      posts: Math.max(0, (currentUser.posts ?? 1) - 1),
     });
   },
 });
 
+/*──────────────────────────────────────────────────────────
+  Other read helpers (unchanged)
+──────────────────────────────────────────*/
 export const getPostsByUser = query({
   args: {
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    const user = args.userId
-      ? await ctx.db.get(args.userId)
-      : await getAuthenticatedUser(ctx);
-
+    const user = args.userId ? await ctx.db.get(args.userId) : await getAuthenticatedUser(ctx);
     if (!user) throw new Error("User not found");
 
-    const posts = await ctx.db
-      .query("posts")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId || user._id))
-      .collect();
-    return posts.map((p) => ({
-      ...p,
-      tags: p.tags || [],
-    }));
+    const posts = await ctx.db.query("posts").withIndex("by_user", (q) => q.eq("userId", args.userId || user._id)).collect();
+    return posts.map((p) => ({ ...p, tags: p.tags || [] }));
   },
 });
 
@@ -290,22 +348,12 @@ export const searchPosts = query({
   args: { q: v.string() },
   handler: async (ctx, { q }) => {
     const posts = await ctx.db.query("posts").collect();
-
     const trimmed = q.trim().toLowerCase();
     const isHashtag = trimmed.startsWith("#");
-
-    // If searching tag (#...)
     if (isHashtag) {
-      const tagQuery = trimmed.replace("#", ""); // remove #
-
-      return posts.filter((p) =>
-        p.tags?.some(
-          (tag) => tag.toLowerCase().startsWith(tagQuery) // tag match
-        )
-      );
+      const tagQuery = trimmed.replace("#", "");
+      return posts.filter((p) => p.tags?.some((tag) => tag.toLowerCase().startsWith(tagQuery)));
     }
-
-    // Normal search
     return posts.filter(
       (p) =>
         p.title?.toLowerCase().includes(trimmed) ||
@@ -315,6 +363,38 @@ export const searchPosts = query({
     );
   },
 });
+
+export const getRecentPosts = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 12 }) => {
+    return await ctx.db.query("posts").order("desc").take(limit);
+  },
+});
+
+// posts.ts
+// Convex backend logic for handling post creation, media upload, and fetching feed posts with user metadata.
+
+
+/*───────────────────────────────────────────────
+ 🔹 Generate a temporary upload URL for images
+───────────────────────────────────────────────*/
+export const generateUploadUrl = mutation(async (ctx) => {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Unauthorized");
+
+  // Convex storage generates a temporary signed URL to upload files
+  return await ctx.storage.generateUploadUrl();
+});
+
+/*───────────────────────────────────────────────
+ 🔹 Create a new post entry in the database
+───────────────────────────────────────────────*/
+
+
+/*───────────────────────────────────────────────
+ 🔹 Fetch posts for the feed (with user data)
+───────────────────────────────────────────────*/
+
 export const editPost = mutation({
   args: {
     postId: v.id("posts"),
@@ -344,12 +424,7 @@ export const editPost = mutation({
     return true;
   },
 });
-export const getRecentPosts = query({
-  args: { limit: v.optional(v.number()) },
-  handler: async (ctx, { limit = 12 }) => {
-    return await ctx.db.query("posts").order("desc").take(limit);
-  },
-});
+
 export const getLikedPosts = query({
   handler: async (ctx) => {
     const user = await getAuthenticatedUser(ctx);

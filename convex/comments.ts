@@ -5,20 +5,83 @@ import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 
 /*───────────────────────────────────────────────
- 🔹 Helper: load correct target (post or marketplacePost)
+ 🔹 Helper: extract mentions using @Full Name
 ───────────────────────────────────────────────*/
-async function getTarget(
-  ctx: any,
-  targetType: "post" | "marketplace",
-  targetId: any
-) {
-  const target = await ctx.db.get(targetId);
-  if (!target) return null;
-  return { ...target, type: targetType };
+function extractFullnameMentions(text: string): string[] {
+  if (!text) return [];
+
+  const re = /@([A-Za-z0-9À-ÖØ-öø-ÿ'’\-\.\s]{2,80}?)\b/g;
+  const found = new Set<string>();
+
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const raw = m[1].trim();
+    if (raw) found.add(raw);
+  }
+
+  return [...found];
 }
 
 /*───────────────────────────────────────────────
- 🔹 Add Comment
+ 🔹 Helper: find users by FULLNAME (case-insensitive)
+───────────────────────────────────────────────*/
+async function findUsersByFullnames(ctx: any, names: string[]) {
+  if (!names.length) return [];
+  const allUsers = await ctx.db.query("users").collect();
+
+  const map = new Map<string, any>();
+  for (const u of allUsers) {
+    if (u.fullname) map.set(u.fullname.toLowerCase(), u);
+  }
+
+  const result = [];
+  for (const name of names) {
+    const u = map.get(name.toLowerCase());
+    if (u) result.push(u);
+  }
+  return result;
+}
+
+/*───────────────────────────────────────────────
+ 🔹 Helper: send DB notification + push
+───────────────────────────────────────────────*/
+async function notifyUsers(ctx: any, receivers: any[], sender: any, opts: any) {
+  const now = Date.now();
+
+  for (const r of receivers) {
+    if (!r || String(r._id) === String(sender._id)) continue; // no self
+
+    // Insert notification
+    await ctx.db.insert("notifications", {
+      receiverId: r._id,
+      senderId: sender._id,
+      type: opts.type,
+      postId: opts.postId,
+      commentId: opts.commentId,
+      createdAt: now,
+      read: false,
+    });
+
+    // Push notification via Expo
+    await ctx.runMutation(api.push.sendPushNotification, {
+      userId: r._id,
+      title: opts.title,
+      body: opts.body,
+      data: opts.data ?? {},
+    });
+  }
+}
+
+/*───────────────────────────────────────────────
+ 🔹 Helper: fetch post or marketplace item
+───────────────────────────────────────────────*/
+async function getTarget(ctx: any, targetType: "post" | "marketplace", targetId: any) {
+  const target = await ctx.db.get(targetId);
+  return target ? { ...target, type: targetType } : null;
+}
+
+/*───────────────────────────────────────────────
+ 🔹 Add Comment (with comment, reply & mention notifications)
 ───────────────────────────────────────────────*/
 export const addComment = mutation({
   args: {
@@ -53,45 +116,81 @@ export const addComment = mutation({
     const target = await getTarget(ctx, targetType, targetId);
     if (!target) return commentId;
 
-    // Update post comments count
-    if (targetType === "post") {
+    // increment post comment count only for top-level comments
+    if (targetType === "post" && !parentId) {
       await ctx.db.patch(targetId, {
         comments: (target.comments ?? 0) + 1,
       });
     }
 
-    // Determine who is notified
-    const receiverId = targetType === "post" ? target.userId : target.creatorId;
+    /*─────────────────────────────────────────────
+     🔸 Case 1: Comment on post → notify post owner
+    ─────────────────────────────────────────────*/
+    const postOwnerId = targetType === "post" ? target.userId : target.creatorId;
 
-    // no self notifications
-    if (String(receiverId) !== String(me._id)) {
-      await ctx.db.insert("notifications", {
-        receiverId,
-        senderId: me._id,
+    if (!parentId && String(postOwnerId) !== String(me._id)) {
+      const postOwner = await ctx.db.get(postOwnerId);
+
+      await notifyUsers(ctx, [postOwner], me, {
         type: "comment",
-        postId: targetType === "post" ? (targetId as Id<"posts">) : undefined,
+        postId: targetType === "post" ? targetId : undefined,
         commentId,
-        createdAt: now,
-        read: false,
-      });
-
-      // PUSH Notification
-      await ctx.runMutation(api.push.sendPushNotification, {
-        userId: receiverId,
-        title: `${me.username} commented on your ${
-          targetType === "post" ? "post" : "listing"
-        }`,
-        body: content.length > 80 ? content.slice(0, 80) + "…" : content,
+        title: `${me.username ?? me.fullname} commented`,
+        body: content.length > 100 ? content.slice(0, 100) + "…" : content,
         data: {
-          type: targetType === "post" ? "comment_post" : "comment_marketplace",
-          postId: targetType === "post" ? (targetId as Id<"posts">) : undefined,
-          marketplaceId:
-            targetType === "marketplace"
-              ? (targetId as Id<"marketplacePosts">)
-              : undefined,
+          type: "comment",
+          postId: targetType === "post" ? targetId : undefined,
           commentId,
         },
       });
+    }
+
+    /*─────────────────────────────────────────────
+     🔸 Case 2: Reply → notify parent comment owner
+    ─────────────────────────────────────────────*/
+    if (parentId) {
+      const parentComment = await ctx.db.get(parentId);
+
+      if (parentComment && String(parentComment.userId) !== String(me._id)) {
+        const parentOwner = await ctx.db.get(parentComment.userId);
+
+        await notifyUsers(ctx, [parentOwner], me, {
+          type: "reply",
+          postId: targetType === "post" ? targetId : undefined,
+          commentId,
+          title: `${me.username ?? me.fullname} replied to your comment`,
+          body: content.length > 100 ? content.slice(0, 100) + "…" : content,
+          data: {
+            type: "reply",
+            postId: targetType === "post" ? targetId : undefined,
+            commentId,
+          },
+        });
+      }
+    }
+
+    /*─────────────────────────────────────────────
+     🔸 Case 3: Mentions inside comment → notify mentioned users
+    ─────────────────────────────────────────────*/
+    const mentions = extractFullnameMentions(content);
+
+    if (mentions.length > 0) {
+      const mentionedUsers = await findUsersByFullnames(ctx, mentions);
+
+      if (mentionedUsers.length > 0) {
+        await notifyUsers(ctx, mentionedUsers, me, {
+          type: "mention",
+          postId: targetType === "post" ? targetId : undefined,
+          commentId,
+          title: `${me.username ?? me.fullname} mentioned you`,
+          body: content.length > 100 ? content.slice(0, 100) + "…" : content,
+          data: {
+            type: "mention",
+            postId: targetType === "post" ? targetId : undefined,
+            commentId,
+          },
+        });
+      }
     }
 
     return commentId;
@@ -181,12 +280,11 @@ export const editComment = mutation({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
     if (!me) throw new Error("User not found.");
-    const userId = me._id;
 
-    const c = await ctx.db.get(commentId);
-    if (!c) throw new Error("Comment not found.");
+    const comment = await ctx.db.get(commentId);
+    if (!comment) throw new Error("Comment not found.");
 
-    if (String(c.userId) !== String(userId)) {
+    if (String(comment.userId) !== String(me._id)) {
       throw new Error("Not authorized.");
     }
 
@@ -213,26 +311,19 @@ export const deleteComment = mutation({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
     if (!me) throw new Error("User not found.");
-    const userId = me._id;
 
     const comment = await ctx.db.get(commentId);
     if (!comment) throw new Error("Comment not found.");
 
-    const target = await getTarget(
-      ctx,
-      comment.targetType as "post" | "marketplace",
-      comment.targetId
-    );
+    const target = await getTarget(ctx, comment.targetType as "post" | "marketplace", comment.targetId);
     if (!target) throw new Error("Target not found.");
 
-    const isOwner = String(comment.userId) === String(userId);
+    const isCommentOwner = String(comment.userId) === String(me._id);
     const isPostOwner =
-      (comment.targetType === "post" &&
-        String(target.userId) === String(userId)) ||
-      (comment.targetType === "marketplace" &&
-        String(target.creatorId) === String(userId));
+      (comment.targetType === "post" && String(target.userId) === String(me._id)) ||
+      (comment.targetType === "marketplace" && String(target.creatorId) === String(me._id));
 
-    if (!isOwner && !isPostOwner) {
+    if (!isCommentOwner && !isPostOwner) {
       throw new Error("Not authorized to delete");
     }
 
@@ -242,13 +333,12 @@ export const deleteComment = mutation({
       .withIndex("by_parent", (q) => q.eq("parentId", commentId))
       .collect();
 
-    for (const r of replies) {
-      await ctx.db.delete(r._id);
-    }
+    for (const r of replies) await ctx.db.delete(r._id);
 
+    // delete comment
     await ctx.db.delete(commentId);
 
-    // decrement comment count (posts only, and only for top-level)
+    // decrement post comment count (posts only & top-level only)
     if (!comment.parentId && comment.targetType === "post") {
       await ctx.db.patch(comment.targetId as Id<"posts">, {
         comments: Math.max(0, (target.comments ?? 1) - 1),

@@ -5,6 +5,7 @@ import { Loader } from "@/components/Loader";
 import Post from "@/components/Posts";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
+import usePushNotifications from "@/hooks/usePushNotifications";
 import { feedStyles } from "@/styles/feed.styles";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "convex/react";
@@ -40,6 +41,7 @@ const categories = [
 ];
 
 export default function FeedScreen() {
+  usePushNotifications();
   const { width } = useWindowDimensions();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
@@ -106,8 +108,10 @@ export default function FeedScreen() {
         <SafeAreaView style={feedStyles.container}>
           {/* HEADER */}
           <View style={{ position: "relative" }}>
-            <AppHeader title="Campus Connect 🎓" alignLeft   
-            showBackButton={false}
+            <AppHeader
+              title="Campus Connect 🎓"
+              alignLeft
+              showBackButton={false}
             />
 
             {/* TOP RIGHT ICONS */}
@@ -203,7 +207,7 @@ export default function FeedScreen() {
           {/* POSTS */}
           <FlatList
             data={filteredPosts}
-            renderItem={({ item }) => <Post post={item} />}
+            renderItem={({ item }) => <Post post={item as any} />}
             keyExtractor={(item) => item._id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[

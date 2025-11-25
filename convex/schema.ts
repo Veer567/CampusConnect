@@ -45,6 +45,8 @@ export default defineSchema({
     location: v.optional(v.string()),
     eventDate: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    createdAt: v.optional(v.number()),
+
   }).index("by_user", ["userId"]),
 
   /*───────────────────────────────
@@ -93,23 +95,29 @@ export default defineSchema({
   /*───────────────────────────────
    🔹 Notifications Table
   ───────────────────────────────*/
-  notifications: defineTable({
-    receiverId: v.id("users"),
-    senderId: v.id("users"),
-    type: v.union(
-      v.literal("like"),
-      v.literal("comment"),
-      v.literal("follow"),
-      v.literal("message")
-    ),
-    postId: v.optional(v.id("posts")),
-    commentId: v.optional(v.id("comments")),
-    createdAt: v.number(),
-    read: v.optional(v.boolean()),
-    conversationId: v.optional(v.id("conversations")),
-  })
-    .index("by_receiver", ["receiverId"])
-    .index("by_post", ["postId"]),
+notifications: defineTable({
+  receiverId: v.id("users"),
+  senderId: v.id("users"),
+
+  // Add new types here
+  type: v.union(
+    v.literal("like"),
+    v.literal("comment"),
+    v.literal("reply"),
+    v.literal("mention"),
+    v.literal("follow"),
+    v.literal("message")
+  ),
+
+  postId: v.optional(v.id("posts")),
+  commentId: v.optional(v.id("comments")),
+  createdAt: v.number(),
+  read: v.optional(v.boolean()),
+  conversationId: v.optional(v.id("conversations")),
+})
+  .index("by_receiver", ["receiverId"])
+  .index("by_post", ["postId"]),
+
 
   /*───────────────────────────────
    🔹 Bookmarks Tabl

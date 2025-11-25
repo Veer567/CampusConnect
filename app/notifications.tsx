@@ -137,7 +137,7 @@ export default function NotificationsScreen() {
     api.users.getUserByClerkId,
     clerkId ? { clerkId } : "skip"
   );
-  const notificationsRaw = useQuery(api.notifications.getNotifcations) ?? null;
+  const notificationsRaw = useQuery(api.notifications.getNotifications) ?? null;
 
   const deleteNotif = useMutation(api.notifications.deleteNotification);
   const markRead = useMutation(api.notifications.markNotificationRead);
@@ -297,42 +297,50 @@ export default function NotificationsScreen() {
     globalIndex: number
   ) => {
     try {
-      if (!n.read) await markRead({ id: n._id as any });
-    } catch {
-      // ignore
+      // 🔥 Ensure the notification is marked as read BEFORE navigating
+      if (!n.read) {
+        await markRead({ id: n._id as any });
+      }
+    } catch (err) {
+      console.log("Failed to mark read:", err);
     }
 
+    // -------------------------
+    // Redirect logic
+    // -------------------------
+
     if (n.type === "comment" || n.type === "mention") {
-      router.push({
+      return router.push({
         pathname: "/post-details",
         params: { postId: n.postId ?? n.post?._id, scrollTo: "comments" },
       });
-      return;
     }
 
     if (n.type === "message") {
       const sender = n.sender?._id ?? n.senderId;
+
       if (!sender) {
-        // fallback: open sender profile
-        router.push({
+        return router.push({
           pathname: "/other-profile",
           params: { userId: n.senderId ?? n.sender?._id },
         });
-        return;
       }
+
       await openChatForSender(String(sender), n.conversationId);
       return;
     }
 
     if (n.type === "follow") {
       const sender = n.sender?._id ?? n.senderId;
-      router.push({ pathname: "/other-profile", params: { userId: sender } });
-      return;
+      return router.push({
+        pathname: "/other-profile",
+        params: { userId: sender },
+      });
     }
 
-    // default: open post
+    // default open post
     if (n.postId || n.post?._id) {
-      router.push({
+      return router.push({
         pathname: "/post-details",
         params: { postId: n.postId ?? n.post?._id },
       });

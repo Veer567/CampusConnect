@@ -8,13 +8,11 @@ import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
-  Image,
+  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -134,7 +132,6 @@ export default function OtherUserProfile() {
           removeInterest={() => {}}
           pickResume={() => {}}
         />
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -147,8 +144,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#fff",
-    margin: 10
-
+    margin: 10,
   },
 
   loadingBox: { flex: 1, justifyContent: "center", alignItems: "center" },

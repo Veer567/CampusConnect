@@ -1,4 +1,4 @@
-// app/lost-found/_layout.tsx
+// / app/lost-found/_layout.tsx
 import { Stack } from "expo-router";
 
 export default function LostFoundLayout() {
@@ -7,13 +7,14 @@ export default function LostFoundLayout() {
       screenOptions={{
         headerShown: false,
         animation: "slide_from_right",
-        gestureEnabled: true,            // ← enables swipe back
-        gestureDirection: "horizontal",  // ← iOS-style back gesture
+        gestureEnabled: true,
+        gestureDirection: "horizontal",
         presentation: "card",
       }}
     >
+      <Stack.Screen name="index" />
       <Stack.Screen name="add" />
-    <Stack.Screen name="edit-lost-item" />
+      <Stack.Screen name="edit" />
     </Stack>
   );
 }

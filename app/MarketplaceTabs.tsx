@@ -10,6 +10,7 @@ type MarketplaceTabsProps = {
 };
 
 export default function MarketplaceTabs({ initialTab }: MarketplaceTabsProps) {
+  const TopTabsAny = TopTabs as any;
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <LinearGradient
@@ -25,10 +26,10 @@ export default function MarketplaceTabs({ initialTab }: MarketplaceTabsProps) {
           </Text>
         </View>
       </LinearGradient>
-
       {/* Connect to TopTabs */}
-      <TopTabs initialTab={initialTab} />
+      <TopTabsAny initialTab={initialTab} />
     </SafeAreaView>
+    
   );
 }
 
