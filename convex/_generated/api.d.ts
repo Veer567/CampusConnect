@@ -18,6 +18,7 @@ import type * as notifications from "../notifications.js";
 import type * as posts from "../posts.js";
 import type * as push from "../push.js";
 import type * as pushTokens from "../pushTokens.js";
+import type * as settings from "../settings.js";
 import type * as storage from "../storage.js";
 import type * as users from "../users.js";
 
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   posts: typeof posts;
   push: typeof push;
   pushTokens: typeof pushTokens;
+  settings: typeof settings;
   storage: typeof storage;
   users: typeof users;
 }>;

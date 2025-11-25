@@ -1,4 +1,5 @@
 // app/post-details.tsx
+import { Loader } from "@/components/Loader";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -13,7 +14,6 @@ import {
   Dimensions,
   Image,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -24,6 +24,7 @@ import {
   KeyboardAvoidingView,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
@@ -84,7 +85,7 @@ export default function PostDetailsScreen() {
   if (!post) {
     return (
       <SafeAreaView style={styles.loadingWrap}>
-        <Text style={{ fontSize: 18, color: COLORS.text }}>Loading...</Text>
+       <Loader />
       </SafeAreaView>
     );
   }

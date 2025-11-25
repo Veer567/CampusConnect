@@ -20,6 +20,7 @@ import { ActivityStatsCard } from "../../components/Profile/ActivityStatsCard";
 import { ProfileBottomSheet } from "../../components/Profile/ProfileBottomSheet";
 import { ProfileContent } from "../../components/Profile/ProfileContent";
 import { ProfileHeader } from "../../components/Profile/ProfileHeader";
+import { Loader } from "../Loader";
 
 export default function ProfileScreen({
   route,
@@ -89,7 +90,7 @@ export default function ProfileScreen({
   const removeInterest = (i: number) =>
     setInterests((s) => s.filter((_, idx) => idx !== i));
 
-  if (!current) return <Text style={{ padding: 20 }}>Loading...</Text>;
+  if (!current) return <Loader />;
 
   return (
     <>

@@ -2,7 +2,7 @@ import React from "react";
 import {
   View,
   Text,
-  SafeAreaView,
+
   ScrollView,
   Image,
   TouchableOpacity,
@@ -18,6 +18,8 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
+import { Loader } from "@/components/Loader";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Responsive helpers
 const { width, height } = Dimensions.get("window");
@@ -61,7 +63,7 @@ export default function Bookmarks() {
           {bookmarks === undefined && (
             <View style={styles.emptyBox}>
               <Ionicons name="time-outline" size={wp(15)} color={COLORS.grey} />
-              <Text style={styles.emptyText}>Loading...</Text>
+             <Loader />
             </View>
           )}
 

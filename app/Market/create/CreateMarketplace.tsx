@@ -23,6 +23,7 @@ import {
 
 import { COLORS } from "../../../constants/themes";
 import { api } from "../../../convex/_generated/api";
+import { Loader } from "@/components/Loader";
 
 /* ---------------------------
    Responsive helpers (module scope)
@@ -232,7 +233,7 @@ export default function CreateMarketplace() {
           accessibilityRole="button"
         >
           <LinearGradient colors={[COLORS.primary, COLORS.secondary]} style={styles.submitGradient}>
-            <Text style={styles.submitText}>{loading ? "Posting..." : "Publish"}</Text>
+            <Text style={styles.submitText}>{loading ? <Loader /> : "Publish"}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </ScrollView>

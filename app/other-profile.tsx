@@ -20,6 +20,7 @@ import { ProfileContent } from "@/components/Profile/ProfileContent";
 import { ProfileHeader } from "@/components/Profile/ProfileHeader";
 import { Id } from "@/convex/_generated/dataModel";
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
+import { Loader } from "@/components/Loader";
 
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
@@ -53,7 +54,7 @@ export default function OtherUserProfile() {
   if (!user || !me) {
     return (
       <SafeAreaView style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Loader />
       </SafeAreaView>
     );
   }

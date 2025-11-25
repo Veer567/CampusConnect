@@ -1,9 +1,10 @@
 // app/MarketplaceTabs.tsx
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import {  StyleSheet, Text, View } from "react-native";
 import { COLORS } from "../constants/themes"; // ← FIXED PATH
 import TopTabs from "./Market/components/TopTabs";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type MarketplaceTabsProps = {
   initialTab?: "project" | "hackathon" | "startup";

@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  SafeAreaView,
+
   StyleSheet,
   Text,
   TextInput,
@@ -18,6 +18,7 @@ import {
   Dimensions,
 } from "react-native";
 import CommentItem from "./Comment";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 /* Responsive helpers */
 const { width, height } = Dimensions.get("window");

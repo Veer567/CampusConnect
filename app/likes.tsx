@@ -12,12 +12,13 @@ import {
   FlatList,
   Image,
   Platform,
-  SafeAreaView,
+
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;

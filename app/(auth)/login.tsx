@@ -11,7 +11,6 @@ import {
   ScrollView,
   Image,
   StyleSheet,
-  SafeAreaView,
   ActivityIndicator,
   Platform,
   Dimensions,
@@ -21,6 +20,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { styles as externalStyles } from "@/styles/auth.styles";
 import { COLORS } from "@/constants/themes";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // local responsive helpers
 const { width: SCREEN_WIDTH } = Dimensions.get("window");

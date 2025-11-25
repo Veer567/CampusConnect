@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
   Pressable,
-  SafeAreaView,
+
   Platform,
   ActivityIndicator,
   StyleSheet,
@@ -21,6 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { COLORS } from "@/constants/themes";
 import { styles as authStyles } from "@/styles/auth.styles";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignupScreen() {
   const { isLoaded, signUp, setActive } = useSignUp();

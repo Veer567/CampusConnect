@@ -17,7 +17,7 @@ import {
   Dimensions,
   FlatList,
   RefreshControl,
-  SafeAreaView,
+
   ScrollView,
   StyleSheet,
   Text,
@@ -26,6 +26,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { height } = Dimensions.get("window");
 

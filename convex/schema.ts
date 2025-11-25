@@ -46,7 +46,6 @@ export default defineSchema({
     eventDate: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
     createdAt: v.optional(v.number()),
-
   }).index("by_user", ["userId"]),
 
   /*───────────────────────────────
@@ -95,29 +94,28 @@ export default defineSchema({
   /*───────────────────────────────
    🔹 Notifications Table
   ───────────────────────────────*/
-notifications: defineTable({
-  receiverId: v.id("users"),
-  senderId: v.id("users"),
+  notifications: defineTable({
+    receiverId: v.id("users"),
+    senderId: v.id("users"),
 
-  // Add new types here
-  type: v.union(
-    v.literal("like"),
-    v.literal("comment"),
-    v.literal("reply"),
-    v.literal("mention"),
-    v.literal("follow"),
-    v.literal("message")
-  ),
+    // Add new types here
+    type: v.union(
+      v.literal("like"),
+      v.literal("comment"),
+      v.literal("reply"),
+      v.literal("mention"),
+      v.literal("follow"),
+      v.literal("message")
+    ),
 
-  postId: v.optional(v.id("posts")),
-  commentId: v.optional(v.id("comments")),
-  createdAt: v.number(),
-  read: v.optional(v.boolean()),
-  conversationId: v.optional(v.id("conversations")),
-})
-  .index("by_receiver", ["receiverId"])
-  .index("by_post", ["postId"]),
-
+    postId: v.optional(v.id("posts")),
+    commentId: v.optional(v.id("comments")),
+    createdAt: v.number(),
+    read: v.optional(v.boolean()),
+    conversationId: v.optional(v.id("conversations")),
+  })
+    .index("by_receiver", ["receiverId"])
+    .index("by_post", ["postId"]),
 
   /*───────────────────────────────
    🔹 Bookmarks Tabl
@@ -265,20 +263,16 @@ notifications: defineTable({
     .index("by_type", ["type"])
     .index("by_createdAt", ["createdAt"]),
 
-  // marketplaceComments: defineTable({
-  //   postId: v.id("marketplacePosts"),
-  //   userId: v.id("users"),
-  //   username: v.string(),
-  //   userImage: v.optional(v.string()),
-  //   text: v.string(),
-  //   createdAt: v.number(),
+  supportMessages: defineTable({
+    userId: v.id("users"),
+    email: v.string(),
+    message: v.string(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 
-  //   // optional fields for replies, mentions, edits
-  //   parentId: v.optional(v.id("marketplaceComments")),
-  //   mentions: v.optional(v.array(v.id("users"))),
-  //   editedAt: v.optional(v.number()),
-  // })
-  //   .index("by_post", ["postId"])
-  //   .index("by_parent", ["parentId"])
-  //   .index("by_user", ["userId"])
+  reportedIssues: defineTable({
+    userId: v.id("users"),
+    issue: v.string(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 });

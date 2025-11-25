@@ -8,13 +8,14 @@ import {
   Dimensions,
   FlatList,
   Image,
-  SafeAreaView,
+  
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 const GAP = 6; // spacing between tiles

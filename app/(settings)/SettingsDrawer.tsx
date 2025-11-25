@@ -1,51 +1,116 @@
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import { useRouter } from "expo-router";
+import React, { useEffect } from "react";
+import {
+
+  ScrollView,
+  Text,
+  Pressable,
+  StyleSheet,
+  View,
+  BackHandler,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import type { ComponentProps } from "react";
+import { useAuth } from "@clerk/clerk-expo";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsDrawer() {
   const router = useRouter();
+  const { signOut } = useAuth();
 
-  type IoniconName = ComponentProps<typeof Ionicons>["name"];
+  type IconName = ComponentProps<typeof Ionicons>["name"];
 
-  const items: { label: string; icon: IoniconName; route: string }[] = [
+  const items: { label: string; icon: IconName; route: string }[] = [
     { label: "FAQ", icon: "help-circle-outline", route: "/(settings)/faq" },
     { label: "Support", icon: "headset-outline", route: "/(settings)/support" },
     { label: "Report Issue", icon: "alert-circle-outline", route: "/(settings)/report" },
     { label: "Terms & Conditions", icon: "document-text-outline", route: "/(settings)/terms" },
     { label: "Privacy Policy", icon: "shield-checkmark-outline", route: "/(settings)/privacy" },
-    { label: "Delete Account", icon: "trash-outline", route: "/(settings)/delete" },
-    { label: "Developer – Viral", icon: "code-slash-outline", route: "/(settings)/dev-viral" },
-    { label: "Developer – Vikas", icon: "terminal-outline", route: "/(settings)/dev-vikas" },
+    { label: "About Us", icon: "people-outline", route: "/(settings)/about" },
   ];
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: "#fff" }}
-      contentContainerStyle={{ padding: 20 }}
-    >
-      <Text style={{ fontSize: 26, fontWeight: "700", marginBottom: 20 }}>
-        Settings
-      </Text>
+  // Android back button → return to Profile
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      router.replace("/(tabs)/profile"); // ← CHANGE IF NEEDED
+      return true;
+    });
 
-      {items.map((item, index) => (
-        <TouchableOpacity
-          key={index}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            paddingVertical: 15,
-            borderBottomWidth: 1,
-            borderBottomColor: "#eee",
+    return () => sub.remove();
+  }, []);
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Settings</Text>
+
+        <View style={styles.card}>
+          {items.map((item, idx) => (
+            <Pressable
+              key={idx}
+              onPress={() => router.push(item.route as any)}
+              style={({ pressed }) => [
+                styles.item,
+                pressed && styles.itemPressed,
+                idx === items.length - 1 && { borderBottomWidth: 0 },
+              ]}
+            >
+              <Ionicons name={item.icon} size={20} />
+              <Text style={styles.label}>{item.label}</Text>
+              <Ionicons name="chevron-forward" size={18} style={styles.chev} />
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Logout */}
+        <Pressable
+          style={styles.logoutBtn}
+          onPress={async () => {
+            await signOut();
+            router.replace("/(auth)/login");
           }}
-          onPress={() => router.push(item.route as any)}
         >
-          <Ionicons name={item.icon} size={22} color="#555" />
-          <Text style={{ marginLeft: 12, fontSize: 16, color: "#333" }}>
-            {item.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+          <Ionicons name="log-out-outline" size={22} color="#E53935" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { padding: 20, paddingBottom: 50 },
+  title: { fontSize: 26, fontWeight: "700", marginBottom: 12 },
+  card: {
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f4f4f4",
+  },
+  itemPressed: { backgroundColor: "#f8f8f8" },
+  label: { marginLeft: 12, fontSize: 16, color: "#222" },
+  chev: { marginLeft: "auto", color: "#999" },
+  logoutBtn: {
+    marginTop: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFECEC",
+    padding: 16,
+    borderRadius: 10,
+  },
+  logoutText: {
+    marginLeft: 10,
+    color: "#E53935",
+    fontSize: 17,
+    fontWeight: "600",
+  },
+});

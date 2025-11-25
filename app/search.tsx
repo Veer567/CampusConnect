@@ -10,7 +10,7 @@ import {
   Image,
   Dimensions,
   StyleSheet,
-  SafeAreaView,
+
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +19,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/clerk-expo";
 import { COLORS } from "@/constants/themes";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;

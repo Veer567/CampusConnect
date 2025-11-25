@@ -20,6 +20,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../../constants/themes";
 import { api } from "../../../convex/_generated/api";
+import { Loader } from "@/components/Loader";
 
 /* ---------------------------
    Responsive helpers
@@ -185,10 +186,8 @@ export default function EditMarketplace() {
 ----------------------------*/
   if (!post) {
     return (
-      <View style={{ padding: wp(5) }}>
-        <Text>Loading...</Text>
-      </View>
-    );
+     <Loader />
+      );
   }
 
   /* ---------------------------
@@ -241,7 +240,7 @@ export default function EditMarketplace() {
         onPress={submit}
       >
         <LinearGradient colors={[COLORS.primary, COLORS.secondary]} style={styles.submitGradient}>
-          <Text style={styles.submitText}>{loading ? "Saving..." : "Save Changes"}</Text>
+          <Text style={styles.submitText}>{loading ? <Loader /> : "Save Changes"}</Text>
         </LinearGradient>
       </TouchableOpacity>
 

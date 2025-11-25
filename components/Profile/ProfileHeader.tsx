@@ -61,9 +61,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
       <View style={styles.topRow}>
         {isOwner && (
           <TouchableOpacity
-            onPress={() =>
-              router.navigate("")
-            }
+            onPress={() => router.push("/(settings)/SettingsDrawer")}
             style={styles.settingsButton}
           >
             <Ionicons
