@@ -123,10 +123,7 @@ export default function MarketplacePostDetail() {
       style={styles.container}
       showsVerticalScrollIndicator={false}
     >
-      {/* BACK BUTTON */}
-      <TouchableOpacity onPress={navigateBack} style={styles.backBtn}>
-        <Ionicons name="arrow-back" size={24} color="#fff" />
-      </TouchableOpacity>
+ 
 
       {/* IMAGE */}
       <View style={styles.heroContainer}>

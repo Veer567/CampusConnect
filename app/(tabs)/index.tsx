@@ -96,6 +96,7 @@ const FullFeedSkeleton = () => {
 
           {/* ---------- SEARCH BAR ---------- */}
           <View style={feedSkeletonStyles.searchBar} />
+          
 
           {/* ---------- CATEGORY CHIPS ---------- */}
           <ScrollView

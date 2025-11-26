@@ -1,15 +1,15 @@
 // app/post-details.tsx
-import { Loader } from "@/components/Loader";
+
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Linking from "expo-linking"; // ← NEW
+import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter } from "expo-router";
-
 import React, { useEffect, useRef, useState } from "react";
+
 import {
   Alert,
   Animated,
@@ -27,6 +27,68 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+/* ============================================================
+   INLINE SHIMMER SKELETON — No separate file needed
+============================================================ */
+const Shimmer: React.FC<{
+  width?: string | number;
+  height?: string | number;
+  radius?: number;
+  style?: any;
+}> = ({ width = "100%", height = 20, radius = 8, style = {} }) => {
+  const shimmer = React.useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmer, {
+          toValue: 0,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const translateX = shimmer.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-150, 150],
+  });
+
+  return (
+    <View
+      style={[
+        {
+          backgroundColor: "#e2e2e2",
+          width,
+          height,
+          borderRadius: radius,
+          overflow: "hidden",
+        },
+        style,
+      ]}
+    >
+      <Animated.View
+        style={{
+          height: "100%",
+          width: "60%",
+          backgroundColor: "rgba(255,255,255,0.45)",
+          transform: [{ translateX }],
+        }}
+      />
+    </View>
+  );
+};
+
+/* ============================================================
+   SCREEN SETUP
+============================================================ */
+
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
@@ -37,13 +99,11 @@ export default function PostDetailsScreen() {
 
   const normalizedPostId = Array.isArray(postId) ? postId[0] : postId;
 
-  // Fetch post
   const post = useQuery(
     api.posts.getPostById,
     normalizedPostId ? { postId: normalizedPostId as Id<"posts"> } : "skip"
   );
 
-  // Fetch comments
   const comments =
     useQuery(
       api.comments.getComments,
@@ -56,12 +116,12 @@ export default function PostDetailsScreen() {
   const deleteComment = useMutation(api.comments.deleteComment);
 
   const scrollRef = useRef<ScrollView>(null);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const [commentText, setCommentText] = useState("");
   const [replyTarget, setReplyTarget] = useState<any>(null);
 
-  // Fade animation
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -70,7 +130,6 @@ export default function PostDetailsScreen() {
     }).start();
   }, []);
 
-  // Scroll to comments when opened from notification
   useEffect(() => {
     if (scrollTo === "comments") {
       setTimeout(() => {
@@ -79,21 +138,64 @@ export default function PostDetailsScreen() {
     }
   }, [scrollTo, comments]);
 
+  /* ============================================================
+     SKELETON LOADING VIEW
+  ============================================================ */
+
   if (!post) {
     return (
       <SafeAreaView style={styles.loadingWrap}>
-        <Loader />
+        {/* Title */}
+        <Shimmer
+          width="70%"
+          height={28}
+          radius={6}
+          style={{ marginBottom: 20 }}
+        />
+
+        {/* Image */}
+        <Shimmer
+          width="100%"
+          height={hp(30)}
+          radius={14}
+          style={{ marginBottom: 30 }}
+        />
+
+        {/* Actions */}
+        <View style={{ flexDirection: "row", gap: 20, marginBottom: 20 }}>
+          <Shimmer width={60} height={30} radius={10} />
+          <Shimmer width={40} height={30} radius={10} />
+        </View>
+
+        {/* Caption + Meta */}
+        <Shimmer width="90%" height={16} style={{ marginBottom: 10 }} />
+        <Shimmer width="80%" height={16} style={{ marginBottom: 10 }} />
+        <Shimmer width="60%" height={16} style={{ marginBottom: 30 }} />
+
+        {/* Comments Skeleton */}
+        <Shimmer width="40%" height={20} style={{ marginBottom: 20 }} />
+        <View style={{ gap: 20, width: "100%" }}>
+          {[...Array(3)].map((_, i) => (
+            <View key={i} style={{ flexDirection: "row", gap: 12 }}>
+              <Shimmer width={40} height={40} radius={20} />
+              <View style={{ flex: 1, gap: 10 }}>
+                <Shimmer width="40%" height={14} />
+                <Shimmer width="75%" height={14} />
+              </View>
+            </View>
+          ))}
+        </View>
       </SafeAreaView>
     );
   }
 
-  // LIKE
-  const handleLike = () => toggleLike({ postId: post._id });
+  /* ============================================================
+     MAIN LOGIC
+  ============================================================ */
 
-  // BOOKMARK
+  const handleLike = () => toggleLike({ postId: post._id });
   const handleBookmark = () => toggleBookmark({ postId: post._id });
 
-  // ADD COMMENT
   const handleSendComment = async () => {
     const text = commentText.trim();
     if (!text) return;
@@ -113,46 +215,30 @@ export default function PostDetailsScreen() {
     }, 200);
   };
 
-  // DELETE COMMENT
+  const handleBack = () => {
+    if (from === "likes") router.push("/profile");
+    else router.back();
+  };
+
   const confirmDelete = (c: any) => {
     Alert.alert("Delete comment?", "", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
-        onPress: async () => {
-          await deleteComment({ commentId: c._id });
-        },
+        onPress: () => deleteComment({ commentId: c._id }),
       },
     ]);
   };
 
-  // BACK BUTTON
-  const handleBack = () => {
-    if (from === "likes") {
-      router.push("/profile");
-    } else {
-      router.back();
-    }
-  };
-
-  /* -------------------------------------------------
-     ADD TO GOOGLE CALENDAR
-  -------------------------------------------------- */
-
   const addToGoogleCalendar = () => {
-    if (!post.eventDate) {
-      alert("No event date available.");
-      return;
-    }
+    if (!post.eventDate) return alert("No event date");
 
-    // Convert event date to YYYYMMDDTHHMMSSZ format
     const startISO = new Date(post.eventDate).toISOString();
     const start = startISO.replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
 
-    // End time = +1 hour
     const endISO = new Date(
-      new Date(post.eventDate).getTime() + 60 * 60 * 1000
+      new Date(post.eventDate).getTime() + 3600000
     ).toISOString();
     const end = endISO.replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
 
@@ -165,10 +251,6 @@ export default function PostDetailsScreen() {
 
     Linking.openURL(url);
   };
-
-  /* -------------------------------------------------
-     RENDER SCREEN
-  -------------------------------------------------- */
 
   return (
     <View style={{ flex: 1 }}>
@@ -194,7 +276,7 @@ export default function PostDetailsScreen() {
         <SafeAreaView style={styles.cardContainer} edges={[]}>
           <StatusBar translucent barStyle="light-content" />
 
-          {/* BACK BUTTON */}
+          {/* BACK */}
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={26} color={COLORS.text} />
           </TouchableOpacity>
@@ -241,47 +323,66 @@ export default function PostDetailsScreen() {
             {/* CAPTION */}
             {post.caption && <Text style={styles.caption}>{post.caption}</Text>}
 
-            {/* META CARD */}
-            <View style={styles.metaCard}>
-              <View style={styles.metaRow}>
-                {post.eventDate && (
-                  <>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={18}
-                      color={COLORS.textSecondary}
-                    />
-                    <Text style={styles.metaText}>{post.eventDate}</Text>
-                  </>
-                )}
-
-                {post.eventDate && (
-                  <TouchableOpacity
-                    onPress={addToGoogleCalendar}
-                    style={styles.inlineAddBtn}
-                  >
-                    <Ionicons name="add" size={18} color={COLORS.primary} />
-                    <Text style={styles.inlineAddText}>Add to Calendar</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+            {/* META CARD (White box with date + location) */}
+            <View
+              style={{
+                backgroundColor: "#F8F9FB",
+                padding: 16,
+                borderRadius: 20,
+                marginTop: 10,
+                marginBottom: 20,
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+              }}
+            >
+              {post.eventDate && (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={18}
+                    color="#6B7280"
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={{ color: "#374151", fontSize: 16 }}>
+                    {post.eventDate}
+                  </Text>
+                </View>
+              )}
 
               {post.location && (
-                <View style={styles.metaRow}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <Ionicons
                     name="location-outline"
                     size={18}
-                    color={COLORS.textSecondary}
+                    color="#6B7280"
+                    style={{ marginRight: 8 }}
                   />
-                  <Text style={styles.metaText}>{post.location}</Text>
+                  <Text style={{ color: "#374151", fontSize: 16 }}>
+                    {post.location}
+                  </Text>
                 </View>
               )}
             </View>
 
-            {/* COMMENTS TITLE */}
+            {/* BLUE ADD TO CALENDAR BUTTON (same as screenshot) */}
+            <TouchableOpacity
+              onPress={addToGoogleCalendar}
+              activeOpacity={0.85}
+              style={styles.calendarCard}
+            >
+              <Ionicons name="calendar" size={22} color="#fff" />
+              <Text style={styles.calendarCardText}>Add to Calendar</Text>
+            </TouchableOpacity>
+
+            {/* COMMENTS */}
             <Text style={styles.commentsTitle}>Comments</Text>
 
-            {/* COMMENTS LIST */}
             {comments.length === 0 ? (
               <Text style={{ color: COLORS.textSecondary }}>
                 No comments yet — be the first!
@@ -297,13 +398,13 @@ export default function PostDetailsScreen() {
               ))
             )}
 
-            <View style={{ height: 120 }} />
+            <View style={{ height: 150 }} />
           </ScrollView>
 
-          {/* COMMENT INPUT */}
+          {/* COMMENT INPUT (a little moved up) */}
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.commentInputWrap}
+            style={[styles.commentInputWrap, { bottom: 5 }]} // raised up
           >
             {replyTarget && (
               <Text style={styles.replyingTo}>
@@ -331,9 +432,10 @@ export default function PostDetailsScreen() {
   );
 }
 
-/* ---------------------------------------------------------
+/* ============================================================
    COMMENT BLOCK COMPONENT
---------------------------------------------------------- */
+============================================================ */
+
 function CommentBlock({ c, onReply, onDelete }: any) {
   const replies = useQuery(api.comments.getReplies, { parentId: c._id }) ?? [];
 
@@ -371,11 +473,18 @@ function CommentBlock({ c, onReply, onDelete }: any) {
   );
 }
 
-/* ---------------------------------------------------------
+/* ============================================================
    STYLES
---------------------------------------------------------- */
+============================================================ */
+
 const styles = StyleSheet.create({
-  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingWrap: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    gap: 20,
+    backgroundColor: "#fff",
+  },
 
   cardContainer: { flex: 1, backgroundColor: COLORS.surface },
 
@@ -392,7 +501,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: hp(4),
     paddingHorizontal: wp(6),
-    paddingBottom: hp(5),
+    paddingBottom: hp(8),
   },
 
   title: {
@@ -445,8 +554,6 @@ const styles = StyleSheet.create({
 
   metaText: { color: COLORS.textSecondary, fontSize: wp(4) },
 
-  /* GOOGLE CALENDAR BUTTON */
-
   commentsTitle: {
     fontSize: wp(5),
     fontWeight: "700",
@@ -459,7 +566,6 @@ const styles = StyleSheet.create({
   },
 
   commentUser: { fontWeight: "700", fontSize: wp(4) },
-
   commentText: { color: COLORS.textSecondary, fontSize: wp(3.7) },
 
   commentActions: {
@@ -479,7 +585,6 @@ const styles = StyleSheet.create({
 
   commentInputWrap: {
     position: "absolute",
-    bottom: 0,
     left: 0,
     right: 0,
     padding: wp(3),
@@ -512,128 +617,7 @@ const styles = StyleSheet.create({
     borderRadius: wp(3),
     marginLeft: wp(3),
   },
-  calendarBtnWrap: {
-    alignSelf: "center",
-    marginBottom: 20,
-  },
 
-  calendarBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 22,
-    borderRadius: 50,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-
-  calendarIconBox: {
-    backgroundColor: "#fff",
-    padding: 8,
-    borderRadius: 50,
-    marginRight: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-
-  calendarText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: wp(4),
-    letterSpacing: 0.5,
-  },
-  calendarGlass: {
-    borderRadius: 20,
-    overflow: "hidden",
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-
-  calendarGlassBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 22,
-    borderRadius: 20,
-  },
-
-  calendarGlassText: {
-    marginLeft: 10,
-    fontSize: wp(4),
-    color: COLORS.primary,
-    fontWeight: "700",
-  },
-  calendarCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 4 },
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-
-  calendarCardText: {
-    color: "#fff",
-    marginLeft: 12,
-    fontSize: wp(4),
-    fontWeight: "700",
-  },
-  calendarMinimal: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-
-  calendarMinimalText: {
-    marginLeft: 10,
-    fontSize: wp(4),
-    color: COLORS.primary,
-    fontWeight: "600",
-  },
-  metaWrapper: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-    padding: wp(4),
-    borderRadius: wp(4),
-    borderColor: COLORS.border,
-    borderWidth: 1,
-    marginBottom: wp(5),
-  },
-
-  metaLeft: {
-    flex: 1,
-  },
-
-  metaAddBtn: {
-    padding: 8,
-    borderRadius: 50,
-    backgroundColor: "#fff",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
   inlineAddBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -651,4 +635,27 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontWeight: "600",
   },
+  calendarCard: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: COLORS.primary,
+  paddingVertical: 14,
+  paddingHorizontal: 24,
+  borderRadius: 14,
+  elevation: 6,
+  shadowColor: "#000",
+  shadowOpacity: 0.2,
+  shadowRadius: 6,
+  shadowOffset: { width: 0, height: 4 },
+  alignSelf: "center",
+  marginBottom: 20,
+},
+
+calendarCardText: {
+  color: "#fff",
+  marginLeft: 12,
+  fontSize: wp(4),
+  fontWeight: "700",
+},
+
 });

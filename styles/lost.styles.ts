@@ -1,12 +1,11 @@
-import { StyleSheet, Platform, Dimensions } from "react-native";
 import { COLORS } from "@/constants/themes";
+import { Dimensions, Platform, StyleSheet } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
 
 export const styles = StyleSheet.create({
-
   /* ----------------------------- MAIN CONTAINER ----------------------------- */
   container: {
     flex: 1,
@@ -16,8 +15,9 @@ export const styles = StyleSheet.create({
   /* --------------------------------- HEADER -------------------------------- */
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 50, // was 10 → pushes background lower
   },
+
   headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -75,37 +75,50 @@ export const styles = StyleSheet.create({
   },
 
   /* ---------------------------------- STATS --------------------------------- */
+  /* ---------------------------------- STATS --------------------------------- */
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    marginTop: 12,
+    marginTop: 10,
   },
+
   statCard: {
+    flex: 1,
     backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 12,
-    width: "32%",
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: "center",
-    elevation: 2,
+    marginHorizontal: 6,
+
+    // shadow
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
+
   statNumber: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
     color: COLORS.primary,
-    marginTop: 6,
+    marginTop: 4,
   },
+
   statLabel: {
     fontSize: 12,
     color: COLORS.textSecondary,
-    marginTop: 4,
+    marginTop: 2,
   },
 
   /* ------------------------------ FILTER CHIPS ------------------------------ */
   filtersSection: {
-    marginTop: 12,
     paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
   },
+
   filterScrollContent: {
     paddingVertical: 4,
     gap: 10,
@@ -113,24 +126,23 @@ export const styles = StyleSheet.create({
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 24,
-    gap: 8,
-    borderWidth: 1.2,
-    borderColor: COLORS.border,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#F2F4F7",
     marginRight: 10,
   },
+
   filterChipActive: {
     backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
+
   filterText: {
     fontSize: 14,
     fontWeight: "600",
     color: COLORS.textSecondary,
   },
+
   filterTextActive: {
     color: "#fff",
   },
@@ -138,8 +150,8 @@ export const styles = StyleSheet.create({
   /* ---------------------------------- LIST --------------------------------- */
   listContent: {
     paddingHorizontal: 12,
-    paddingTop: 16,
-    paddingBottom: 140,
+    paddingTop: 18,
+    paddingBottom: 160,
   },
 
   /* -------------------------------- EMPTY STATE ----------------------------- */
@@ -400,5 +412,20 @@ export const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "800",
   },
-
 });
+
+export const shimmerStyles = StyleSheet.create({
+    shimmerContainer: {
+    overflow: "hidden",
+    backgroundColor: "#e0e0e0",
+  },
+  shimmerOverlay: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: "40%",
+    backgroundColor: "rgba(255,255,255,0.45)",
+  },
+})
+
+

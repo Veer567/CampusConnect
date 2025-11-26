@@ -3,16 +3,17 @@
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/clerk-expo";
-import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef } from "react";
 import {
-  ActivityIndicator,
+  Animated,
   Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -20,7 +21,6 @@ import { ProfileContent } from "@/components/Profile/ProfileContent";
 import { ProfileHeader } from "@/components/Profile/ProfileHeader";
 import { Id } from "@/convex/_generated/dataModel";
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
-import { Loader } from "@/components/Loader";
 
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
@@ -28,50 +28,35 @@ const wp = (p: number) => (width * p) / 100;
 export default function OtherUserProfile() {
   const router = useRouter();
 
-  // URL PARAM
   const { userId } = useLocalSearchParams();
   const uid = userId as Id<"users">;
 
-  // Clerk Auth
   const { userId: myClerkId } = useAuth();
 
-  // Fetch MY Convex User
   const me = useQuery(api.users.getUserByClerkId, {
     clerkId: myClerkId || "",
   });
 
-  // Fetch OTHER user profile
   const user = useQuery(api.users.getUserProfile, { id: uid });
   const userPosts = useQuery(api.posts.getPostsByUser, { userId: uid });
   const isFollowing = useQuery(api.users.isFollowing, { followingId: uid });
 
-  // Mutations
   const toggleFollow = useMutation(api.users.toggleFollow);
   const getOrStartConv = useMutation(api.chat.getOrStartConversation);
 
-  const imageCacheBuster = useProfileImageCache(userId as string);
+  const imageCacheBuster = useProfileImageCache(uid);
 
-  if (!user || !me) {
-    return (
-      <SafeAreaView style={styles.loadingBox}>
-        <Loader />
-      </SafeAreaView>
-    );
-  }
+  const isLoading = !me || !user;
+
+  if (isLoading) return <ProfileSkeleton />;
 
   return (
-    <SafeAreaView style={styles.screen}edges={[]}>
+    <SafeAreaView style={styles.screen} edges={[]}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 50 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back Button */}
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={26} color={COLORS.text} />
-        </TouchableOpacity>
-
-        {/* PROFILE HEADER */}
         <ProfileHeader
           imageUrl={user.image}
           fullname={user.fullname}
@@ -88,7 +73,6 @@ export default function OtherUserProfile() {
           userId={user._id}
         />
 
-        {/* FOLLOW BUTTON */}
         <TouchableOpacity
           style={isFollowing ? styles.followingBtn : styles.followBtn}
           onPress={() => toggleFollow({ followingId: user._id })}
@@ -98,7 +82,6 @@ export default function OtherUserProfile() {
           </Text>
         </TouchableOpacity>
 
-        {/* MESSAGE */}
         <TouchableOpacity
           style={styles.messageBtn}
           onPress={async () => {
@@ -119,7 +102,6 @@ export default function OtherUserProfile() {
           <Text style={styles.messageText}>Message 💬</Text>
         </TouchableOpacity>
 
-        {/* PROFILE CONTENT */}
         <ProfileContent
           emails={user.emails || []}
           departments={user.departments || []}
@@ -139,22 +121,283 @@ export default function OtherUserProfile() {
 }
 
 /*───────────────────────────────────────────────
-  STYLES (Responsive)
+  SKELETON LOADING UI
 ───────────────────────────────────────────────*/
+
+/*───────────────────────────────────────────────
+  NEW SHIMMER (Same as ProfileScreen)
+───────────────────────────────────────────────*/
+
+const Shimmer = ({ style }: any) => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 1200,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const translateX = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-150, 350],
+  });
+
+  return (
+    <View
+      style={[
+        {
+          backgroundColor: "#e7e7e7",
+          overflow: "hidden",
+          position: "relative",
+        },
+        style,
+      ]}
+    >
+      <Animated.View
+        style={{
+          width: 100,
+          height: "100%",
+          backgroundColor: "rgba(255,255,255,0.45)",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          transform: [{ translateX }],
+        }}
+      />
+    </View>
+  );
+};
+
+function ProfileSkeleton() {
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: "#fff" }}
+      contentContainerStyle={{ padding: 20, paddingTop: 40 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* HEADER CARD */}
+      <View
+        style={{
+          backgroundColor: "#fff",
+          borderRadius: 18,
+          paddingVertical: 24,
+          paddingHorizontal: 18,
+          marginHorizontal: 6,
+          elevation: 3,
+        }}
+      >
+        {/* Avatar */}
+        <Shimmer
+          style={{
+            width: 90,
+            height: 90,
+            borderRadius: 45,
+            alignSelf: "center",
+            marginBottom: 16,
+          }}
+        />
+
+        {/* Name */}
+        <Shimmer
+          style={{
+            height: 20,
+            width: "50%",
+            alignSelf: "center",
+            borderRadius: 6,
+            marginBottom: 10,
+          }}
+        />
+
+        {/* Year */}
+        <Shimmer
+          style={{
+            height: 16,
+            width: "30%",
+            alignSelf: "center",
+            borderRadius: 6,
+            marginBottom: 18,
+          }}
+        />
+
+        {/* Stats Row */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginTop: 10,
+          }}
+        >
+          <Shimmer style={{ width: "30%", height: 60, borderRadius: 10 }} />
+          <Shimmer style={{ width: "30%", height: 60, borderRadius: 10 }} />
+          <Shimmer style={{ width: "30%", height: 60, borderRadius: 10 }} />
+        </View>
+      </View>
+
+      {/* FOLLOW BUTTON */}
+      <View style={{ marginTop: 25 }}>
+        <Shimmer
+          style={{
+            height: 50,
+            width: "70%",
+            borderRadius: 12,
+            alignSelf: "center",
+          }}
+        />
+      </View>
+
+      {/* MESSAGE BUTTON */}
+      <View style={{ marginTop: 14 }}>
+        <Shimmer
+          style={{
+            height: 50,
+            width: "70%",
+            borderRadius: 12,
+            alignSelf: "center",
+          }}
+        />
+      </View>
+
+      {/* CONTENT SECTIONS */}
+      <View style={{ marginTop: 30 }}>
+        {/* Title */}
+        <Shimmer
+          style={{
+            height: 20,
+            width: "40%",
+            borderRadius: 8,
+            marginBottom: 20,
+          }}
+        />
+
+        {/* Three rows */}
+        {[1, 2, 3].map((i) => (
+          <Shimmer
+            key={i}
+            style={{
+              height: 45,
+              borderRadius: 10,
+              marginBottom: 16,
+            }}
+          />
+        ))}
+      </View>
+
+      <View style={{ height: 100 }} />
+    </ScrollView>
+  );
+}
+
+const sk = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    alignItems: "center",
+  },
+
+  shimmer: {
+    position: "absolute",
+    width: 120,
+    height: "100%",
+    backgroundColor: "rgba(255,255,255,0.4)",
+    opacity: 0.5,
+    borderRadius: 12,
+  },
+
+  avatarBox: {
+    marginTop: 30,
+    alignSelf: "center",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#e6e6e6",
+    overflow: "hidden",
+  },
+  avatar: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 60,
+    backgroundColor: "#dcdcdc",
+  },
+
+  name: {
+    width: "50%",
+    height: 20,
+    backgroundColor: "#e3e3e3",
+    alignSelf: "center",
+    marginTop: 20,
+    borderRadius: 6,
+  },
+  year: {
+    width: "30%",
+    height: 16,
+    backgroundColor: "#e5e5e5",
+    alignSelf: "center",
+    marginTop: 10,
+    borderRadius: 6,
+  },
+
+  followBtn: {
+    width: "70%",
+    height: 50,
+    backgroundColor: "#e4e4e4",
+    alignSelf: "center",
+    marginTop: 25,
+    borderRadius: 12,
+  },
+  msgBtn: {
+    width: "70%",
+    height: 50,
+    backgroundColor: "#e4e4e4",
+    alignSelf: "center",
+    marginTop: 14,
+    borderRadius: 12,
+  },
+
+  section: {
+    width: "85%",
+    height: 18,
+    backgroundColor: "#ebebeb",
+    marginTop: 30,
+    alignSelf: "center",
+    borderRadius: 8,
+  },
+
+  line: {
+    height: 14,
+    width: "85%",
+    backgroundColor: "#e2e2e2",
+    alignSelf: "center",
+    marginTop: 14,
+    borderRadius: 6,
+  },
+
+  lineShort: {
+    height: 14,
+    width: "60%",
+    backgroundColor: "#e2e2e2",
+    alignSelf: "center",
+    marginTop: 10,
+    borderRadius: 6,
+  },
+});
+
+/*───────────────────────────────────────────────
+  REGULAR STYLES
+───────────────────────────────────────────────*/
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#fff",
-    margin: 10,
+    marginTop: 50,
+    marginHorizontal: 12,
   },
 
   loadingBox: { flex: 1, justifyContent: "center", alignItems: "center" },
-
-  backBtn: {
-    paddingHorizontal: wp(3),
-    paddingVertical: wp(2),
-    marginTop: 8,
-  },
 
   followBtn: {
     marginTop: 20,
@@ -192,38 +435,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     fontSize: wp(4),
-  },
-
-  postsTitle: {
-    marginTop: 30,
-    marginLeft: wp(4),
-    marginBottom: 10,
-    fontSize: wp(5),
-    fontWeight: "700",
-    color: COLORS.text,
-  },
-
-  postsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    paddingHorizontal: wp(2),
-  },
-
-  postImage: {
-    width: width * 0.28,
-    height: width * 0.28,
-    margin: wp(2),
-    borderRadius: 12,
-    backgroundColor: "#eee",
-  },
-
-  noPostsBox: {
-    marginTop: 40,
-    alignItems: "center",
-  },
-  noPostsText: {
-    color: COLORS.textSecondary,
-    marginTop: 8,
   },
 });

@@ -5,6 +5,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
 import {
+  Animated,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -20,7 +21,170 @@ import { ActivityStatsCard } from "../../components/Profile/ActivityStatsCard";
 import { ProfileBottomSheet } from "../../components/Profile/ProfileBottomSheet";
 import { ProfileContent } from "../../components/Profile/ProfileContent";
 import { ProfileHeader } from "../../components/Profile/ProfileHeader";
-import { Loader } from "../Loader";
+import { useEffect, useRef } from "react";
+
+/* ------------------------------------------------------------------
+    FULL PAGE SKELETON LOADER (SHIMMER)
+------------------------------------------------------------------ */
+const Shimmer = ({ style }: any) => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 1200,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const translateX = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-150, 350],
+  });
+
+  return (
+    <View
+      style={[
+        {
+          backgroundColor: "#e7e7e7",
+          overflow: "hidden",
+          position: "relative",
+        },
+        style,
+      ]}
+    >
+      <Animated.View
+        style={{
+          width: 100,
+          height: "100%",
+          backgroundColor: "rgba(255,255,255,0.45)",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          transform: [{ translateX }],
+        }}
+      />
+    </View>
+  );
+};
+
+const ProfileScreenSkeleton = () => {
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: COLORS.background }}
+      contentContainerStyle={{ padding: 18, paddingTop: 40 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* HEADER CARD */}
+      <View
+        style={{
+          backgroundColor: "#fff",
+          borderRadius: 18,
+          paddingVertical: 24,
+          paddingHorizontal: 18,
+          marginHorizontal: 6,
+        }}
+      >
+        {/* Avatar */}
+        <Shimmer
+          style={{
+            width: 90,
+            height: 90,
+            borderRadius: 45,
+            alignSelf: "center",
+            marginBottom: 16,
+          }}
+        />
+
+        {/* Name */}
+        <Shimmer
+          style={{
+            height: 20,
+            width: "50%",
+            alignSelf: "center",
+            borderRadius: 6,
+            marginBottom: 10,
+          }}
+        />
+
+        {/* Year */}
+        <Shimmer
+          style={{
+            height: 16,
+            width: "30%",
+            alignSelf: "center",
+            borderRadius: 6,
+            marginBottom: 18,
+          }}
+        />
+
+        {/* Stats Row */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            marginTop: 10,
+          }}
+        >
+          <Shimmer style={{ width: "30%", height: 60, borderRadius: 10 }} />
+          <Shimmer style={{ width: "30%", height: 60, borderRadius: 10 }} />
+          <Shimmer style={{ width: "30%", height: 60, borderRadius: 10 }} />
+        </View>
+      </View>
+
+      {/* CONTENT SECTIONS */}
+      <View style={{ marginTop: 30 }}>
+        {/* Title */}
+        <Shimmer
+          style={{
+            height: 20,
+            width: "40%",
+            marginBottom: 20,
+            borderRadius: 8,
+          }}
+        />
+
+        {/* Three rows */}
+        {[1, 2, 3].map((i) => (
+          <Shimmer
+            key={i}
+            style={{
+              height: 45,
+              borderRadius: 10,
+              marginBottom: 16,
+            }}
+          />
+        ))}
+      </View>
+
+      {/* ACTIVITY STATS */}
+      <View style={{ marginTop: 30 }}>
+        <Shimmer
+          style={{
+            height: 120,
+            width: "100%",
+            borderRadius: 14,
+          }}
+        />
+      </View>
+
+      {/* EDIT BUTTON */}
+      <View style={{ marginTop: 30 }}>
+        <Shimmer
+          style={{
+            height: 50,
+            width: "100%",
+            borderRadius: 12,
+          }}
+        />
+      </View>
+
+      <View style={{ height: 100 }} />
+    </ScrollView>
+  );
+};
 
 export default function ProfileScreen({
   route,
@@ -62,13 +226,13 @@ export default function ProfileScreen({
     closeSheet,
     addItem,
     handleSheetAddManual,
-    openImageCropper, // ← NEW: circular crop
+    openImageCropper,
     saveProfile,
     signOut,
     uploadToConvex,
   } = useProfile(profileId);
 
-  // ────── RESUME PICKER ──────
+  /* --- PICK RESUME --- */
   const pickResume = async () => {
     const res = await DocumentPicker.getDocumentAsync({ type: "*/*" });
     if (res.canceled) return;
@@ -82,7 +246,6 @@ export default function ProfileScreen({
     }
   };
 
-  // ────── REMOVE HELPERS ──────
   const removeEmail = (i: number) =>
     setEmails((s) => s.filter((_, idx) => idx !== i));
   const removeDepartment = (i: number) =>
@@ -90,11 +253,13 @@ export default function ProfileScreen({
   const removeInterest = (i: number) =>
     setInterests((s) => s.filter((_, idx) => idx !== i));
 
-  if (!current) return <Loader />;
+  /* ------------------------------------
+      SHOW SKELETON WHILE LOADING
+  ------------------------------------ */
+  if (!current) return <ProfileScreenSkeleton />;
 
   return (
     <>
-      {/* Dark status bar */}
       <StatusBar barStyle="dark-content" />
 
       <KeyboardAvoidingView
@@ -105,11 +270,12 @@ export default function ProfileScreen({
           style={{ flex: 1, backgroundColor: COLORS.background }}
           contentContainerStyle={{
             paddingHorizontal: 18,
-            paddingTop: insets.top + 12, // ← pushes header down
+            paddingTop: insets.top + 12,
             paddingBottom: insets.bottom + 30,
           }}
+          showsVerticalScrollIndicator={false}
         >
-          {/* ────── HEADER CARD ────── */}
+          {/* HEADER CARD */}
           <View
             style={{
               backgroundColor: "#fff",
@@ -131,16 +297,16 @@ export default function ProfileScreen({
               imageCacheBuster={imageCacheBuster}
               setFullname={setFullname}
               setYear={setYear}
-              openImageCropper={openImageCropper} // ← circular crop
+              openImageCropper={openImageCropper}
               isOwner={isOwner}
-                posts={current.posts}  
-              followers={current.followers} 
-              following={current.following} 
+              posts={current.posts}
+              followers={current.followers}
+              following={current.following}
               userId={current._id}
             />
           </View>
 
-          {/* ────── CONTENT ────── */}
+          {/* CONTENT */}
           <ProfileContent
             emails={emails}
             departments={departments}
@@ -155,10 +321,10 @@ export default function ProfileScreen({
             removeInterest={removeInterest}
           />
 
-          {/* ────── ACTIVITY STATS ────── */}
+          {/* ACTIVITY STATS */}
           <ActivityStatsCard {...({ stats } as any)} />
 
-          {/* ────── ACTION BUTTONS ────── */}
+          {/* ACTION BUTTONS */}
           <View style={{ marginTop: 22 }}>
             {!editing ? (
               <TouchableOpacity
@@ -197,6 +363,7 @@ export default function ProfileScreen({
                     Cancel
                   </Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={{
                     backgroundColor: COLORS.primary,
@@ -211,19 +378,18 @@ export default function ProfileScreen({
                   onPress={saveProfile}
                 >
                   <MaterialIcons name="save" size={18} color="#fff" />
-                  <Text style={{ color: "#fff", fontWeight: "700" }}>Save</Text>
+                  <Text style={{ color: "#fff", fontWeight: "700" }}>
+                    Save
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
-
-        
           </View>
 
-          {/* Extra bottom padding */}
           <View style={{ height: insets.bottom + 40 }} />
         </ScrollView>
 
-        {/* ────── BOTTOM SHEET ────── */}
+        {/* BOTTOM SHEET */}
         <ProfileBottomSheet
           visible={sheetVisible}
           type={sheetType}
