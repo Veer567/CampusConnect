@@ -191,7 +191,7 @@ export default function PostDetailsScreen() {
           ],
         }}
       >
-        <SafeAreaView style={styles.cardContainer}edges={[]}>
+        <SafeAreaView style={styles.cardContainer} edges={[]}>
           <StatusBar translucent barStyle="light-content" />
 
           {/* BACK BUTTON */}
@@ -242,42 +242,41 @@ export default function PostDetailsScreen() {
             {post.caption && <Text style={styles.caption}>{post.caption}</Text>}
 
             {/* META CARD */}
-            {(post.eventDate || post.location) && (
-              <View style={styles.metaCard}>
+            <View style={styles.metaCard}>
+              <View style={styles.metaRow}>
                 {post.eventDate && (
-                  <View style={styles.metaRow}>
+                  <>
                     <Ionicons
                       name="calendar-outline"
                       size={18}
                       color={COLORS.textSecondary}
                     />
                     <Text style={styles.metaText}>{post.eventDate}</Text>
-                  </View>
+                  </>
                 )}
 
-                {post.location && (
-                  <View style={styles.metaRow}>
-                    <Ionicons
-                      name="location-outline"
-                      size={18}
-                      color={COLORS.textSecondary}
-                    />
-                    <Text style={styles.metaText}>{post.location}</Text>
-                  </View>
+                {post.eventDate && (
+                  <TouchableOpacity
+                    onPress={addToGoogleCalendar}
+                    style={styles.inlineAddBtn}
+                  >
+                    <Ionicons name="add" size={18} color={COLORS.primary} />
+                    <Text style={styles.inlineAddText}>Add to Calendar</Text>
+                  </TouchableOpacity>
                 )}
               </View>
-            )}
 
-            {/* ADD TO GOOGLE CALENDAR BUTTON */}
-            {post.eventDate && (
-              <TouchableOpacity
-                onPress={addToGoogleCalendar}
-                style={styles.calendarBtn}
-              >
-                <Ionicons name="calendar" size={20} color="#fff" />
-                <Text style={styles.calendarText}>Add to Google Calendar</Text>
-              </TouchableOpacity>
-            )}
+              {post.location && (
+                <View style={styles.metaRow}>
+                  <Ionicons
+                    name="location-outline"
+                    size={18}
+                    color={COLORS.textSecondary}
+                  />
+                  <Text style={styles.metaText}>{post.location}</Text>
+                </View>
+              )}
+            </View>
 
             {/* COMMENTS TITLE */}
             <Text style={styles.commentsTitle}>Comments</Text>
@@ -376,7 +375,7 @@ function CommentBlock({ c, onReply, onDelete }: any) {
    STYLES
 --------------------------------------------------------- */
 const styles = StyleSheet.create({
-  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" ,},
+  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
 
   cardContainer: { flex: 1, backgroundColor: COLORS.surface },
 
@@ -447,23 +446,6 @@ const styles = StyleSheet.create({
   metaText: { color: COLORS.textSecondary, fontSize: wp(4) },
 
   /* GOOGLE CALENDAR BUTTON */
-  calendarBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-    marginBottom: 16,
-  },
-
-  calendarText: {
-    color: "#fff",
-    fontWeight: "700",
-    marginLeft: 10,
-    fontSize: 15,
-  },
 
   commentsTitle: {
     fontSize: wp(5),
@@ -529,5 +511,144 @@ const styles = StyleSheet.create({
     padding: wp(3),
     borderRadius: wp(3),
     marginLeft: wp(3),
+  },
+  calendarBtnWrap: {
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+
+  calendarBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: 50,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+
+  calendarIconBox: {
+    backgroundColor: "#fff",
+    padding: 8,
+    borderRadius: 50,
+    marginRight: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+
+  calendarText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: wp(4),
+    letterSpacing: 0.5,
+  },
+  calendarGlass: {
+    borderRadius: 20,
+    overflow: "hidden",
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+
+  calendarGlassBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    borderRadius: 20,
+  },
+
+  calendarGlassText: {
+    marginLeft: 10,
+    fontSize: wp(4),
+    color: COLORS.primary,
+    fontWeight: "700",
+  },
+  calendarCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+
+  calendarCardText: {
+    color: "#fff",
+    marginLeft: 12,
+    fontSize: wp(4),
+    fontWeight: "700",
+  },
+  calendarMinimal: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+
+  calendarMinimalText: {
+    marginLeft: 10,
+    fontSize: wp(4),
+    color: COLORS.primary,
+    fontWeight: "600",
+  },
+  metaWrapper: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: COLORS.background,
+    padding: wp(4),
+    borderRadius: wp(4),
+    borderColor: COLORS.border,
+    borderWidth: 1,
+    marginBottom: wp(5),
+  },
+
+  metaLeft: {
+    flex: 1,
+  },
+
+  metaAddBtn: {
+    padding: 8,
+    borderRadius: 50,
+    backgroundColor: "#fff",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  inlineAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: "auto",
+    backgroundColor: "#fff",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+
+  inlineAddText: {
+    color: COLORS.primary,
+    marginLeft: 6,
+    fontWeight: "600",
   },
 });

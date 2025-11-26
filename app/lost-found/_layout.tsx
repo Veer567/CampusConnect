@@ -12,7 +12,7 @@ export default function LostFoundLayout() {
         presentation: "card",
       }}
     >
-      <Stack.Screen name="index" />
+      <Stack.Screen name="LostFoundScreen" />
       <Stack.Screen name="add" />
       <Stack.Screen name="edit" />
     </Stack>

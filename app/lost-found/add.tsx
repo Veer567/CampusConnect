@@ -1,24 +1,24 @@
+import CustomStatusBar from "@/components/CustomStatusBar";
+import { COLORS } from "@/constants/themes";
+import { api } from "@/convex/_generated/api";
+import { Ionicons } from "@expo/vector-icons";
+import { useMutation } from "convex/react";
+import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
+  Alert,
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Image,
-  ScrollView,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Dimensions,
+  View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { router } from "expo-router";
-import { COLORS } from "@/constants/themes";
-import AppHeader from "@/components/AppHeader";
 
 /* Responsive helpers */
 const { width, height } = Dimensions.get("window");
@@ -66,92 +66,93 @@ export default function AddLostItem() {
   };
 
   return (
-    
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? hp(8) : 0}
-    >
- 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: hp(5) }}
+    <>
+      <CustomStatusBar />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? hp(8) : 0}
       >
-        <Text style={styles.header}>Report Item</Text>
-        <Text style={styles.subheader}>
-          Help others by reporting lost or found items
-        </Text>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={{ paddingBottom: hp(5) }}
+        >
+          <Text style={styles.header}>Report Item</Text>
+          <Text style={styles.subheader}>
+            Help others by reporting lost or found items
+          </Text>
 
-        {/* IMAGE PICKER */}
-        <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-          {image ? (
-            <Image source={{ uri: image }} style={styles.previewImage} />
-          ) : (
-            <>
-              <Ionicons name="camera-outline" size={wp(12)} color="#888" />
-              <Text style={styles.imageText}>Upload Image</Text>
-            </>
-          )}
-        </TouchableOpacity>
+          {/* IMAGE PICKER */}
+          <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+            {image ? (
+              <Image source={{ uri: image }} style={styles.previewImage} />
+            ) : (
+              <>
+                <Ionicons name="camera-outline" size={wp(12)} color="#888" />
+                <Text style={styles.imageText}>Upload Image</Text>
+              </>
+            )}
+          </TouchableOpacity>
 
-        {/* FORM */}
-        <View style={styles.formCard}>
-          <Text style={styles.label}>Item Title *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Black Laptop Bag"
-            value={title}
-            onChangeText={setTitle}
-          />
+          {/* FORM */}
+          <View style={styles.formCard}>
+            <Text style={styles.label}>Item Title *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Black Laptop Bag"
+              value={title}
+              onChangeText={setTitle}
+            />
 
-          <Text style={styles.label}>Description *</Text>
-          <TextInput
-            style={[styles.input, { height: hp(12) }]}
-            multiline
-            placeholder="Describe the item..."
-            value={desc}
-            onChangeText={setDesc}
-          />
+            <Text style={styles.label}>Description *</Text>
+            <TextInput
+              style={[styles.input, { height: hp(12) }]}
+              multiline
+              placeholder="Describe the item..."
+              value={desc}
+              onChangeText={setDesc}
+            />
 
-          <Text style={styles.label}>Location *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Library 2nd Floor"
-            value={location}
-            onChangeText={setLocation}
-          />
+            <Text style={styles.label}>Location *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Library 2nd Floor"
+              value={location}
+              onChangeText={setLocation}
+            />
 
-          {/* STATUS */}
-          <Text style={styles.label}>Status</Text>
-          <View style={styles.statusRow}>
-            {["lost", "found"].map((s) => (
-              <TouchableOpacity
-                key={s}
-                style={[
-                  styles.statusChip,
-                  status === s && styles.statusChipActive,
-                ]}
-                onPress={() => setStatus(s as "lost" | "found")}
-              >
-                <Text
+            {/* STATUS */}
+            <Text style={styles.label}>Status</Text>
+            <View style={styles.statusRow}>
+              {["lost", "found"].map((s) => (
+                <TouchableOpacity
+                  key={s}
                   style={[
-                    styles.statusText,
-                    status === s && styles.statusTextActive,
+                    styles.statusChip,
+                    status === s && styles.statusChipActive,
                   ]}
+                  onPress={() => setStatus(s as "lost" | "found")}
                 >
-                  {s === "lost" ? "Lost" : "Found"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.statusText,
+                      status === s && styles.statusTextActive,
+                    ]}
+                  >
+                    {s === "lost" ? "Lost" : "Found"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* SUBMIT */}
-        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-          <Text style={styles.submitText}>Submit Item</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* SUBMIT */}
+          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+            <Text style={styles.submitText}>Submit Item</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 

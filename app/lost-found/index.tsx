@@ -14,6 +14,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useMemo, useRef, useState } from "react";
 import ActionSheet from "react-native-actions-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 
 import {
   Alert,
@@ -41,6 +42,8 @@ type ConfirmAction = "delete" | "reunite" | "markFound" | null;
 
 export default function LostFoundScreen() {
   const router = useRouter();
+  const navigation = useNavigation<any>(); // ⭐ REQUIRED FOR OPTION A
+
   const insets = useSafeAreaInsets();
   const { userId: clerkId } = useAuth();
 
@@ -60,14 +63,11 @@ export default function LostFoundScreen() {
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
-        router.push({ pathname: "/(tabs)" }); // Go to Home Tab instead of exiting
-        return true; // Prevent exiting the app
+        router.push("/(tabs)");
+        return true;
       };
 
-      const sub = BackHandler.addEventListener(
-        "hardwareBackPress",
-        onBackPress
-      );
+      const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
       return () => sub.remove();
     }, [])
   );
@@ -84,8 +84,8 @@ export default function LostFoundScreen() {
         statusFilter === "Lost"
           ? "lost"
           : statusFilter === "Found"
-            ? "found"
-            : undefined,
+          ? "found"
+          : undefined,
       limit: 200,
     }) ?? [];
 
@@ -102,7 +102,7 @@ export default function LostFoundScreen() {
     (api.lostItems as any).deleteLostItem
   );
 
-  // Filtered search
+  // FILTERING
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return lostItems.filter((item: any) => {
@@ -117,6 +117,7 @@ export default function LostFoundScreen() {
     });
   }, [lostItems, search]);
 
+  // ACTION SHEET
   const openItemOptions = (item: any) => {
     setSelectedItem(item);
     actionSheetRef.current?.show();
@@ -124,7 +125,10 @@ export default function LostFoundScreen() {
 
   const handleEditSelected = () => {
     actionSheetRef.current?.hide();
-    if (selectedItem) router.push(`/lost-found/edit?id=${selectedItem._id}`);
+    if (selectedItem) {
+     navigation.navigate("LostFoundEdit", { id: selectedItem._id });
+
+    }
   };
 
   const handleDeleteSelected = () => {
@@ -177,6 +181,7 @@ export default function LostFoundScreen() {
     }
   };
 
+  // CREATE NEW ITEM
   const handleCreatePress = () => {
     Animated.sequence([
       Animated.timing(scaleAnim, {
@@ -189,10 +194,10 @@ export default function LostFoundScreen() {
         duration: 100,
         useNativeDriver: true,
       }),
-    ]).start(() => router.push("/lost-found/add"));
+    ]).start(() => navigation.navigate("LostFoundAdd"));
   };
 
-  // ************** UI START **************
+  // **************** UI START ****************
   return (
     <View style={styles.container}>
       {/* HEADER */}
@@ -207,7 +212,9 @@ export default function LostFoundScreen() {
             </View>
             <View>
               <Text style={styles.headerTitle}>Lost & Found</Text>
-              <Text style={styles.headerSubtitle}>Help find missing items</Text>
+              <Text style={styles.headerSubtitle}>
+                Help find missing items
+              </Text>
             </View>
           </View>
           <TouchableOpacity style={styles.sparklesBtn}>
@@ -262,7 +269,7 @@ export default function LostFoundScreen() {
         </View>
       </View>
 
-      {/* STATUS FILTERS */}
+      {/* FILTERS */}
       <View style={styles.filtersSection}>
         <ScrollView
           horizontal
@@ -282,8 +289,8 @@ export default function LostFoundScreen() {
                     s === "Lost"
                       ? "alert-circle-outline"
                       : s === "Found"
-                        ? "checkmark-circle-outline"
-                        : "albums-outline"
+                      ? "checkmark-circle-outline"
+                      : "albums-outline"
                   }
                   size={16}
                   color={isActive ? "#fff" : COLORS.textSecondary}
@@ -302,7 +309,7 @@ export default function LostFoundScreen() {
         </ScrollView>
       </View>
 
-      {/* ITEMS LIST */}
+      {/* LIST */}
       <FlatList
         data={filtered}
         keyExtractor={(i) => i._id}
@@ -312,9 +319,9 @@ export default function LostFoundScreen() {
           <LostItemCard
             item={item}
             me={me}
+            navigation={navigation} // ⭐ pass navigation
             onStartChat={getOrStartConv}
             onOpenOptions={() => openItemOptions(item)}
-            router={router}
             markFoundMut={markFoundMut}
             markReunitedMut={markReunitedMut}
             onCardOwnerMarkFound={(itm: any) => {
@@ -331,11 +338,7 @@ export default function LostFoundScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons
-              name="cube-outline"
-              size={64}
-              color={COLORS.textSecondary}
-            />
+            <Ionicons name="cube-outline" size={64} color={COLORS.textSecondary} />
             <Text style={styles.emptyTitle}>No items found</Text>
             <Text style={styles.emptySubtitle}>
               Try adjusting filters or be the first to report an item
@@ -369,31 +372,21 @@ export default function LostFoundScreen() {
         <View style={styles.sheetContainer}>
           <Text style={styles.sheetTitle}>Item Options</Text>
 
-          <TouchableOpacity
-            style={styles.sheetOption}
-            onPress={handleEditSelected}
-          >
+          <TouchableOpacity style={styles.sheetOption} onPress={handleEditSelected}>
             <Ionicons name="create-outline" size={20} color={COLORS.primary} />
             <Text style={styles.sheetText}>Edit Item</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.sheetOption}
-            onPress={handleDeleteSelected}
-          >
+          <TouchableOpacity style={styles.sheetOption} onPress={handleDeleteSelected}>
             <Ionicons name="trash-outline" size={20} color={COLORS.red} />
-            <Text style={[styles.sheetText, { color: COLORS.red }]}>
-              Delete Item
-            </Text>
+            <Text style={[styles.sheetText, { color: COLORS.red }]}>Delete Item</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.sheetOption, { justifyContent: "center" }]}
             onPress={() => actionSheetRef.current?.hide()}
           >
-            <Text style={[styles.sheetText, { fontWeight: "700" }]}>
-              Cancel
-            </Text>
+            <Text style={[styles.sheetText, { fontWeight: "700" }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </ActionSheet>
@@ -431,8 +424,8 @@ export default function LostFoundScreen() {
                 {confirmAction === "delete"
                   ? "Delete Item?"
                   : confirmAction === "reunite"
-                    ? "Mark Reunited?"
-                    : "Confirm"}
+                  ? "Mark Reunited?"
+                  : "Confirm"}
               </Text>
             </View>
 
@@ -441,28 +434,22 @@ export default function LostFoundScreen() {
                 {confirmAction === "delete"
                   ? "This will permanently delete the post."
                   : confirmAction === "reunite"
-                    ? "This will remove the post and increase 'Reunited' count."
-                    : ""}
+                  ? "This will remove the post and increase 'Reunited' count."
+                  : ""}
               </Text>
 
               <View style={styles.confirmButtons}>
-                <TouchableOpacity
-                  style={styles.confirmCancel}
-                  onPress={closeConfirmModal}
-                >
+                <TouchableOpacity style={styles.confirmCancel} onPress={closeConfirmModal}>
                   <Text style={styles.confirmCancelText}>Cancel</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.confirmConfirm}
-                  onPress={performConfirmAction}
-                >
+                <TouchableOpacity style={styles.confirmConfirm} onPress={performConfirmAction}>
                   <Text style={styles.confirmConfirmText}>
                     {confirmAction === "delete"
                       ? "Delete"
                       : confirmAction === "reunite"
-                        ? "Reunite"
-                        : "Confirm"}
+                      ? "Reunite"
+                      : "Confirm"}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -473,16 +460,15 @@ export default function LostFoundScreen() {
     </View>
   );
 }
-// END MAIN SCREEN
 
 // **********************************
-// ITEM CARD COMPONENT
+// ITEM CARD
 // **********************************
 
 function LostItemCard({
   item,
   me,
-  router,
+  navigation,
   onStartChat,
   onOpenOptions,
   markFoundMut,
@@ -498,8 +484,8 @@ function LostItemCard({
   const avatarUri = userProfile?.image
     ? `${userProfile.image}?t=${cache}`
     : item.reporterImage
-      ? `${item.reporterImage}?t=${cache}`
-      : FALLBACK_IMG_1;
+    ? `${item.reporterImage}?t=${cache}`
+    : FALLBACK_IMG_1;
 
   const createdAgo = formatDistanceToNow(new Date(item.createdAt), {
     addSuffix: true,
@@ -517,9 +503,11 @@ function LostItemCard({
       typeof conv === "object" && conv && "_id" in conv ? conv._id : conv;
 
     if (conversationId && me?._id)
-      router.push(
-        `/chat-screen?conversationId=${conversationId}&currentUserId=${me._id}&otherUserId=${item.reporterId}`
-      );
+      navigation.navigate("ChatScreen", {
+        conversationId,
+        currentUserId: me._id,
+        otherUserId: item.reporterId,
+      });
   };
 
   return (
@@ -530,6 +518,7 @@ function LostItemCard({
           style={styles.cardImage}
           contentFit="cover"
         />
+
         <LinearGradient
           colors={["rgba(0,0,0,0.45)", "transparent"]}
           style={styles.imageGradient}
@@ -546,16 +535,11 @@ function LostItemCard({
             size={14}
             color="#fff"
           />
-          <Text style={styles.statusBadgeText}>
-            {isLost ? "Lost" : "Found"}
-          </Text>
+          <Text style={styles.statusBadgeText}>{isLost ? "Lost" : "Found"}</Text>
         </View>
 
         {isOwner && (
-          <TouchableOpacity
-            style={styles.topMenuBtn}
-            onPress={() => onOpenOptions(item)}
-          >
+          <TouchableOpacity style={styles.topMenuBtn} onPress={() => onOpenOptions(item)}>
             <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
           </TouchableOpacity>
         )}
@@ -565,7 +549,9 @@ function LostItemCard({
         <View style={styles.userRowTop}>
           <TouchableOpacity
             onPress={() =>
-              router.push(`/other-profile?userId=${item.reporterId}`)
+              navigation.navigate("OtherProfile", {
+                userId: item.reporterId,
+              })
             }
           >
             <Image
@@ -582,18 +568,14 @@ function LostItemCard({
             <Text style={styles.timeText}>{createdAgo}</Text>
           </View>
 
+          {/* OWNER BUTTONS */}
           {isOwner ? (
             isLost ? (
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: "#FF4F91" }]}
                 onPress={() => onCardOwnerMarkFound(item)}
               >
-                <Ionicons
-                  name="sparkles"
-                  size={14}
-                  color="#fff"
-                  style={{ marginRight: 8 }}
-                />
+                <Ionicons name="sparkles" size={14} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={[styles.actionBtnText, { color: "#fff" }]}>
                   I Found It
                 </Text>
@@ -603,12 +585,7 @@ function LostItemCard({
                 style={[styles.actionBtn, { backgroundColor: "#10B981" }]}
                 onPress={() => onCardOwnerReturnToOwner(item)}
               >
-                <Ionicons
-                  name="checkmark"
-                  size={14}
-                  color="#fff"
-                  style={{ marginRight: 8 }}
-                />
+                <Ionicons name="checkmark" size={14} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={[styles.actionBtnText, { color: "#fff" }]}>
                   Returned
                 </Text>
@@ -625,34 +602,29 @@ function LostItemCard({
           )}
         </View>
 
+        {/* TITLE */}
         <Text style={styles.cardTitle} numberOfLines={2}>
           {item.title}
         </Text>
 
+        {/* DESCRIPTION */}
         {item.description ? (
           <Text style={styles.cardDescription} numberOfLines={2}>
             {item.description}
           </Text>
         ) : null}
 
+        {/* META */}
         <View style={styles.metaContainer}>
           <View style={styles.metaRow}>
-            <Ionicons
-              name="location-outline"
-              size={14}
-              color={COLORS.textSecondary}
-            />
+            <Ionicons name="location-outline" size={14} color={COLORS.textSecondary} />
             <Text style={styles.metaText} numberOfLines={1}>
               {item.location || "Unknown location"}
             </Text>
           </View>
 
           <View style={styles.metaRow}>
-            <Ionicons
-              name="calendar-outline"
-              size={14}
-              color={COLORS.textSecondary}
-            />
+            <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
             <Text style={styles.metaText}>
               {new Date(item.createdAt).toDateString()}
             </Text>

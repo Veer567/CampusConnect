@@ -1,14 +1,15 @@
-// app/chat.tsx
 import AppHeader from "@/components/AppHeader";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/clerk-expo";
 import { useQuery } from "convex/react";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
+  Animated,
   Dimensions,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,45 +19,92 @@ import {
 const { width } = Dimensions.get("window");
 const AVATAR_SIZE = width * 0.15;
 
-function formatTime(ts?: number) {
-  if (!ts) return " ";
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60000);
-  const hrs = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m`;
-  if (hrs < 24) return `${hrs}h`;
-  if (days === 1) return "yesterday";
-  return `${days}d`;
-}
+/* ------------------------------------------------------
+   📌 SKELETON LOADER (Chat List)
+------------------------------------------------------ */
+const ChatListSkeleton = () => {
+  const shimmer = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(shimmer, {
+        toValue: 1,
+        duration: 1300,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const translateX = shimmer.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-150, 150],
+  });
+
+  const Shimmer = () => (
+    <Animated.View
+      style={[chatSkeleton.shimmer, { transform: [{ translateX }] }]}
+    />
+  );
+
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <View style={{ padding: 16 }}>
+        <View style={chatSkeleton.header} />
+      </View>
+
+      {Array.from({ length: 7 }).map((_, i) => (
+        <View key={i} style={chatSkeleton.row}>
+          <View style={chatSkeleton.avatar}>
+            <Shimmer />
+          </View>
+
+          <View style={{ flex: 1, marginLeft: 14 }}>
+            <View style={chatSkeleton.line1} />
+            <View style={chatSkeleton.line2} />
+          </View>
+
+          <View style={chatSkeleton.time} />
+        </View>
+      ))}
+    </ScrollView>
+  );
+};
+
+/* ------------------------------------------------------
+   📌 MAIN CHAT LIST SCREEN
+------------------------------------------------------ */
 export default function ChatList() {
   const { userId: clerkId } = useAuth();
 
-  // get Convex user for current Clerk identity
-  const me = useQuery(
-    api.users.getUserByClerkId,
-    clerkId ? { clerkId } : "skip"
+  const me = useQuery(api.users.getUserByClerkId, clerkId ? { clerkId } : "skip");
+  const conversations = useQuery(
+    api.chat.getMyConversations,
+    me ? {} : "skip"
   );
 
-  // get conversations only after we have me
-  const conversations = useQuery(api.chat.getMyConversations, me ? {} : "skip");
-
-  // lightweight user list to resolve other user's profile (client-side cache). You can replace with a better query.
   const users = useQuery(api.users.searchUsers, { q: "" });
 
-  if (!me || !conversations || !users) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.loading}>Loading chats…</Text>
-      </View>
-    );
+  const isLoading = !me || !conversations || !users;
+
+  if (isLoading) return <ChatListSkeleton />;
+
+  function formatTime(ts?: number) {
+    if (!ts) return " ";
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    const hrs = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (mins < 1) return "now";
+    if (mins < 60) return `${mins}m`;
+    if (hrs < 24) return `${hrs}h`;
+    if (days === 1) return "yesterday";
+    return `${days}d`;
   }
 
   return (
     <View style={styles.screen}>
       <AppHeader title="Chats" rightIcon="chatbubbles" />
+
       {conversations.map((c: any) => {
         const otherUserId = c.participants.find(
           (p: any) => String(p) !== String(me._id)
@@ -102,6 +150,7 @@ export default function ChatList() {
 
             <View style={styles.right}>
               <Text style={styles.time}>{formatTime(c.lastMessageAt)}</Text>
+
               {c.unreadCount > 0 && (
                 <View style={styles.unreadBadge}>
                   <Text style={styles.unreadText}>{c.unreadCount}</Text>
@@ -115,10 +164,11 @@ export default function ChatList() {
   );
 }
 
+/* ------------------------------------------------------
+   📌 STYLES
+------------------------------------------------------ */
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loading: { fontSize: 16, color: COLORS.textSecondary },
   chatRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -143,10 +193,10 @@ const styles = StyleSheet.create({
     right: -1,
     bottom: -2,
   },
-  middle: { flex: 1, marginLeft: 14, justifyContent: "center" },
-  name: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  middle: { flex: 1, marginLeft: 14 },
+  name: { fontSize: 16, fontWeight: "700" },
   lastMsg: { marginTop: 4, fontSize: 14, color: "#777", maxWidth: "92%" },
-  right: { alignItems: "flex-end", justifyContent: "center" },
+  right: { alignItems: "flex-end" },
   time: { fontSize: 12, color: "#999" },
   unreadBadge: {
     backgroundColor: COLORS.primary,
@@ -159,7 +209,58 @@ const styles = StyleSheet.create({
   unreadText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#fff",
+    color: "white",
     textAlign: "center",
+  },
+});
+
+/* ------------------------------------------------------
+   📌 SKELETON STYLES
+------------------------------------------------------ */
+const chatSkeleton = StyleSheet.create({
+  shimmer: {
+    position: "absolute",
+    height: "100%",
+    width: 120,
+    backgroundColor: "rgba(255,255,255,0.5)",
+  },
+  header: {
+    width: "40%",
+    height: 28,
+    backgroundColor: "#e9e9e9",
+    borderRadius: 6,
+    marginBottom: 20,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+  },
+  avatar: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    backgroundColor: "#e3e3e3",
+    overflow: "hidden",
+  },
+  line1: {
+    width: "60%",
+    height: 16,
+    backgroundColor: "#e3e3e3",
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  line2: {
+    width: "40%",
+    height: 14,
+    backgroundColor: "#e3e3e3",
+    borderRadius: 6,
+  },
+  time: {
+    width: 40,
+    height: 14,
+    borderRadius: 6,
+    backgroundColor: "#e3e3e3",
   },
 });

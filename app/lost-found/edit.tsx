@@ -3,7 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
-import { router, useLocalSearchParams } from "expo-router";
+
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,12 +20,19 @@ import {
   View,
 } from "react-native";
 
+import { useRoute, useNavigation } from "@react-navigation/native";
+import CustomStatusBar from "@/components/CustomStatusBar";
+
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 
 export default function EditLostItem() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // ⭐ FIXED: Now inside component, not global
+  const route = useRoute();
+  const navigation = useNavigation<any>();
+  const { id } = route.params as { id: string };
 
+  // ITEM QUERY
   const item = useQuery(
     api.lostItems.getItemById,
     id ? { id: id as any } : "skip"
@@ -33,12 +40,14 @@ export default function EditLostItem() {
 
   const updateLostItem = useMutation(api.lostItems.updateLostItem);
 
+  // FORM STATES
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState<"lost" | "found">("lost");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
+  // LOAD EXISTING ITEM
   useEffect(() => {
     if (item) {
       setTitle(item.title);
@@ -49,6 +58,7 @@ export default function EditLostItem() {
     }
   }, [item]);
 
+  // IMAGE PICKER
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
@@ -59,6 +69,7 @@ export default function EditLostItem() {
     if (!result.canceled) setImageUrl(result.assets[0].uri);
   };
 
+  // SUBMIT
   const handleSubmit = async () => {
     try {
       await updateLostItem({
@@ -72,12 +83,13 @@ export default function EditLostItem() {
       });
 
       Alert.alert("Updated!", "Your item was successfully updated.");
-     router.back();
+      navigation.goBack(); // ⭐ FIXED
     } catch (err: any) {
       Alert.alert("Error", err.message || "Update failed");
     }
   };
 
+  // LOADING SCREEN
   if (!item)
     return (
       <View style={styles.center}>
@@ -85,8 +97,9 @@ export default function EditLostItem() {
       </View>
     );
 
+  // UI
   return (
-    <KeyboardAvoidingView
+    <><CustomStatusBar /><KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: "#F8FAFC" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
@@ -100,8 +113,7 @@ export default function EditLostItem() {
           value={title}
           onChangeText={setTitle}
           placeholder="Black Laptop Bag"
-          placeholderTextColor="#aaa"
-        />
+          placeholderTextColor="#aaa" />
 
         {/* Description */}
         <Text style={styles.label}>Description *</Text>
@@ -111,8 +123,7 @@ export default function EditLostItem() {
           multiline
           onChangeText={setDescription}
           placeholder="Describe the item..."
-          placeholderTextColor="#aaa"
-        />
+          placeholderTextColor="#aaa" />
 
         {/* Location */}
         <Text style={styles.label}>Location *</Text>
@@ -121,8 +132,7 @@ export default function EditLostItem() {
           value={location}
           onChangeText={setLocation}
           placeholder="Library 2nd Floor"
-          placeholderTextColor="#aaa"
-        />
+          placeholderTextColor="#aaa" />
 
         {/* Status */}
         <Text style={styles.label}>Status</Text>
@@ -130,10 +140,7 @@ export default function EditLostItem() {
           {["lost", "found"].map((s) => (
             <TouchableOpacity
               key={s}
-              style={[
-                styles.chip,
-                status === s && styles.chipActive,
-              ]}
+              style={[styles.chip, status === s && styles.chipActive]}
               onPress={() => setStatus(s as "lost" | "found")}
             >
               <Text
@@ -166,7 +173,7 @@ export default function EditLostItem() {
           <Text style={styles.submitText}>Save Changes</Text>
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingView></>
   );
 }
 

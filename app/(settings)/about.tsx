@@ -1,14 +1,14 @@
-import React from "react";
-import {
-  ScrollView,
-  Text,
-  StyleSheet,
-  Pressable,
-  View,
-  Linking,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import React from "react";
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 export default function About() {
   const router = useRouter();
@@ -58,11 +58,15 @@ export default function About() {
 
         <View style={styles.list}>
           <Text style={styles.point}>• Social feed & updates</Text>
-          <Text style={styles.point}>• Marketplace for projects & hackathons</Text>
+          <Text style={styles.point}>
+            • Marketplace for projects & hackathons
+          </Text>
           <Text style={styles.point}>• Lost & Found management</Text>
           <Text style={styles.point}>• Real-time chat & group messaging</Text>
           <Text style={styles.point}>• Notifications & alerts</Text>
-          <Text style={styles.point}>• Student profiles & content visibility</Text>
+          <Text style={styles.point}>
+            • Student profiles & content visibility
+          </Text>
         </View>
       </View>
 
@@ -71,49 +75,49 @@ export default function About() {
         <Text style={styles.heading}>Why We Built This</Text>
         <Text style={styles.text}>
           Important campus information is often scattered across groups,
-          messages, posters, and stories.  
-          CampusConnect centralizes everything — making student life organized,
-          simple, and efficient.
+          messages, posters, and stories. CampusConnect centralizes everything —
+          making student life organized, simple, and efficient.
         </Text>
       </View>
 
       {/* SECTION: Developers */}
       <View style={[styles.sectionBox, { marginBottom: 50 }]}>
-        <Text style={styles.heading}>Developers</Text>
+        <Text style={styles.heading}>Project Team</Text>
 
         {/* Viral */}
         <Pressable
           style={styles.devRow}
-          onPress={() => openLink("https://www.linkedin.com/in/viral-bhojani-5a5650328?utm_source=share_via&utm_content=profile&utm_medium=member_android")}
+          onPress={() =>
+            openLink(
+              "https://www.linkedin.com/in/viral-bhojani-5a5650328?utm_source=share_via&utm_content=profile&utm_medium=member_android"
+            )
+          }
         >
-          <View style={styles.devTextBox}>
-            <Text style={styles.devName}>• Viral Bhojani</Text>
-            <Text style={styles.role}>Lead Developer</Text>
-          </View>
+          <Text style={styles.devName}>• Viral Bhojani</Text>
           <Ionicons name="logo-linkedin" size={24} color="#0077B5" />
         </Pressable>
 
         {/* Vikas */}
         <Pressable
           style={styles.devRow}
-          onPress={() => openLink("https://www.linkedin.com/in/vikas-singh-android")}
+          onPress={() =>
+            openLink("https://www.linkedin.com/in/vikas-singh-android")
+          }
         >
-          <View style={styles.devTextBox}>
-            <Text style={styles.devName}>• Vikas Singh</Text>
-            <Text style={styles.role}>Software Developer</Text>
-          </View>
+          <Text style={styles.devName}>• Vikas Singh</Text>
           <Ionicons name="logo-linkedin" size={24} color="#0077B5" />
         </Pressable>
 
         {/* Aryan */}
         <Pressable
           style={styles.devRow}
-          onPress={() => openLink("https://www.linkedin.com/in/aryan-bhojani-62360936b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app")}
+          onPress={() =>
+            openLink(
+              "https://www.linkedin.com/in/aryan-bhojani-62360936b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"
+            )
+          }
         >
-          <View style={styles.devTextBox}>
-            <Text style={styles.devName}>• Aryan Bhojani</Text>
-            <Text style={styles.role}>UI/UX Designer</Text>
-          </View>
+          <Text style={styles.devName}>• Aryan Bhojani</Text>
           <Ionicons name="logo-linkedin" size={24} color="#0077B5" />
         </Pressable>
       </View>
@@ -170,12 +174,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
-  devRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-
   devTextBox: {
     flex: 1,
   },
@@ -186,9 +184,10 @@ const styles = StyleSheet.create({
     color: "#222",
   },
 
-  role: {
-    fontSize: 15,
-    color: "#666",
-    marginTop: 2,
+  devRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
   },
 });
