@@ -1,8 +1,8 @@
+// app/bookmarks.tsx
 import React from "react";
 import {
   View,
   Text,
-
   ScrollView,
   Image,
   TouchableOpacity,
@@ -53,7 +53,13 @@ export default function Bookmarks() {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container} edges={[]}>
-        <AppHeader title="Bookmarks" rightIcon="bookmark" />
+        {/* <-- MATCHES Likes screen: showBackButton + replace to /profile */}
+        <AppHeader
+          title="Bookmarks"
+          rightIcon="bookmark"
+          showBackButton={true}
+          onBackPress={() => router.replace("/profile")}
+        />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -63,7 +69,7 @@ export default function Bookmarks() {
           {bookmarks === undefined && (
             <View style={styles.emptyBox}>
               <Ionicons name="time-outline" size={wp(15)} color={COLORS.grey} />
-             <Loader />
+              <Loader />
             </View>
           )}
 

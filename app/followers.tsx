@@ -10,12 +10,10 @@ import {
   Dimensions,
   FlatList,
   Image,
-
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -47,15 +45,19 @@ export default function FollowersScreen() {
       from === "profile"
         ? "/(tabs)/profile"
         : from === "other"
-        ? `/other-profile?userId=${userId}`
-        : "/(tabs)";
+          ? `/other-profile?userId=${userId}`
+          : "/(tabs)";
 
     router.replace(fallback as any);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
-      <AppHeader title="Followers" showBackButton onBackPress={handleBack} />
+      <AppHeader
+        title="Followers"
+        showBackButton={true}
+        onBackPress={() => router.replace("/profile")}
+      />
 
       {/* Empty */}
       {followers.length === 0 ? (
@@ -72,9 +74,7 @@ export default function FollowersScreen() {
             <View style={styles.row}>
               {/* Avatar */}
               <TouchableOpacity
-                onPress={() =>
-                  router.push(`/other-profile?userId=${item._id}`)
-                }
+                onPress={() => router.push(`/other-profile?userId=${item._id}`)}
                 activeOpacity={0.7}
               >
                 <Image
@@ -90,9 +90,7 @@ export default function FollowersScreen() {
               {/* Name + Username */}
               <TouchableOpacity
                 style={styles.userInfo}
-                onPress={() =>
-                  router.push(`/other-profile?userId=${item._id}`)
-                }
+                onPress={() => router.push(`/other-profile?userId=${item._id}`)}
               >
                 <Text numberOfLines={1} style={styles.name}>
                   {item.fullname}

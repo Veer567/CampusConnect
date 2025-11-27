@@ -13,8 +13,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import ActionSheet from "react-native-actions-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { shimmerStyles as sh } from "../../styles/lost.styles"
-
+import { shimmerStyles as sh } from "../../styles/lost.styles";
 
 import { COLORS } from "@/constants/themes";
 import {
@@ -532,52 +531,120 @@ export default function LostFoundScreen() {
       </ActionSheet>
 
       {/* CONFIRM MODAL */}
+      {/* CONFIRM MODAL */}
+      {/* CONFIRM MODAL */}
       <Modal visible={confirmVisible} transparent animationType="none">
         <TouchableWithoutFeedback onPress={closeConfirmModal}>
-          <View style={styles.confirmBackdrop} />
-        </TouchableWithoutFeedback>
-
-        <View style={styles.confirmCenter}>
           <Animated.View
             style={[
-              styles.confirmCard,
               {
-                opacity: confirmAnim,
+                flex: 1,
+                backgroundColor: "rgba(0,0,0,0.4)",
+              },
+              { opacity: confirmAnim },
+            ]}
+          />
+        </TouchableWithoutFeedback>
+
+        <View style={{ justifyContent: "flex-end", flex: 1 }}>
+          <Animated.View
+            style={[
+              {
+                backgroundColor: "#fff",
+                paddingHorizontal: 20,
+                paddingTop: 20,
+                paddingBottom: 32,
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
+                shadowColor: "#000",
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 8,
+              },
+              {
                 transform: [
                   {
-                    scale: confirmAnim.interpolate({
+                    translateY: confirmAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [0.92, 1],
+                      outputRange: [200, 0],
                     }),
                   },
                 ],
               },
             ]}
           >
-            <Text style={styles.headerTitle}>
-              {confirmAction === "delete" ? "Delete Item?" : "Mark Reunited?"}
-            </Text>
-
-            <Text style={styles.confirmMessage}>
+            {/* Title */}
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "700",
+                textAlign: "center",
+                color: COLORS.text,
+                marginBottom: 8,
+              }}
+            >
               {confirmAction === "delete"
-                ? "This post will be permanently removed."
-                : "This item will be marked as reunited."}
+                ? "Delete Item?"
+                : "Mark as Reunited?"}
             </Text>
 
-            <View style={styles.confirmButtons}>
-              <TouchableOpacity
-                style={styles.confirmCancel}
-                onPress={closeConfirmModal}
-              >
-                <Text style={styles.confirmCancelText}>Cancel</Text>
-              </TouchableOpacity>
+            {/* Message */}
+            <Text
+              style={{
+                fontSize: 15,
+                textAlign: "center",
+                color: COLORS.textSecondary,
+                marginBottom: 24,
+                lineHeight: 20,
+              }}
+            >
+              {confirmAction === "delete"
+                ? "This item will be permanently removed."
+                : "This will mark the item as reunited."}
+            </Text>
 
+            {/* Buttons */}
+            <View style={{ gap: 12 }}>
+              {/* Confirm */}
               <TouchableOpacity
-                style={styles.confirmConfirm}
+                style={{
+                  backgroundColor:
+                    confirmAction === "delete" ? COLORS.red : COLORS.primary,
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                }}
                 onPress={performConfirmAction}
               >
-                <Text style={styles.confirmConfirmText}>
+                <Text
+                  style={{
+                    color: "#fff",
+                    textAlign: "center",
+                    fontSize: 16,
+                    fontWeight: "700",
+                  }}
+                >
                   {confirmAction === "delete" ? "Delete" : "Confirm"}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Cancel */}
+              <TouchableOpacity
+                style={{
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  backgroundColor: "#f2f2f2",
+                }}
+                onPress={closeConfirmModal}
+              >
+                <Text
+                  style={{
+                    color: COLORS.text,
+                    textAlign: "center",
+                    fontSize: 16,
+                    fontWeight: "600",
+                  }}
+                >
+                  Cancel
                 </Text>
               </TouchableOpacity>
             </View>

@@ -11,12 +11,6 @@
     "scheme": "spotlight",
     "userInterfaceStyle": "automatic",
 
-    "androidStatusBar": {
-      "hidden": false,
-      "backgroundColor": "#000000",
-      "translucent": true,
-      "barStyle": "light-content"
-    },
 
     "ios": {
       "supportsTablet": true,

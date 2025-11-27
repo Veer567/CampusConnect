@@ -10,12 +10,10 @@ import {
   Dimensions,
   FlatList,
   Image,
-
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -47,15 +45,19 @@ export default function FollowingScreen() {
       from === "profile"
         ? "/(tabs)/profile"
         : from === "other"
-        ? `/other-profile?userId=${userId}`
-        : "/(tabs)";
+          ? `/other-profile?userId=${userId}`
+          : "/(tabs)";
 
     router.replace(fallback as any);
   };
 
   return (
-    <SafeAreaView style={styles.container}edges={[]}>
-      <AppHeader title="Following" showBackButton onBackPress={handleBack} />
+    <SafeAreaView style={styles.container} edges={[]}>
+      <AppHeader
+        title="Following"
+        showBackButton={true}
+        onBackPress={() => router.replace("/profile")}
+      />
 
       {following.length === 0 ? (
         <View style={styles.emptyBox}>
@@ -72,9 +74,7 @@ export default function FollowingScreen() {
               {/* Profile Image */}
               <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={() =>
-                  router.push(`/other-profile?userId=${item._id}`)
-                }
+                onPress={() => router.push(`/other-profile?userId=${item._id}`)}
               >
                 <Image
                   source={{
@@ -90,9 +90,7 @@ export default function FollowingScreen() {
               <TouchableOpacity
                 style={styles.userInfo}
                 activeOpacity={0.7}
-                onPress={() =>
-                  router.push(`/other-profile?userId=${item._id}`)
-                }
+                onPress={() => router.push(`/other-profile?userId=${item._id}`)}
               >
                 <Text numberOfLines={1} style={styles.name}>
                   {item.fullname}

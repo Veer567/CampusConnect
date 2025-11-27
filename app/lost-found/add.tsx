@@ -201,7 +201,7 @@ export default function AddLostItem() {
                 style={styles.submitGradient}
               >
                 <Text style={styles.submitText}>
-                 "Submit"
+                 Submit
                 </Text>
               </LinearGradient>
             </Animated.View>

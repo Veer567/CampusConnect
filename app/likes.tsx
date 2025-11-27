@@ -5,14 +5,13 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo } from "react";
 import {
   Dimensions,
   FlatList,
   Image,
   Platform,
-
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -23,7 +22,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
-
+const params = useLocalSearchParams();
+const from = Array.isArray(params.from) ? params.from[0] : params.from;
 export default function LikesScreen() {
   const router = useRouter();
 
@@ -47,12 +47,14 @@ export default function LikesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}edges={[]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <AppHeader
         title="Liked Posts"
         rightIcon="heart"
         showBackButton={true}
-        onBackPress={() => router.replace("/profile")}
+        onBackPress={() =>
+          from === "profile" ? router.back() : router.push("/profile")
+        }
       />
 
       {likes.length === 0 ? (

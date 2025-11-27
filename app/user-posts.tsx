@@ -8,12 +8,11 @@ import {
   Dimensions,
   FlatList,
   Image,
-  
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -32,11 +31,11 @@ export default function UserPosts() {
   if (!posts) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <AppHeader
         title="Posts"
         showBackButton={true}
-        onBackPress={() => router.back()}
+        onBackPress={() => router.replace("/profile")}
       />
 
       {posts.length === 0 ? (
@@ -54,9 +53,7 @@ export default function UserPosts() {
             <TouchableOpacity
               activeOpacity={0.85}
               style={styles.card}
-              onPress={() =>
-                router.push(`/post-details?postId=${item._id}`)
-              }
+              onPress={() => router.push(`/post-details?postId=${item._id}`)}
             >
               <Image
                 source={{ uri: item.imageUrl }}

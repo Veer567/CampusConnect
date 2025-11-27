@@ -9,7 +9,6 @@ import { router } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
-  Dimensions,
   Image,
   Platform,
   ScrollView,
@@ -21,23 +20,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
-const wp = (p: number) => (width * p) / 100;
-
 /* -------------------------------------------------------
-   🔄 Debounce Hook
-------------------------------------------------------- */
-function useDebounce(value: string, delay = 300) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(id);
-  }, [value]);
-  return debounced;
-}
-
-/* -------------------------------------------------------
-   ⭐ INLINE SHIMMER COMPONENT (FOR HEADER + GRID)
+   SIMPLE SHIMMER (INLINE)
 ------------------------------------------------------- */
 function Shimmer({ style }: any) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -54,16 +38,16 @@ function Shimmer({ style }: any) {
 
   const translateX = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [-150, 150],
+    outputRange: [-200, 200],
   });
 
   return (
-    <View style={[style, { overflow: "hidden", backgroundColor: "#e5e5e5" }]}>
+    <View style={[style, { backgroundColor: "#e3e3e3", overflow: "hidden" }]}>
       <Animated.View
         style={{
-          width: 100,
+          width: "40%",
           height: "100%",
-          backgroundColor: "rgba(255,255,255,0.45)",
+          backgroundColor: "rgba(255,255,255,0.5)",
           transform: [{ translateX }],
         }}
       />
@@ -72,113 +56,75 @@ function Shimmer({ style }: any) {
 }
 
 /* -------------------------------------------------------
-   ⭐ FULL PAGE SKELETON LOADING (MIXED STYLE)
+   SIMPLE SKELETON LOADING
 ------------------------------------------------------- */
-function SearchSkeleton() {
+function SimpleSearchSkeleton() {
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      {/* HEADER */}
-      <View style={[styles.header, { marginBottom: 4 }]}>
-        <View style={[styles.headerRow, { marginBottom: 10 }]}>
-          <Shimmer style={{ width: 28, height: 28, borderRadius: 8 }} />
+    <View style={{ padding: 16 }}>
+      {/* Search bar */}
+      <Shimmer style={{ width: "100%", height: 45, borderRadius: 10 }} />
+
+      <View style={{ height: 20 }} />
+
+      {/* List rows */}
+      {Array.from({ length: 6 }).map((_, i) => (
+        <View
+          key={i}
+          style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}
+        >
+          {/* avatar */}
           <Shimmer
-            style={{ width: 100, height: 18, borderRadius: 6, marginLeft: 12 }}
+            style={{
+              width: 50,
+              height: 50,
+              borderRadius: 25,
+              marginRight: 14,
+            }}
           />
-        </View>
 
-        <Shimmer
-          style={[
-            styles.searchInput,
-            { height: 48, borderRadius: 10, marginTop: 0 },
-          ]}
-        />
-      </View>
-
-      {/* RECENT SEARCHES SECTION */}
-      <View style={styles.section}>
-        <Shimmer style={{ width: 150, height: 18, borderRadius: 6 }} />
-
-        {Array.from({ length: 4 }).map((_, i) => (
-          <View key={i} style={styles.recentRow}>
-            <Shimmer style={{ width: 18, height: 18, borderRadius: 6 }} />
+          {/* name + subtitle */}
+          <View style={{ flex: 1 }}>
             <Shimmer
               style={{
-                height: 16,
-                width: 120,
+                width: "70%",
+                height: 14,
                 borderRadius: 6,
-                marginLeft: 12,
-              }}
-            />
-          </View>
-        ))}
-      </View>
-
-      {/* RECENT POSTS GRID */}
-      <View style={styles.section}>
-        <Shimmer style={{ width: 180, height: 18, borderRadius: 6 }} />
-
-        <View style={styles.grid}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Shimmer
-              key={i}
-              style={{
-                width: "32%",
-                height: wp(30),
-                borderRadius: 10,
                 marginBottom: 10,
               }}
             />
-          ))}
+            <Shimmer style={{ width: "40%", height: 14, borderRadius: 6 }} />
+          </View>
         </View>
-      </View>
-
-      {/* USERS LIST */}
-      <View style={styles.section}>
-        <Shimmer style={{ width: 140, height: 18, borderRadius: 6 }} />
-
-        {Array.from({ length: 4 }).map((_, i) => (
-          <View key={i} style={styles.skelUserRow}>
-            <Shimmer style={styles.skelAvatar} />
-            <Shimmer style={styles.skelUserLine} />
-          </View>
-        ))}
-      </View>
-
-      {/* POSTS LIST */}
-      <View style={styles.section}>
-        <Shimmer style={{ width: 140, height: 18, borderRadius: 6 }} />
-
-        {Array.from({ length: 4 }).map((_, i) => (
-          <View key={i} style={styles.skelPostRow}>
-            <Shimmer style={styles.skelThumb} />
-            <View style={{ flex: 1 }}>
-              <Shimmer style={styles.skelPostLine} />
-              <Shimmer style={[styles.skelPostLine, { width: "40%" }]} />
-            </View>
-          </View>
-        ))}
-      </View>
-
-      <View style={{ height: 80 }} />
-    </ScrollView>
+      ))}
+    </View>
   );
 }
 
 /* -------------------------------------------------------
-   MAIN SEARCH SCREEN
+   DEBOUNCE HOOK
+------------------------------------------------------- */
+function useDebounce(value: string, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
+  }, [value]);
+  return debounced;
+}
+
+/* -------------------------------------------------------
+   MAIN SCREEN
 ------------------------------------------------------- */
 export default function SearchScreen() {
   const [query, setQuery] = useState("");
-  const debouncedQuery = useDebounce(query, 300);
+  const debouncedQuery = useDebounce(query);
   const trimmed = debouncedQuery.trim().toLowerCase();
 
   const { user } = useUser();
   const clerkId = user?.id;
 
-  const me = useQuery(api.users.getUserByClerkId, {
-    clerkId: clerkId || "",
-  });
-
+  // queries
+  const me = useQuery(api.users.getUserByClerkId, { clerkId: clerkId || "" });
   const users = useQuery(api.users.searchUsers, { q: trimmed });
   const posts = useQuery(api.posts.searchPosts, { q: trimmed });
   const recentPosts = useQuery(api.posts.getRecentPosts, { limit: 12 });
@@ -230,12 +176,12 @@ export default function SearchScreen() {
     }
   };
 
-  /* 🚀 SHOW SKELETON */
-  if (isLoading) return <SearchSkeleton />;
+  /* SHOW SIMPLE SKELETON WHILE LOADING */
+  if (isLoading) return <SimpleSearchSkeleton />;
 
-  /* -------------------------------------------------------
-     UI WHEN LOADED
-  ------------------------------------------------------- */
+  /* ----------------------------------------
+       MAIN UI
+  ---------------------------------------- */
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
@@ -279,31 +225,6 @@ export default function SearchScreen() {
             </View>
           )}
 
-        {/* RECENT POSTS GRID */}
-        {!trimmed && Array.isArray(recentPosts) && recentPosts.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recently Added Posts</Text>
-
-            <View style={styles.grid}>
-              {recentPosts.map((post: any) => (
-                <TouchableOpacity
-                  key={post._id}
-                  onPress={() => {
-                    saveSearch();
-                    router.push(`/post-details?postId=${post._id}`);
-                  }}
-                  style={styles.gridItem}
-                >
-                  <Image
-                    source={{ uri: post.imageUrl }}
-                    style={styles.gridImage}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
         {/* USERS */}
         {filteredUsers.length > 0 && (
           <View style={styles.section}>
@@ -325,7 +246,7 @@ export default function SearchScreen() {
           </View>
         )}
 
-        {/* POSTS LIST */}
+        {/* POSTS */}
         {filteredPosts.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Posts</Text>
@@ -370,32 +291,16 @@ export default function SearchScreen() {
   );
 }
 
-/*────────────────────────────────────────
- ⬇️ UPDATED RESPONSIVE STYLES
-────────────────────────────────────────*/
+/* -------------------------------------------------------
+   STYLES
+------------------------------------------------------- */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
 
-  header: {
-    paddingHorizontal: wp(4),
-    marginBottom: 4, // reduced — lifts everything up
-    paddingTop: 4, // slight upward shift
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8, // reduced (was 12)
-    marginTop: -10, // moves up slightly
-  },
+  header: { paddingHorizontal: 16, marginBottom: 4, paddingTop: 4 },
+  headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
 
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginLeft: 14,
-  },
+  headerTitle: { fontSize: 22, fontWeight: "700", marginLeft: 14 },
 
   searchInput: {
     width: "100%",
@@ -407,10 +312,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
 
-  section: {
-    marginTop: 20,
-    paddingHorizontal: wp(4),
-  },
+  section: { marginTop: 20, paddingHorizontal: 16 },
 
   sectionTitle: {
     fontWeight: "700",
@@ -418,37 +320,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  /* Recent searches */
   recentRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 10,
   },
-  recentText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: COLORS.text,
-  },
+  recentText: { marginLeft: 10, fontSize: 16 },
 
-  /* Grid */
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  gridItem: {
-    width: "32%",
-    marginBottom: 10,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  gridImage: {
-    width: "100%",
-    height: wp(30),
-    borderRadius: 10,
-  },
-
-  /* User Rows */
   userRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -460,9 +338,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     marginRight: 12,
   },
-  userName: { fontSize: 17, color: COLORS.text },
+  userName: { fontSize: 17 },
 
-  /* Post Rows */
   postRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -482,47 +359,7 @@ const styles = StyleSheet.create({
   noResults: {
     textAlign: "center",
     marginTop: 40,
-    color: COLORS.textSecondary,
     fontSize: 15,
-  },
-
-  /* SKELETON STATIC BLOCKS */
-  skelUserRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-  },
-  skelAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#eee",
-    marginRight: 12,
-  },
-  skelUserLine: {
-    height: 16,
-    width: "40%",
-    backgroundColor: "#eee",
-    borderRadius: 6,
-  },
-
-  skelPostRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-  },
-  skelThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: "#eee",
-    marginRight: 12,
-  },
-  skelPostLine: {
-    height: 14,
-    width: "70%",
-    backgroundColor: "#eee",
-    borderRadius: 6,
-    marginBottom: 6,
+    color: "#777",
   },
 });
