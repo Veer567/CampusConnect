@@ -234,20 +234,32 @@ export default function PostDetailsScreen() {
   const addToGoogleCalendar = () => {
     if (!post.eventDate) return alert("No event date");
 
-    const startISO = new Date(post.eventDate).toISOString();
-    const start = startISO.replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+    // Convert DD/MM/YYYY → YYYY-MM-DD
+    const [day, month, year] = post.eventDate.split("/");
+    const formatted = `${year}-${month}-${day}`;
 
-    const endISO = new Date(
-      new Date(post.eventDate).getTime() + 3600000
-    ).toISOString();
-    const end = endISO.replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+    const eventDateObj = new Date(formatted);
+    if (isNaN(eventDateObj.getTime())) {
+      return alert("Invalid event date format");
+    }
+
+    const startISO = eventDateObj
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d+Z$/, "Z");
+
+    const endObj = new Date(eventDateObj.getTime() + 3600000);
+    const endISO = endObj
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d+Z$/, "Z");
 
     const url =
       "https://www.google.com/calendar/render?action=TEMPLATE" +
       `&text=${encodeURIComponent(post.title || "Event")}` +
       `&details=${encodeURIComponent(post.caption || "")}` +
       `&location=${encodeURIComponent(post.location || "")}` +
-      `&dates=${start}/${end}`;
+      `&dates=${startISO}/${endISO}`;
 
     Linking.openURL(url);
   };
@@ -636,26 +648,25 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   calendarCard: {
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: COLORS.primary,
-  paddingVertical: 14,
-  paddingHorizontal: 24,
-  borderRadius: 14,
-  elevation: 6,
-  shadowColor: "#000",
-  shadowOpacity: 0.2,
-  shadowRadius: 6,
-  shadowOffset: { width: 0, height: 4 },
-  alignSelf: "center",
-  marginBottom: 20,
-},
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    alignSelf: "center",
+    marginBottom: 20,
+  },
 
-calendarCardText: {
-  color: "#fff",
-  marginLeft: 12,
-  fontSize: wp(4),
-  fontWeight: "700",
-},
-
+  calendarCardText: {
+    color: "#fff",
+    marginLeft: 12,
+    fontSize: wp(4),
+    fontWeight: "700",
+  },
 });

@@ -1,3 +1,4 @@
+// app/chat-list.tsx
 import AppHeader from "@/components/AppHeader";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
@@ -18,10 +19,118 @@ import {
 
 const { width } = Dimensions.get("window");
 const AVATAR_SIZE = width * 0.15;
+const ONLINE_THRESHOLD_MS = 30_000; // 30 seconds
 
 /* ------------------------------------------------------
-   📌 SKELETON LOADER (Chat List)
+   ChatList — shows conversation rows
+   - Uses api.chat.getMyConversations for conversations
+   - Uses api.users.getUserProfile to get 'other' user profile and lastActive
+   - online determination: other.lastActive within threshold
 ------------------------------------------------------ */
+export default function ChatList() {
+  const { userId: clerkId } = useAuth();
+
+  const me = useQuery(
+    api.users.getUserByClerkId,
+    clerkId ? { clerkId } : "skip"
+  );
+  const conversations = useQuery(api.chat.getMyConversations, me ? {} : "skip");
+  const users = useQuery(api.users.searchUsers, { q: "" }); // local cache of users
+
+  const isLoading = !me || !conversations || !users;
+
+  if (isLoading) {
+    return <ChatListSkeleton />;
+  }
+
+  function formatTime(ts?: number) {
+    if (!ts) return " ";
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    const hrs = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (mins < 1) return "now";
+    if (mins < 60) return `${mins}m`;
+    if (hrs < 24) return `${hrs}h`;
+    if (days === 1) return "yesterday";
+    return `${days}d`;
+  }
+
+  return (
+    <View style={styles.screen}>
+      <AppHeader title="Chats" rightIcon="chatbubbles" />
+
+      <ScrollView>
+        {conversations.map((c: any) => {
+          // pick other participant for 1:1 chat
+          const otherUserId = c.participants.find(
+            (p: any) => String(p) !== String(me._id)
+          );
+          const other = users.find(
+            (u: any) => String(u._id) === String(otherUserId)
+          );
+
+          // presence: check lastActive field on other (if your backend uses `lastActive` or `lastSeen`, adapt)
+          const lastActive = (other as any)?.lastActive as number | undefined;
+          const isOnline =
+            typeof lastActive === "number" &&
+            Date.now() - lastActive < ONLINE_THRESHOLD_MS;
+
+          return (
+            <TouchableOpacity
+              key={c._id}
+              activeOpacity={0.8}
+              onPress={() =>
+                router.push({
+                  pathname: "/chat-screen",
+                  params: {
+                    conversationId: String(c._id),
+                    currentUserId: String(me._id),
+                    otherUserId: String(otherUserId),
+                  },
+                })
+              }
+              style={styles.chatRow}
+            >
+              <View style={{ position: "relative" }}>
+                <Image
+                  source={{
+                    uri:
+                      other?.image ??
+                      "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                  }}
+                  style={styles.avatar}
+                />
+                {isOnline && <View style={styles.onlineDot} />}
+              </View>
+
+              <View style={styles.middle}>
+                <Text style={styles.name}>{other?.fullname || "Unknown"}</Text>
+                <Text numberOfLines={1} style={styles.lastMsg}>
+                  {c.lastMessage || "Say hi 👋"}
+                </Text>
+              </View>
+
+              <View style={styles.right}>
+                <Text style={styles.time}>{formatTime(c.lastMessageAt)}</Text>
+
+                {c.unreadCount > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadText}>{c.unreadCount}</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+/* ------------------------------------------
+   Skeleton while loading
+------------------------------------------- */
 const ChatListSkeleton = () => {
   const shimmer = useRef(new Animated.Value(0)).current;
 
@@ -70,103 +179,9 @@ const ChatListSkeleton = () => {
   );
 };
 
-/* ------------------------------------------------------
-   📌 MAIN CHAT LIST SCREEN
------------------------------------------------------- */
-export default function ChatList() {
-  const { userId: clerkId } = useAuth();
-
-  const me = useQuery(api.users.getUserByClerkId, clerkId ? { clerkId } : "skip");
-  const conversations = useQuery(
-    api.chat.getMyConversations,
-    me ? {} : "skip"
-  );
-
-  const users = useQuery(api.users.searchUsers, { q: "" });
-
-  const isLoading = !me || !conversations || !users;
-
-  if (isLoading) return <ChatListSkeleton />;
-
-  function formatTime(ts?: number) {
-    if (!ts) return " ";
-    const diff = Date.now() - ts;
-    const mins = Math.floor(diff / 60000);
-    const hrs = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    if (mins < 1) return "now";
-    if (mins < 60) return `${mins}m`;
-    if (hrs < 24) return `${hrs}h`;
-    if (days === 1) return "yesterday";
-    return `${days}d`;
-  }
-
-  return (
-    <View style={styles.screen}>
-      <AppHeader title="Chats" rightIcon="chatbubbles" />
-
-      {conversations.map((c: any) => {
-        const otherUserId = c.participants.find(
-          (p: any) => String(p) !== String(me._id)
-        );
-        const other = users.find(
-          (u: any) => String(u._id) === String(otherUserId)
-        );
-
-        return (
-          <TouchableOpacity
-            key={c._id}
-            activeOpacity={0.8}
-            onPress={() =>
-              router.push({
-                pathname: "/chat-screen",
-                params: {
-                  conversationId: String(c._id),
-                  currentUserId: String(me._id),
-                  otherUserId: String(otherUserId),
-                },
-              })
-            }
-            style={styles.chatRow}
-          >
-            <View style={{ position: "relative" }}>
-              <Image
-                source={{
-                  uri:
-                    other?.image ??
-                    "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-                }}
-                style={styles.avatar}
-              />
-              <View style={styles.onlineDot} />
-            </View>
-
-            <View style={styles.middle}>
-              <Text style={styles.name}>{other?.fullname || "Unknown"}</Text>
-              <Text numberOfLines={1} style={styles.lastMsg}>
-                {c.lastMessage || "Say hi 👋"}
-              </Text>
-            </View>
-
-            <View style={styles.right}>
-              <Text style={styles.time}>{formatTime(c.lastMessageAt)}</Text>
-
-              {c.unreadCount > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadText}>{c.unreadCount}</Text>
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-}
-
-/* ------------------------------------------------------
-   📌 STYLES
------------------------------------------------------- */
+/* ------------------------------------------
+   Styles
+------------------------------------------ */
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
   chatRow: {
@@ -214,9 +229,9 @@ const styles = StyleSheet.create({
   },
 });
 
-/* ------------------------------------------------------
-   📌 SKELETON STYLES
------------------------------------------------------- */
+/* ------------------------------------------
+   Skeleton styles
+------------------------------------------ */
 const chatSkeleton = StyleSheet.create({
   shimmer: {
     position: "absolute",
@@ -257,10 +272,5 @@ const chatSkeleton = StyleSheet.create({
     backgroundColor: "#e3e3e3",
     borderRadius: 6,
   },
-  time: {
-    width: 40,
-    height: 14,
-    borderRadius: 6,
-    backgroundColor: "#e3e3e3",
-  },
+  time: { width: 40, height: 14, borderRadius: 6, backgroundColor: "#e3e3e3" },
 });

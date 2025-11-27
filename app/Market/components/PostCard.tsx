@@ -35,11 +35,13 @@ export interface MarketplacePost {
   imageUrl?: string;
   type: string;
   location?: string;
-  interestedUsers?: {
-    _id: string;
-    fullname: string;
-    image?: string;
-  }[] | null;
+  interestedUsers?:
+    | {
+        _id: string;
+        fullname: string;
+        image?: string;
+      }[]
+    | null;
 }
 
 export interface PostCardProps {
@@ -66,14 +68,19 @@ export default function PostCard({
   const actionSheetRef = useRef<ActionSheetRef>(null);
   const [commentsVisible, setCommentsVisible] = useState(false);
 
-  const handleEditSelected = () => {
+  const runAfterSheetClose = (fn: () => void) => {
     actionSheetRef.current?.hide();
-    onEdit?.(post._id);
+    setTimeout(fn, 90);
+  };
+
+  const handleEditSelected = () => {
+    if (!post?._id) return;
+    runAfterSheetClose(() => onEdit?.(post._id));
   };
 
   const handleDeleteSelected = () => {
-    actionSheetRef.current?.hide();
-    onDelete?.(post._id);
+    if (!post?._id) return;
+    runAfterSheetClose(() => onDelete?.(post._id));
   };
 
   return (
@@ -92,7 +99,17 @@ export default function PostCard({
           {/* OPTIONS (Ellipsis) */}
           {isSelf && (
             <View style={styles.actionBar}>
-              <Pressable onPress={() => actionSheetRef.current?.show()}>
+              <Pressable
+                onPress={() => actionSheetRef.current?.show()}
+                android_ripple={{ color: "rgba(0,0,0,0.12)", borderless: true }}
+                style={({ pressed }) => [
+                  {
+                    padding: 6,
+                    borderRadius: 20,
+                  },
+                  pressed && { opacity: 0.5 }, // iOS feedback
+                ]}
+              >
                 <Ionicons
                   name="ellipsis-vertical"
                   size={20}
@@ -198,42 +215,36 @@ export default function PostCard({
       </MotiView>
 
       {/* ACTION SHEET */}
-      <ActionSheet ref={actionSheetRef} gestureEnabled>
+      <ActionSheet ref={actionSheetRef}>
         <View style={sheetStyles.sheetContainer}>
-          <Text style={sheetStyles.sheetTitle}>Post Options</Text>
+          <Text style={sheetStyles.sheetTitle}>Item Options</Text>
 
-          {/* EDIT */}
-          <TouchableOpacity
+          <Pressable
             style={sheetStyles.sheetOption}
             onPress={handleEditSelected}
           >
             <Ionicons name="create-outline" size={20} color={COLORS.primary} />
-            <Text style={sheetStyles.sheetText}>Edit Post</Text>
-          </TouchableOpacity>
+            <Text style={sheetStyles.sheetText}>Edit Item</Text>
+          </Pressable>
 
-          {/* DELETE */}
-          <TouchableOpacity
+          <Pressable
             style={sheetStyles.sheetOption}
             onPress={handleDeleteSelected}
           >
-            <Ionicons name="trash-outline" size={20} color="red" />
-            <Text style={[sheetStyles.sheetText, { color: "red" }]}>
-              Delete Post
+            <Ionicons name="trash-outline" size={20} color={COLORS.red} />
+            <Text style={[sheetStyles.sheetText, { color: COLORS.red }]}>
+              Delete Item
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          {/* CANCEL */}
-          <TouchableOpacity
-            style={[
-              sheetStyles.sheetOption,
-              { justifyContent: "center", marginTop: 10 },
-            ]}
+          <Pressable
+            style={[sheetStyles.sheetOption, { justifyContent: "center" }]}
             onPress={() => actionSheetRef.current?.hide()}
           >
             <Text style={[sheetStyles.sheetText, { fontWeight: "700" }]}>
               Cancel
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </ActionSheet>
 

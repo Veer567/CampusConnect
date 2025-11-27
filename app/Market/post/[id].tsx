@@ -123,8 +123,6 @@ export default function MarketplacePostDetail() {
       style={styles.container}
       showsVerticalScrollIndicator={false}
     >
- 
-
       {/* IMAGE */}
       <View style={styles.heroContainer}>
         <Image
@@ -241,7 +239,7 @@ export default function MarketplacePostDetail() {
               style={styles.joinGradient}
             >
               <Text style={styles.joinText}>
-                {isJoined ? "Joined ✔" : "Join Team"}
+                {isJoined ? "Message me" : "I'm Interested "}
               </Text>
             </LinearGradient>
           </TouchableOpacity>

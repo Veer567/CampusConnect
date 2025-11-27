@@ -8,6 +8,7 @@ import {
   Animated,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StatusBar,
   Text,
@@ -327,7 +328,7 @@ export default function ProfileScreen({
           {/* ACTION BUTTONS */}
           <View style={{ marginTop: 22 }}>
             {!editing ? (
-              <TouchableOpacity
+              <Pressable
                 style={{
                   backgroundColor: COLORS.primary,
                   borderRadius: 12,
@@ -345,10 +346,10 @@ export default function ProfileScreen({
                 >
                   Edit Profile
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ) : (
               <View style={{ flexDirection: "row", gap: 12 }}>
-                <TouchableOpacity
+                <Pressable
                   style={{
                     backgroundColor: "#ddd",
                     borderRadius: 12,
@@ -362,9 +363,9 @@ export default function ProfileScreen({
                   <Text style={{ color: "#333", fontWeight: "700" }}>
                     Cancel
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
 
-                <TouchableOpacity
+                <Pressable
                   style={{
                     backgroundColor: COLORS.primary,
                     borderRadius: 12,
@@ -381,7 +382,7 @@ export default function ProfileScreen({
                   <Text style={{ color: "#fff", fontWeight: "700" }}>
                     Save
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
           </View>

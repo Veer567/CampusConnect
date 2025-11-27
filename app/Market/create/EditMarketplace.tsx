@@ -3,7 +3,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Image,
   ScrollView,
@@ -15,12 +15,15 @@ import {
   BackHandler,
   Alert,
   Dimensions,
-  Platform,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../../constants/themes";
 import { api } from "../../../convex/_generated/api";
 import { Loader } from "@/components/Loader";
+import DateTimePicker from "react-native-ui-datepicker";
+import dayjs from "dayjs";
+import { Animated, Easing } from "react-native";
 
 /* ---------------------------
    Responsive helpers
@@ -55,7 +58,7 @@ export default function EditMarketplace() {
   const [loading, setLoading] = useState(false);
 
   /* ---------------------------
-     Load post into state
+     Load post data
 ----------------------------*/
   useEffect(() => {
     if (post) {
@@ -73,6 +76,41 @@ export default function EditMarketplace() {
   const postType = post?.type ?? "project";
 
   /* ---------------------------
+     Animated Date Picker
+----------------------------*/
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerField, setPickerField] = useState<"event" | "join" | null>(null);
+  const [pickerDate, setPickerDate] = useState(new Date());
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const openPicker = (field: "event" | "join", currentValue?: string) => {
+    setPickerField(field);
+
+    if (currentValue) {
+      const d = dayjs(currentValue, "DD/MM/YYYY");
+      if (d.isValid()) setPickerDate(d.toDate());
+    }
+
+    setShowPicker(true);
+    slideAnim.setValue(0);
+
+    Animated.timing(slideAnim, {
+      toValue: 1,
+      duration: 250,
+      easing: Easing.ease,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closePicker = () => {
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => setShowPicker(false));
+  };
+
+  /* ---------------------------
      Android back override
 ----------------------------*/
   useEffect(() => {
@@ -82,44 +120,38 @@ export default function EditMarketplace() {
     };
     const sub = BackHandler.addEventListener("hardwareBackPress", backAction);
     return () => sub.remove();
-  }, [postType, router]);
+  }, [postType]);
 
   /* ---------------------------
-     Image Picker + Compression
+     Image Picker
 ----------------------------*/
   const pickImage = async () => {
-    try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert("Permission required", "Allow gallery access to pick an image.");
-        return;
-      }
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Permission required", "Please allow gallery access.");
+      return;
+    }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
-        quality: 0.7,
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      quality: 0.7,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    });
 
-      if (!result.canceled && result.assets[0]?.uri) {
-        const compressed = await ImageManipulator.manipulateAsync(
-          result.assets[0].uri,
-          [{ resize: { width: 1080 } }],
-          { compress: 0.7 }
-        );
-        setImage(compressed.uri);
-      }
-    } catch (err) {
-      console.log("Image pick error:", err);
+    if (!result.canceled && result.assets[0]?.uri) {
+      const compressed = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 1080 } }],
+        { compress: 0.7 }
+      );
+      setImage(compressed.uri);
     }
   };
 
   /* ---------------------------
-     SAVE CHANGES
+     Submit
 ----------------------------*/
   const submit = useCallback(async () => {
-    if (!post) return;
-
     if (!title.trim() || !description.trim()) {
       Alert.alert("Missing fields", "Please fill title & description.");
       return;
@@ -130,10 +162,10 @@ export default function EditMarketplace() {
     try {
       await updatePost({
         id: id as any,
-        title: title.trim(),
-        description: description.trim(),
+        title,
+        description,
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-        lookingFor: lookingFor.trim() || undefined,
+        lookingFor,
         eventDate: eventDate || undefined,
         lastDateToJoin: lastDateToJoin || undefined,
         imageUrl: image || undefined,
@@ -141,61 +173,37 @@ export default function EditMarketplace() {
       });
 
       router.replace(`/marketplace?tab=${postType}`);
-    } catch (err) {
-      console.log("Update error:", err);
-      Alert.alert("Failed", "Could not update post. Please try again.");
+    } catch {
+      Alert.alert("Failed", "Could not update post.");
     }
 
     setLoading(false);
-  }, [
-    id,
-    title,
-    description,
-    tags,
-    lookingFor,
-    eventDate,
-    lastDateToJoin,
-    image,
-    location,
-    postType,
-  ]);
+  }, [title, description, tags, lookingFor, eventDate, lastDateToJoin, image]);
 
   /* ---------------------------
-     DELETE POST
+     Delete
 ----------------------------*/
   const deleteConfirm = () => {
-    Alert.alert(
-      "Delete Post?",
-      "This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            await deletePost({ id: id as any });
-            router.replace(`/marketplace?tab=${postType}`);
-          },
+    Alert.alert("Delete Post?", "This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          await deletePost({ id: id as any });
+          router.replace(`/marketplace?tab=${postType}`);
         },
-      ]
-    );
+      },
+    ]);
   };
-
-  /* ---------------------------
-     Loading state
-----------------------------*/
-  if (!post) {
-    return (
-     <Loader />
-      );
-  }
 
   /* ---------------------------
      UI
 ----------------------------*/
+  if (!post) return <Loader />;
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Back Button */}
       <TouchableOpacity
         onPress={() => router.replace(`/marketplace?tab=${postType}`)}
         style={styles.backRow}
@@ -224,53 +232,147 @@ export default function EditMarketplace() {
       <Input label="Description" value={description} onChange={setDescription} multiline />
       <Input label="Skills / Tags" value={tags} onChange={setTags} />
       <Input label="Looking For" value={lookingFor} onChange={setLookingFor} />
-      <Input label="Event Date" value={eventDate} onChange={setEventDate} placeholder="YYYY-MM-DD" />
-      <Input
+
+      {/* Event Date (only hackathon) */}
+      {postType === "hackathon" && (
+        <DateInput
+          label="Event Date"
+          value={eventDate}
+          onPress={() => openPicker("event", eventDate)}
+          onChange={setEventDate}
+        />
+      )}
+
+      {/* Last Date to Join (all types) */}
+      <DateInput
         label="Last Date to Join"
         value={lastDateToJoin}
+        onPress={() => openPicker("join", lastDateToJoin)}
         onChange={setLastDateToJoin}
-        placeholder="YYYY-MM-DD"
       />
+
       <Input label="Location" value={location} onChange={setLocation} />
 
-      {/* Save Changes */}
+      {/* Save */}
       <TouchableOpacity
         disabled={loading}
         style={[styles.submitBtn, loading && { opacity: 0.6 }]}
         onPress={submit}
       >
         <LinearGradient colors={[COLORS.primary, COLORS.secondary]} style={styles.submitGradient}>
-          <Text style={styles.submitText}>{loading ? <Loader /> : "Save Changes"}</Text>
+          <Text style={styles.submitText}>{loading ? "Saving..." : "Save Changes"}</Text>
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* Delete Button */}
+      {/* Delete */}
       <TouchableOpacity style={styles.deleteBtn} onPress={deleteConfirm}>
         <Text style={styles.deleteText}>Delete Post</Text>
       </TouchableOpacity>
+
+      {/* ----------------------- DATE PICKER MODAL ------------------------- */}
+      <Modal visible={showPicker} transparent animationType="fade">
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.4)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Animated.View
+            style={{
+              width: "90%",
+              backgroundColor: "#fff",
+              borderRadius: 16,
+              padding: 15,
+              transform: [
+                {
+                  translateY: slideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [200, 0],
+                  }),
+                },
+              ],
+              opacity: slideAnim,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "600",
+                marginBottom: 10,
+                textAlign: "center",
+              }}
+            >
+              Select Date
+            </Text>
+
+            <DateTimePicker
+              mode="single"
+              date={pickerDate}
+              onChange={(params) => {
+                if (!params.date) return;
+                const d =
+                  params.date instanceof Date
+                    ? params.date
+                    : dayjs(params.date).toDate();
+
+                const formatted = dayjs(d).format("DD/MM/YYYY");
+
+                if (pickerField === "event") setEventDate(formatted);
+                if (pickerField === "join") setLastDateToJoin(formatted);
+
+                closePicker();
+              }}
+            />
+
+            <TouchableOpacity onPress={closePicker} style={{ padding: 12, alignItems: "center" }}>
+              <Text style={{ color: COLORS.primary, fontSize: 16 }}>Cancel</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
 
 /* ---------------------------
-   Reusable input component
+   Date Input with Icon
 ----------------------------*/
-function Input({
-  label,
-  value,
-  onChange,
-  multiline = false,
-  placeholder,
-}: any) {
+function DateInput({ label, value, onPress }: any) {
+  return (
+    <>
+      <Text style={styles.label}>{label}</Text>
+      <TouchableOpacity onPress={onPress} style={styles.dateInputWrapper}>
+        <TextInput
+          value={value}
+          placeholder="DD/MM/YYYY"
+          style={styles.dateInput}
+          editable={false}
+        />
+        <Ionicons
+          name="calendar-outline"
+          size={22}
+          color={COLORS.textSecondary}
+          style={styles.calendarIcon}
+        />
+      </TouchableOpacity>
+    </>
+  );
+}
+
+/* ---------------------------
+   Text Input Component
+----------------------------*/
+function Input({ label, value, onChange, multiline = false }: any) {
   return (
     <>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChange}
-        placeholder={placeholder}
-        multiline={multiline}
         placeholderTextColor={COLORS.textSecondary}
+        multiline={multiline}
         style={[styles.input, multiline && styles.multilineInput]}
       />
     </>
@@ -278,7 +380,7 @@ function Input({
 }
 
 /* ---------------------------
-   Styles (fully responsive)
+   Styles
 ----------------------------*/
 const styles = StyleSheet.create({
   container: {
@@ -289,7 +391,7 @@ const styles = StyleSheet.create({
   backRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: hp(1.5),
+    marginBottom: hp(1),
   },
   backText: {
     fontSize: wp(4),
@@ -306,7 +408,7 @@ const styles = StyleSheet.create({
     fontSize: wp(3.7),
     fontWeight: "700",
     marginTop: hp(1),
-    marginBottom: hp(0.6),
+    marginBottom: hp(0.5),
     color: COLORS.text,
   },
   uploadBox: {
@@ -320,11 +422,14 @@ const styles = StyleSheet.create({
   },
   uploadText: { fontWeight: "700", color: COLORS.text },
   uploadSub: { color: COLORS.textSecondary, marginTop: 4 },
+
   previewImage: {
     width: "100%",
     height: hp(25),
     borderRadius: wp(3),
   },
+
+  /* Text Inputs */
   input: {
     backgroundColor: "#fff",
     padding: wp(4),
@@ -338,6 +443,28 @@ const styles = StyleSheet.create({
     minHeight: hp(15),
     textAlignVertical: "top",
   },
+
+  /* Date Input */
+  dateInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: wp(3),
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(1.5),
+  },
+  dateInput: {
+    flex: 1,
+    fontSize: wp(4),
+    color: COLORS.text,
+  },
+  calendarIcon: {
+    marginLeft: wp(2),
+  },
+
+  /* Buttons */
   submitBtn: {
     marginTop: hp(3),
     borderRadius: wp(3),

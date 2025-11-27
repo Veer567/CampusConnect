@@ -388,5 +388,110 @@ export const getUnreadMessageCount = query({
 
     return unreadTotal;
   },
+  
+});
+
+export const deleteMessage = mutation({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, { messageId }) => {
+    const me = await getAuthenticatedUser(ctx);
+    const msg = await ctx.db.get(messageId);
+    if (!msg) throw new Error("Message not found");
+
+    if (String(msg.senderId) !== String(me._id))
+      throw new Error("Not your message");
+
+    await ctx.db.delete(messageId);
+  }
+});
+
+export const editMessage = mutation({
+  args: { messageId: v.id("messages"), text: v.string() },
+  handler: async (ctx, { messageId, text }) => {
+    const me = await getAuthenticatedUser(ctx);
+    const msg = await ctx.db.get(messageId);
+    if (!msg) throw new Error("Message not found");
+
+    if (String(msg.senderId) !== String(me._id))
+      throw new Error("Not your message");
+
+    await ctx.db.patch(messageId, { text });
+  }
+});
+/*───────────────────────────────────────────
+  USER PRESENCE (Online / Last Seen)
+───────────────────────────────────────────*/
+
+/**
+ * Called every time user performs an action (opening chat, sending msg, typing, navigating)
+ */
+export const updatePresence = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getAuthenticatedUser(ctx);
+    const now = Date.now();
+
+    // Check if entry exists
+    const existing = await ctx.db
+      .query("presence")
+      .withIndex("by_user", (q) => q.eq("userId", me._id))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { lastSeen: now });
+    } else {
+      await ctx.db.insert("presence", {
+        userId: me._id,
+        lastSeen: now,
+      });
+    }
+  },
+});
+
+/**
+ * Get presence info for another user
+ * Returns: { online: boolean, lastSeen: number }
+ */
+export const getUserPresence = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const entry = await ctx.db
+      .query("presence")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (!entry) return { online: false, lastSeen: 0 };
+
+    const now = Date.now();
+    const diff = now - entry.lastSeen;
+
+    // User is online if active in last 15 seconds
+    const online = diff < 15000;
+
+    return {
+      online,
+      lastSeen: entry.lastSeen,
+    };
+  },
+});
+
+/**
+ * Automatically delete stale presence entries
+ * (runs when presence is fetched)
+ */
+export const cleanupExpiredPresence = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const threshold = now - 5 * 60 * 1000; // 5 minutes
+
+    const all = await ctx.db.query("presence").collect();
+
+    for (const p of all) {
+      if (p.lastSeen < threshold) {
+        await ctx.db.delete(p._id);
+      }
+    }
+  },
 });
 

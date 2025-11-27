@@ -4,9 +4,19 @@
     "slug": "Spotlight",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/splash/splash 2.png",
+
+  
+    "icon": "./assets/splash/image2.png",
+
     "scheme": "spotlight",
     "userInterfaceStyle": "automatic",
+
+    "androidStatusBar": {
+      "hidden": false,
+      "backgroundColor": "#000000",
+      "translucent": true,
+      "barStyle": "light-content"
+    },
 
     "ios": {
       "supportsTablet": true,
@@ -16,17 +26,12 @@
 
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/splash/splash 2.png",
+   
+        "foregroundImage": "./assets/splash/image2.png",
         "backgroundColor": "#ffffff"
       },
       "softwareKeyboardLayoutMode": "pan",
       "edgeToEdgeEnabled": false,
-      "statusBar": {
-        "hidden": false,
-        "backgroundColor": "black",
-        "translucent": true,
-        "barStyle": "light-content"
-      },
       "package": "com.vir567.Spotlight",
       "versionCode": 1
     },
@@ -42,7 +47,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash/splash 2.png",
+          
+          "image": "./assets/splash/image2.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"

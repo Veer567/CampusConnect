@@ -11,27 +11,13 @@ import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
 export default function RootLayout() {
   const pathname = usePathname();
 
-  // Screens where StatusBar should be hidden
-  const exactHiddenScreens = [
-    "/index",
-    "/profile",
-    "/other-profile",
-    "/lost-found"
-  ];
-
-  const isExactMatch = exactHiddenScreens.includes(pathname);
-
-  const isLostFoundChild =
-    pathname.startsWith("/lost-found/"); 
-    // matches /lost-found/add, /lost-found/edit, etc.
-
-  const shouldHideStatusBar = isExactMatch || isLostFoundChild;
+  const hiddenScreens = ["/index", "/profile", "/other-profile", "/lost-found"];
+  const shouldHide = hiddenScreens.includes(pathname) || pathname.startsWith("/lost-found/");
 
   return (
     <ClerkAndConvexProvider>
       <SafeAreaProvider>
-        {/* Hide global status bar ONLY for selected screens */}
-        {!shouldHideStatusBar && (
+        {!shouldHide && (
           <CustomStatusBar
             colors={[COLORS.primary, COLORS.secondary]}
             style="light"

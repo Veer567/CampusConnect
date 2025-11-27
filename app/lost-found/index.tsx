@@ -23,6 +23,7 @@ import {
   BackHandler,
   FlatList,
   Modal,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -507,26 +508,26 @@ export default function LostFoundScreen() {
         <View style={styles.sheetContainer}>
           <Text style={styles.sheetTitle}>Item Options</Text>
 
-          <TouchableOpacity style={styles.sheetOption} onPress={handleEdit}>
+          <Pressable style={styles.sheetOption} onPress={handleEdit}>
             <Ionicons name="create-outline" size={20} color={COLORS.primary} />
             <Text style={styles.sheetText}>Edit Item</Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity style={styles.sheetOption} onPress={handleDelete}>
+          <Pressable style={styles.sheetOption} onPress={handleDelete}>
             <Ionicons name="trash-outline" size={20} color={COLORS.red} />
             <Text style={[styles.sheetText, { color: COLORS.red }]}>
               Delete Item
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
+          <Pressable
             style={[styles.sheetOption, { justifyContent: "center" }]}
             onPress={() => actionSheetRef.current?.hide()}
           >
             <Text style={[styles.sheetText, { fontWeight: "700" }]}>
               Cancel
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </ActionSheet>
 

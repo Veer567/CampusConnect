@@ -8,6 +8,7 @@ import {
   Dimensions,
   Easing,
   Image,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -94,30 +95,30 @@ export function ProfileHeader(props: ProfileHeaderProps) {
             { transform: [{ rotate: rotateInterpolate }] },
           ]}
         >
-          <TouchableOpacity
+          <Pressable
             onPress={() => {
               animateGear();
               setTimeout(() => {
                 router.push("/(settings)/SettingsDrawer");
               }, 200); // delay in ms
             }}
-            activeOpacity={0.9}
+         
           >
             <Ionicons
               name="settings-outline"
               size={22}
               color={COLORS.primary}
             />
-          </TouchableOpacity>
+          </Pressable>
         </Animated.View>
       )}
 
       <View style={styles.container}>
         {/* PROFILE IMAGE */}
-        <TouchableOpacity
+        <Pressable
           onPress={openImageCropper}
           disabled={!isOwner}
-          activeOpacity={0.8}
+         
         >
           <View style={{ position: "relative" }}>
             <Image
@@ -142,7 +143,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
               </View>
             )}
           </View>
-        </TouchableOpacity>
+        </Pressable>
 
         {/* NAME */}
         {editing ? (

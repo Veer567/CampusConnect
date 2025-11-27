@@ -6,15 +6,13 @@ import { useMutation, useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Share } from "react-native";
-
 import {
   Alert,
   Dimensions,
   Image,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -33,7 +31,7 @@ interface PostData {
   isLiked?: boolean;
   likes: number;
   comments: number;
-  author: { username: string; image?: string; _id: Id<"users"> }; // ← ADD _id
+  author: { username: string; image?: string; _id: Id<"users"> };
   eventDate?: string;
   location?: string;
   isOwner?: boolean;
@@ -49,7 +47,24 @@ interface PostProps {
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 
-// Category meta info
+/* ---------------------------------------------------------
+   UNIVERSAL PRESSABLE COMPONENT (INLINE)
+--------------------------------------------------------- */
+const T = ({ children, onPress, style, disabled = false }: any) => (
+  <Pressable
+    disabled={disabled}
+    onPress={onPress}
+    style={({ pressed }) => [
+      style,
+      pressed ? { opacity: 0.5 } : null, // iOS effect
+    ]}
+    android_ripple={{ color: "rgba(0,0,0,0.15)" }}
+  >
+    {children}
+  </Pressable>
+);
+
+// Category icons
 const CATEGORY_META: Record<string, { icon: string }> = {
   Hackathon: { icon: "🚀" },
   Placements: { icon: "👨‍💼" },
@@ -62,140 +77,40 @@ const CATEGORY_META: Record<string, { icon: string }> = {
 export default function Post({ post, onDeleted }: PostProps) {
   const router = useRouter();
 
-  // current user id (optional) — use undefined when no user is available
   const currentUserId: Id<"users"> | undefined = undefined;
-
-  // -------------------------------------------------
-  // 1. CACHE BUSTER – updates the avatar instantly
-  // -------------------------------------------------
   const cacheBuster = useProfileImageCache(post.author._id);
 
   const toggleLike = useMutation(api.posts.toggleLikePost);
   const toggleBookmark = useMutation(api.bookmark.toggleBookmark);
   const deletePostMutation = useMutation(api.posts.deletePost);
-  const [timeAgo, setTimeAgo] = useState("");
-  const [showDetails, setShowDetails] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  const [selectedPostId, setSelectedPostId] = useState<Id<"posts"> | null>(
-    null
-  );
 
   const bookmarks = useQuery(api.bookmark.getBookmarks);
 
   const [isLiked, setIsLiked] = useState(post.isLiked ?? false);
-  const [likesCount, setLikesCount] = useState(post.likes ?? 0);
+  const [likesCount, setLikesCount] = useState(post.likes);
   const [commentsCount, setCommentsCount] = useState(post.comments ?? 0);
-
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [timeAgo, setTimeAgo] = useState("");
 
-  // ─── Sync states ─────────────────────
+  const [showComments, setShowComments] = useState(false);
+
+  const actionSheetRef = useRef<ActionSheetRef>(null);
+
+  /* ---------------------------------------------------------
+     Sync likes & bookmarks on update
+  --------------------------------------------------------- */
   useEffect(() => {
     setIsLiked(post.isLiked ?? false);
     setLikesCount(post.likes ?? 0);
+
     if (bookmarks) {
-      const found = bookmarks.some((b: any) => b._id === post._id);
-      setIsBookmarked(found);
+      setIsBookmarked(bookmarks.some((b: any) => b._id === post._id));
     }
   }, [post.isLiked, post.likes, bookmarks]);
 
-  // ─── Like ─────────────────────────────────────
-  const handleLike = useCallback(async () => {
-    try {
-      const oldLiked = isLiked;
-      const oldLikes = likesCount;
-
-      // Optimistic UI update
-      setIsLiked(!oldLiked);
-      setLikesCount(oldLiked ? oldLikes - 1 : oldLikes + 1);
-
-      const result = await toggleLike({ postId: post._id });
-
-      if (!result) return;
-
-      // If backend says user cannot like own post
-      if (result.liked === false && post.isOwner) {
-        setIsLiked(false);
-        setLikesCount(oldLikes);
-
-        Toast.show({
-          type: "info",
-          text1: "You can't like your own post",
-          position: "bottom",
-        });
-        return;
-      }
-
-      // Sync with backend
-      setIsLiked(result.liked);
-      setLikesCount(result.likes);
-    } catch (err) {
-      console.error(err);
-    }
-  }, [isLiked, likesCount, post._id]);
-
-  // ─── Bookmark ─────────────────────────────────
-  const handleBookmark = useCallback(async () => {
-    try {
-      const result = await toggleBookmark({ postId: post._id });
-      setIsBookmarked(result);
-      Toast.show({
-        type: result ? "success" : "info",
-        text1: result ? "Added to bookmarks" : "Removed from bookmarks",
-        position: "bottom",
-        visibilityTime: 1500,
-      });
-    } catch (e) {
-      console.error(e);
-    }
-  }, [post._id, toggleBookmark]);
-
-  const actionSheetRef = useRef<ActionSheetRef>(null);
-  const openOptions = () => actionSheetRef.current?.show();
-
-  const confirmDelete = async () => {
-    Alert.alert(
-      "Delete Post",
-      "Are you sure you want to permanently delete this post?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deletePostMutation({ postId: post._id });
-              Toast.show({
-                type: "success",
-                text1: "Post deleted!",
-                position: "bottom",
-              });
-              onDeleted?.(post._id);
-            } catch (err: any) {
-              Toast.show({
-                type: "error",
-                text1: "Failed",
-                text2: err?.message,
-                position: "bottom",
-              });
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleEdit = () => {
-    actionSheetRef.current?.hide();
-
-    router.push({
-      pathname: "/edit-post",
-      params: {
-        postId: post._id,
-      },
-    });
-  };
-
-  // ─── Time ago ─────────────────────────────────
+  /* ---------------------------------------------------------
+     Time ago calculation
+  --------------------------------------------------------- */
   useEffect(() => {
     const update = () => {
       setTimeAgo(
@@ -205,98 +120,138 @@ export default function Post({ post, onDeleted }: PostProps) {
       );
     };
     update();
-    const id = setInterval(update, 60_000);
+    const id = setInterval(update, 60000);
     return () => clearInterval(id);
   }, [post._creationTime]);
 
-  // -------------------------------------------------
-  // 2. AVATAR – use cache‑buster in the URL
-  // -------------------------------------------------
+  const handleLike = useCallback(async () => {
+    const prev = isLiked;
+    const prevCount = likesCount;
+
+    setIsLiked(!prev);
+    setLikesCount(prev ? prevCount - 1 : prevCount + 1);
+
+    try {
+      const res = await toggleLike({ postId: post._id });
+
+      if (res && post.isOwner) {
+        setIsLiked(false);
+        setLikesCount(prevCount);
+        Toast.show({
+          type: "info",
+          text1: "You can't like your own post",
+        });
+      }
+    } catch (e) {
+      setIsLiked(prev);
+      setLikesCount(prevCount);
+    }
+  }, [isLiked, likesCount]);
+
+  const handleBookmark = useCallback(async () => {
+    try {
+      const result = await toggleBookmark({ postId: post._id });
+      setIsBookmarked(result);
+      Toast.show({
+        type: result ? "success" : "info",
+        text1: result ? "Added to bookmarks" : "Removed from bookmarks",
+      });
+    } catch {}
+  }, []);
+
+  const openOptions = () => actionSheetRef.current?.show();
+
+  const confirmDelete = () =>
+    Alert.alert("Delete Post?", "This action is irreversible.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deletePostMutation({ postId: post._id });
+            onDeleted?.(post._id);
+            Toast.show({
+              type: "success",
+              text1: "Post deleted",
+            });
+          } catch {}
+        },
+      },
+    ]);
+
+  const handleEdit = () => {
+    actionSheetRef.current?.hide();
+    setTimeout(() => {
+      router.push({ pathname: "/edit-post", params: { postId: post._id } });
+    }, 130);
+  };
+
   const avatarUri = post.author.image
     ? `${post.author.image}?t=${cacheBuster}`
     : "https://i.pravatar.cc/300";
 
-  const handleShare = async () => {
-    try {
-      const postUrl = `https://campusconnect.app/post/${post._id}`;
-      // 🔼 Replace with your web URL if different
-
-      await Share.share({
-        message: `${post.title}\n\n${post.caption ?? ""}\n\nCheck it out: ${postUrl}`,
-      });
-    } catch (error) {
-      console.error("Share error:", error);
-    }
-  };
-
   return (
     <View style={styles.card}>
-      {/* Header */}
+      {/* ---------------------------------- HEADER ---------------------------------- */}
+      {/* ---------------- HEADER ---------------- */}
       <View style={styles.header}>
-        <TouchableOpacity
+        {/* LEFT: User */}
+        <T
           style={styles.userInfo}
-          activeOpacity={0.7}
-          onPress={() => {
-            // If your own post → go to Profile screen
-            if (post.isOwner) {
-              router.push("/profile");
-            } else {
-              router.push({
-                pathname: "/other-profile",
-                params: {
-                  userId: post.author._id, // Convex user ID
-                },
-              });
-            }
-          }}
+          onPress={() =>
+            post.isOwner
+              ? router.push("/profile")
+              : router.push({
+                  pathname: "/other-profile",
+                  params: { userId: post.author._id },
+                })
+          }
         >
-          {post.author.image ? (
-            <Image source={{ uri: post.author.image }} style={styles.avatar} />
-          ) : (
-            <View
-              style={[styles.avatar, { backgroundColor: COLORS.grey + "30" }]}
-            />
-          )}
-
+          <Image source={{ uri: avatarUri }} style={styles.avatar} />
           <View>
             <Text style={styles.username}>{post.author.username}</Text>
             <Text style={styles.timeAgo}>{timeAgo}</Text>
           </View>
-        </TouchableOpacity>
+        </T>
 
-        {post.isOwner && (
-          <TouchableOpacity onPress={openOptions} style={styles.threeDotButton}>
-            <Ionicons
-              name="ellipsis-vertical"
-              size={20}
-              color={COLORS.textSecondary}
-            />
-          </TouchableOpacity>
-        )}
-
-        {post.category && (
-          <View style={styles.categoryTag}>
+        {/* RIGHT: Category + Menu */}
+        <View
+          style={{ flexDirection: "row", alignItems: "center", gap: wp(3) }}
+        >
+          {/* Category beside 3-dot */}
+          {post.category && (
             <LinearGradient
               colors={["#4F9DFF", "#2E6CF3"]}
-              style={styles.categoryBadge}
+              style={styles.categoryBadgeInline}
             >
               <Text style={styles.categoryEmoji}>
                 {CATEGORY_META[post.category]?.icon ?? "✨"}
               </Text>
-
               <Text style={styles.categoryText}>{post.category}</Text>
             </LinearGradient>
-          </View>
-        )}
+          )}
+
+          {/* 3 dot menu */}
+          {post.isOwner && (
+            <T style={styles.threeDotButton} onPress={openOptions}>
+              <Ionicons
+                name="ellipsis-vertical"
+                size={20}
+                color={COLORS.textSecondary}
+              />
+            </T>
+          )}
+        </View>
       </View>
 
-      {/* Title */}
+      {/* ---------------------------------- TITLE ---------------------------------- */}
       <Text style={styles.title}>{post.title}</Text>
 
       {post.caption && (
         <Text style={styles.description}>
           {post.caption.length > 120
-            ? `${post.caption.substring(0, 120)}... `
+            ? `${post.caption.slice(0, 120)}... `
             : post.caption}
           {post.caption.length > 120 && (
             <Text
@@ -314,32 +269,32 @@ export default function Post({ post, onDeleted }: PostProps) {
         </Text>
       )}
 
-      {/* TAGS */}
-      {post.tags && post.tags.length > 0 && (
+      {/* ---------------------------------- TAGS ---------------------------------- */}
+      {post.tags?.length ? (
         <View style={styles.tagsContainer}>
-          {post.tags.map((tag, i) => (
-            <View key={i} style={styles.tagChip}>
+          {post.tags.map((tag) => (
+            <View key={tag} style={styles.tagChip}>
               <Text style={styles.tagText}>#{tag}</Text>
             </View>
           ))}
         </View>
+      ) : null}
+
+      {/* ---------------------------------- IMAGE ---------------------------------- */}
+      {post.imageUrl && (
+        <T
+          onPress={() =>
+            router.push({
+              pathname: "/post-details",
+              params: { postId: post._id },
+            })
+          }
+        >
+          <Image source={{ uri: post.imageUrl }} style={styles.image} />
+        </T>
       )}
 
-  {post.imageUrl && (
-  <TouchableOpacity
-    activeOpacity={0.9}
-    onPress={() =>
-      router.push({
-        pathname: "/post-details",
-        params: { postId: post._id },
-      })
-    }
-  >
-    <Image source={{ uri: post.imageUrl }} style={styles.image} />
-  </TouchableOpacity>
-)}
-
-
+      {/* ---------------------------------- META ---------------------------------- */}
       {(post.eventDate || post.location) && (
         <View style={styles.metaRow}>
           {post.eventDate && (
@@ -352,6 +307,7 @@ export default function Post({ post, onDeleted }: PostProps) {
               <Text style={styles.metaText}>{post.eventDate}</Text>
             </View>
           )}
+
           {post.location && (
             <View style={styles.metaItem}>
               <Ionicons
@@ -365,86 +321,73 @@ export default function Post({ post, onDeleted }: PostProps) {
         </View>
       )}
 
-      {/* Actions */}
+      {/* ---------------------------------- ACTIONS ---------------------------------- */}
       <View style={styles.actions}>
-        <TouchableOpacity onPress={handleLike} style={styles.actionItem}>
-          <Ionicons
-            name={isLiked ? "heart" : "heart-outline"}
-            size={isLiked ? 22 : 20}
-            color={isLiked ? COLORS.red : COLORS.textSecondary}
-          />
-          <Text style={styles.actionText}>{likesCount}</Text>
-        </TouchableOpacity>
+        <View style={styles.leftActions}>
+          <T style={styles.actionItem} onPress={handleLike}>
+            <Ionicons
+              name={isLiked ? "heart" : "heart-outline"}
+              size={22}
+              color={isLiked ? COLORS.red : COLORS.textSecondary}
+            />
+            <Text style={styles.actionText}>{likesCount}</Text>
+          </T>
 
-        <TouchableOpacity
-          onPress={() => setShowComments(true)}
-          style={styles.actionItem}
-        >
-          <Ionicons
-            name="chatbubble-outline"
-            size={20}
-            color={COLORS.textSecondary}
-          />
-          <Text style={styles.actionText}>{commentsCount}</Text>
-        </TouchableOpacity>
+          <T style={styles.actionItem} onPress={() => setShowComments(true)}>
+            <Ionicons
+              name="chatbubble-outline"
+              size={20}
+              color={COLORS.textSecondary}
+            />
+            <Text style={styles.actionText}>{commentsCount}</Text>
+          </T>
+        </View>
 
-        <TouchableOpacity
-          onPress={handleBookmark}
-          style={styles.bookmarkButton}
-        >
+        <T style={styles.bookmarkButton} onPress={handleBookmark}>
           <Ionicons
             name={isBookmarked ? "bookmark" : "bookmark-outline"}
             size={22}
             color={isBookmarked ? COLORS.primary : COLORS.textSecondary}
           />
-        </TouchableOpacity>
+        </T>
       </View>
 
-      {/* Modals */}
+      {/* ---------------------------------- COMMENTS MODAL ---------------------------------- */}
       <CommentsModal
         targetId={post._id}
         targetType="post"
         visible={showComments}
         onClose={() => setShowComments(false)}
         currentUserId={currentUserId}
-        postOwnerId={post.author._id} // <-- IMPORTANT for delete permission UI
-        onCommentAdded={() => setCommentsCount((c) => c + 1)} // optimistic update
+        postOwnerId={post.author._id}
+        onCommentAdded={() => setCommentsCount((c) => c + 1)}
       />
 
-      {/* Action sheet */}
-      <ActionSheet ref={actionSheetRef} gestureEnabled>
+      {/* ---------------------------------- ACTION SHEET ---------------------------------- */}
+      <ActionSheet ref={actionSheetRef}>
         <View style={styles.sheetContainer}>
           <Text style={styles.sheetTitle}>Post Options</Text>
 
-          <TouchableOpacity
-            style={styles.sheetOption}
-            onPress={() => {
-              handleEdit();
-            }}
-          >
+          <T style={styles.sheetOption} onPress={handleEdit}>
             <Ionicons name="create-outline" size={20} color={COLORS.primary} />
             <Text style={styles.sheetText}>Edit Post</Text>
-          </TouchableOpacity>
+          </T>
 
-          <TouchableOpacity
-            style={styles.sheetOption}
-            onPress={() => {
-              actionSheetRef.current?.hide();
-              confirmDelete();
-            }}
-          >
+          <T style={styles.sheetOption} onPress={confirmDelete}>
             <Ionicons name="trash-outline" size={20} color={COLORS.red} />
             <Text style={[styles.sheetText, { color: COLORS.red }]}>
               Delete Post
             </Text>
-          </TouchableOpacity>
+          </T>
         </View>
       </ActionSheet>
     </View>
   );
 }
 
-/* ─── Styles (unchanged) ─────────────────────────────────────────── */
+/* ---------------------------------------------------------
+   STYLES (unchanged)
+--------------------------------------------------------- */
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
@@ -452,100 +395,155 @@ const styles = StyleSheet.create({
     marginVertical: wp(2.5),
     marginHorizontal: wp(4),
     padding: wp(3.5),
+    elevation: 3,
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 8,
     shadowOffset: { width: 5, height: 4 },
-    elevation: 3,
   },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: wp(3),
-    position: "relative",
   },
-  userInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+
+  userInfo: { flexDirection: "row", alignItems: "center" },
+
   avatar: {
     width: wp(9),
     height: wp(9),
     borderRadius: wp(4.5),
     marginRight: wp(2.5),
   },
+
   username: {
     fontSize: wp(3.9),
     fontWeight: "700",
     color: COLORS.text,
   },
-  timeAgo: {
-    fontSize: wp(3),
-    color: COLORS.textSecondary,
+
+  timeAgo: { fontSize: wp(3), color: COLORS.textSecondary },
+
+  threeDotButton: {
+    padding: 5,
+    marginTop: -20,
   },
-  threeDotButton: { padding: 6, alignSelf: "flex-start" },
-  categoryTag: { position: "absolute", top: wp(0), right: wp(5) },
-  categoryBadge: {
+
+  categoryBadgeInline: {
     flexDirection: "row",
     alignItems: "center",
+    marginRight: wp(1),
+    marginTop: -20,
     paddingHorizontal: wp(2.8),
     paddingVertical: wp(0.8),
     borderRadius: wp(5),
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
+    backgroundColor: "#4F9DFF",
     elevation: 2,
   },
+
+  categoryBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: wp(3),
+    paddingVertical: wp(1),
+    borderRadius: wp(5),
+    elevation: 2,
+  },
+
   categoryEmoji: { fontSize: wp(3.2), marginRight: wp(1.2) },
-  categoryText: { fontSize: wp(3.2), color: COLORS.white, fontWeight: "600" },
+  categoryText: { fontSize: wp(3.2), color: "#fff", fontWeight: "600" },
+
   title: {
     fontSize: wp(4.5),
     fontWeight: "700",
     color: COLORS.text,
     marginBottom: wp(1),
   },
+
   description: {
     fontSize: wp(3.7),
     color: COLORS.textSecondary,
     lineHeight: wp(5),
     marginBottom: wp(3),
   },
+
+  readMore: { color: COLORS.primary, fontWeight: "600" },
+
+  tagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: wp(2),
+    marginBottom: wp(3),
+  },
+
+  tagChip: {
+    backgroundColor: "#eef4ff",
+    borderColor: COLORS.secondary + "40",
+    borderWidth: 1,
+    paddingHorizontal: wp(2.5),
+    paddingVertical: wp(1),
+    borderRadius: wp(5),
+  },
+
+  tagText: { fontSize: wp(3.2), fontWeight: "600", color: COLORS.primary },
+
   image: {
     width: "100%",
     height: wp(55),
     borderRadius: wp(3),
     marginBottom: wp(3),
   },
+
   metaRow: {
     flexDirection: "row",
     marginBottom: wp(3),
     alignItems: "center",
     gap: wp(4),
   },
+
   metaItem: { flexDirection: "row", alignItems: "center", gap: wp(1.5) },
+
   metaText: { fontSize: wp(3.4), color: COLORS.textSecondary },
+
+  leftActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: wp(7),
+  },
+
   actions: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between", // <-- THIS FIXES IT
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     paddingTop: wp(2.5),
-    justifyContent: "space-between",
-    gap: wp(5),
+    marginTop: wp(2),
   },
+
+  bookmarkButton: {
+    padding: 4,
+  },
+
   actionItem: { flexDirection: "row", alignItems: "center", gap: wp(1) },
-  bookmarkButton: { marginLeft: "auto" },
-  actionText: { fontSize: wp(3.4), fontWeight: "500", color: COLORS.text },
+
+  actionText: {
+    fontSize: wp(3.4),
+    fontWeight: "500",
+    color: COLORS.text,
+  },
+
   sheetContainer: { padding: wp(5), backgroundColor: COLORS.surface },
+
   sheetTitle: {
     fontSize: wp(4),
     fontWeight: "700",
-    color: COLORS.text,
-    marginBottom: wp(3),
     textAlign: "center",
+    marginBottom: wp(3),
   },
+
   sheetOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -554,28 +552,6 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     gap: wp(3),
   },
-  sheetText: { fontSize: wp(3.8), color: COLORS.text, fontWeight: "500" },
-  readMore: { color: COLORS.primary, fontWeight: "600" },
 
-  tagsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: wp(3),
-    gap: wp(2),
-  },
-
-  tagChip: {
-    backgroundColor: "#eef4ff",
-    paddingHorizontal: wp(2.5),
-    paddingVertical: wp(1),
-    borderRadius: wp(5),
-    borderWidth: 1,
-    borderColor: COLORS.secondary + "40",
-  },
-
-  tagText: {
-    fontSize: wp(3.2),
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
+  sheetText: { fontSize: wp(3.8), color: COLORS.text },
 });

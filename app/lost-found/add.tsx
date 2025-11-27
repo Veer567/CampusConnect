@@ -1,22 +1,25 @@
 import CustomStatusBar from "@/components/CustomStatusBar";
+import { Loader } from "@/components/Loader";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Dimensions,
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -31,8 +34,34 @@ export default function AddLostItem() {
   const [desc, setDesc] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState<"lost" | "found">("lost");
+  const [loading, setLoading] = useState(false);
 
   const createLostItem = useMutation(api.lostItems.addLostItem);
+
+  // shimmer animation
+  const shimmer = useRef(new Animated.Value(0)).current;
+
+  const startShimmer = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, {
+          toValue: 1,
+          duration: 450,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmer, {
+          toValue: 0,
+          duration: 450,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
+
+  const stopShimmer = () => {
+    shimmer.stopAnimation();
+    shimmer.setValue(0);
+  };
 
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -49,6 +78,8 @@ export default function AddLostItem() {
     }
 
     try {
+      setLoading(true);
+
       await createLostItem({
         title,
         description: desc,
@@ -62,6 +93,8 @@ export default function AddLostItem() {
     } catch (err) {
       Alert.alert("Error", "Failed to upload item.");
       console.log(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,7 +108,7 @@ export default function AddLostItem() {
       >
         <ScrollView
           style={styles.container}
-          contentContainerStyle={{ paddingBottom: hp(5) }}
+          contentContainerStyle={{ paddingBottom: hp(10) }}
         >
           <Text style={styles.header}>Report Item</Text>
           <Text style={styles.subheader}>
@@ -83,7 +116,7 @@ export default function AddLostItem() {
           </Text>
 
           {/* IMAGE PICKER */}
-          <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+          <Pressable style={styles.imagePicker} onPress={pickImage}>
             {image ? (
               <Image source={{ uri: image }} style={styles.previewImage} />
             ) : (
@@ -92,7 +125,7 @@ export default function AddLostItem() {
                 <Text style={styles.imageText}>Upload Image</Text>
               </>
             )}
-          </TouchableOpacity>
+          </Pressable>
 
           {/* FORM */}
           <View style={styles.formCard}>
@@ -125,7 +158,7 @@ export default function AddLostItem() {
             <Text style={styles.label}>Status</Text>
             <View style={styles.statusRow}>
               {["lost", "found"].map((s) => (
-                <TouchableOpacity
+                <Pressable
                   key={s}
                   style={[
                     styles.statusChip,
@@ -141,15 +174,38 @@ export default function AddLostItem() {
                   >
                     {s === "lost" ? "Lost" : "Found"}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               ))}
             </View>
           </View>
 
-          {/* SUBMIT */}
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-            <Text style={styles.submitText}>Submit Item</Text>
-          </TouchableOpacity>
+          {/* SUBMIT BUTTON WITH SHIMMER */}
+          <Pressable
+            disabled={loading}
+            onPress={handleSubmit}
+            onPressIn={startShimmer}
+            onPressOut={stopShimmer}
+            style={[styles.submitBtn, loading && { opacity: 0.6 }]}
+            accessibilityRole="button"
+          >
+            <Animated.View
+              style={{
+                opacity: shimmer.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 0.4],
+                }),
+              }}
+            >
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.secondary]}
+                style={styles.submitGradient}
+              >
+                <Text style={styles.submitText}>
+                 "Submit"
+                </Text>
+              </LinearGradient>
+            </Animated.View>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </>
@@ -178,7 +234,6 @@ const styles = StyleSheet.create({
     marginBottom: hp(2),
   },
 
-  /* IMAGE PICKER */
   imagePicker: {
     backgroundColor: "#fff",
     height: hp(25),
@@ -200,7 +255,6 @@ const styles = StyleSheet.create({
     fontSize: wp(3.6),
   },
 
-  /* FORM */
   formCard: {
     backgroundColor: "#fff",
     padding: wp(4),
@@ -226,7 +280,6 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 
-  /* STATUS ROW */
   statusRow: {
     flexDirection: "row",
     marginTop: hp(1.3),
@@ -250,13 +303,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* SUBMIT BUTTON */
   submitBtn: {
-    backgroundColor: COLORS.primary,
+    borderRadius: wp(3),
+    marginTop: hp(1),
+    overflow: "hidden",
+  },
+  submitGradient: {
     paddingVertical: hp(2.2),
     borderRadius: wp(3),
     alignItems: "center",
-    marginTop: hp(1),
   },
   submitText: {
     color: "#fff",

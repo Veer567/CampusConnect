@@ -1,5 +1,5 @@
 // LoginScreen.tsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -14,11 +14,11 @@ import {
   ActivityIndicator,
   Platform,
   Dimensions,
+  Animated,
 } from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { styles as externalStyles } from "@/styles/auth.styles";
 import { COLORS } from "@/constants/themes";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -34,6 +34,31 @@ const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+
+  // shimmer animation
+  const shimmer = useRef(new Animated.Value(0)).current;
+
+  const startShimmer = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmer, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
+
+  const stopShimmer = () => {
+    shimmer.stopAnimation();
+    shimmer.setValue(0);
+  };
 
   // only allow Marwadi University emails (trim + lowercase)
   const isAllowedEmail = (rawEmail: string) =>
@@ -67,18 +92,14 @@ const LoginScreen: React.FC = () => {
       });
 
       if (signInAttempt.status === "complete") {
-        // activate session (optional chaining in case setActive is undefined)
         await setActive?.({ session: signInAttempt.createdSessionId });
-        // navigate to main tabs (replace)
         router.replace("/(tabs)");
       } else {
-        // handle intermediate states: show friendly message
         Alert.alert("Sign-in", "Sign-in not completed. Please try again.");
       }
     } catch (err: any) {
-      // try to show Clerk errors when available, otherwise fallback
       const message =
-        (err && err.errors && err.errors[0] && err.errors[0].message) ||
+        (err?.errors && err.errors[0]?.message) ||
         err?.message ||
         "Something went wrong. Please try again.";
       Alert.alert("Sign-in failed", message);
@@ -127,12 +148,6 @@ const LoginScreen: React.FC = () => {
               placeholder="Enter your Marwadi email"
               placeholderTextColor="#9AA0A6"
               style={localStyles.input}
-              returnKeyType="next"
-              onSubmitEditing={() => {
-                // focus password — simple approach: no ref used to keep code short
-              }}
-              accessible
-              accessibilityLabel="Email input"
               textContentType="username"
             />
 
@@ -147,12 +162,7 @@ const LoginScreen: React.FC = () => {
                 style={localStyles.passwordInput}
                 autoComplete="password"
                 returnKeyType="done"
-                onSubmitEditing={() => {
-                  // submit on pressing Done
-                  handleSignIn();
-                }}
-                accessible
-                accessibilityLabel="Password input"
+                onSubmitEditing={handleSignIn}
                 textContentType="password"
               />
               <TouchableOpacity
@@ -160,7 +170,6 @@ const LoginScreen: React.FC = () => {
                 accessibilityLabel={
                   showPassword ? "Hide password" : "Show password"
                 }
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Ionicons
                   name={showPassword ? "eye-off" : "eye"}
@@ -177,22 +186,33 @@ const LoginScreen: React.FC = () => {
               <Text style={localStyles.forgotText}>Forgot Password?</Text>
             </TouchableOpacity>
 
+            {/* ⬇️ SIGN IN BUTTON WITH SHIMMER ANIMATION */}
             <Pressable
               onPress={handleSignIn}
+              onPressIn={startShimmer}
+              onPressOut={stopShimmer}
               style={[
                 localStyles.signInButton,
                 loading ? localStyles.buttonDisabled : null,
               ]}
               disabled={loading}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: loading }}
             >
-              {loading ? (
-                <ActivityIndicator size="small" />
-              ) : (
-                <Text style={localStyles.signInText}>Sign In</Text>
-              )}
+              <Animated.View
+                style={{
+                  opacity: shimmer.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 0.4],
+                  }),
+                }}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={localStyles.signInText}>Sign In</Text>
+                )}
+              </Animated.View>
             </Pressable>
+            {/* ⬆️ END SHIMMER BUTTON */}
 
             <View style={localStyles.signupRow}>
               <Text style={localStyles.greyText}>Don’t have an account? </Text>
@@ -233,20 +253,13 @@ const localStyles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
-  logoImage: {
-    width: "100%",
-    height: "100%",
-  },
+  logoImage: { width: "100%", height: "100%" },
   appName: {
     fontSize: isSmallPhone ? 20 : 26,
     fontWeight: "700",
     color: COLORS.text ?? "#111",
   },
-  tagline: {
-    fontSize: 14,
-    color: COLORS.grey,
-    marginTop: 4,
-  },
+  tagline: { fontSize: 14, color: COLORS.grey, marginTop: 4 },
   card: {
     marginTop: 24,
     backgroundColor: COLORS.white,
@@ -292,7 +305,12 @@ const localStyles = StyleSheet.create({
     alignItems: "center",
   },
   buttonDisabled: { opacity: 0.7 },
-  signInText: { color: COLORS.white, textAlign: "center", fontSize: 16, fontWeight: "600" },
+  signInText: {
+    color: COLORS.white,
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
+  },
   signupRow: {
     marginTop: 20,
     flexDirection: "row",

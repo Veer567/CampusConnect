@@ -170,6 +170,11 @@ export default defineSchema({
     createdAt: v.number(),
     expiresAt: v.number(),
   }).index("by_conversation", ["conversationId"]),
+  
+  presence: defineTable({
+    userId: v.id("users"),
+    lastSeen: v.number(),
+  }).index("by_user", ["userId"]),
 
   recentSearches: defineTable({
     userId: v.id("users"),
@@ -275,4 +280,6 @@ export default defineSchema({
     issue: v.string(),
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  // schema.ts
 });
