@@ -3,11 +3,12 @@
 // and Convex (for backend database + real-time sync) providers.  
 // It ensures secure integration between Clerk’s user session and Convex’s API access.
 
-import React from "react";
+import React, { useEffect } from "react";
 import { ClerkProvider, ClerkLoaded, useAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
-import { ConvexReactClient } from "convex/react";
+import { ConvexReactClient, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 // ✅ Environment variables for secure runtime configuration
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL!;
@@ -41,4 +42,17 @@ export default function ClerkAndConvexProvider({
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );
+}
+function PresenceUpdater() {
+  const updatePresence = useMutation(api.chat.updatePresence);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updatePresence().catch(() => {});
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return null;
 }

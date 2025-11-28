@@ -1,4 +1,3 @@
-// app/chat-screen.tsx
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -24,15 +23,14 @@ import {
 
 const { width } = Dimensions.get("window");
 const BUBBLE_MAX_WIDTH = width * 0.78;
-const ONLINE_THRESHOLD_MS = 30_000; // 30 seconds
 
 export default function ChatScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const convId = params.conversationId as unknown as Id<"conversations">;
-  const meId = params.currentUserId as unknown as Id<"users">;
-  const otherId = params.otherUserId as unknown as Id<"users">;
+  const convId = params.conversationId as Id<"conversations">;
+  const meId = params.currentUserId as Id<"users">;
+  const otherId = params.otherUserId as Id<"users">;
 
   // Queries
   const me = useQuery(api.users.getUserProfile, convId ? { id: meId } : "skip");
@@ -40,10 +38,17 @@ export default function ChatScreen() {
     api.users.getUserProfile,
     convId ? { id: otherId } : "skip"
   );
+
+  const presence = useQuery(
+    api.chat.getUserPresence,
+    otherId ? { userId: otherId } : "skip"
+  );
+
   const page = useQuery(
     api.chat.getMessagesPage,
     convId ? { conversationId: convId, pageSize: 200 } : "skip"
   );
+
   const typingUsers = useQuery(
     api.chat.getTypingForConversation,
     convId ? { conversationId: convId } : "skip"
@@ -57,14 +62,13 @@ export default function ChatScreen() {
   const deleteMessageMut = useMutation(api.chat.deleteMessage);
   const editMessageMut = useMutation(api.chat.editMessage);
 
+  // Local UI state
   const flatRef = useRef<FlatList>(null);
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
-
   const [isMenuVisible, setMenuVisible] = useState(false);
   const [menuForMessage, setMenuForMessage] = useState<any | null>(null);
 
-  /* WHATSAPP STYLE EDITING */
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [editingMessage, setEditingMessage] = useState<any | null>(null);
 
@@ -72,12 +76,44 @@ export default function ChatScreen() {
     (t: any) => String(t.userId) === String(otherId)
   );
 
+  // SMART SCROLL
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [unreadNewMessages, setUnreadNewMessages] = useState(0);
+
+  const handleScroll = (event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+
+    const paddingToBottom = 20;
+    const bottom =
+      contentOffset.y + layoutMeasurement.height >=
+      contentSize.height - paddingToBottom;
+
+    setIsAtBottom(bottom);
+
+    if (bottom) setUnreadNewMessages(0);
+  };
+
+  const scrollToBottom = () => {
+    if (!isAtBottom) return;
+
+    requestAnimationFrame(() => {
+      flatRef.current?.scrollToEnd({ animated: true });
+    });
+
+    setTimeout(() => {
+      flatRef.current?.scrollToEnd({ animated: true });
+    }, 80);
+  };
+
   // Load messages
   useEffect(() => {
     if (!page?.messages) return;
+
     const sorted = [...page.messages].sort((a, b) => a.createdAt - b.createdAt);
     setMessages(sorted);
-    setTimeout(() => flatRef.current?.scrollToEnd({ animated: false }), 40);
+
+    if (isAtBottom) scrollToBottom();
+    else setUnreadNewMessages((c) => c + 1);
   }, [page]);
 
   // Mark read
@@ -92,22 +128,23 @@ export default function ChatScreen() {
   // Typing indicator
   useEffect(() => {
     if (!convId) return;
-    if (text.length > 0)
-      startTyping({ conversationId: convId }).catch(() => {});
+
+    if (text.length > 0) startTyping({ conversationId: convId });
+
     const t = setTimeout(() => {
-      stopTyping({ conversationId: convId }).catch(() => {});
+      stopTyping({ conversationId: convId });
     }, 1000);
+
     return () => clearTimeout(t);
   }, [text]);
 
-  // Send Message
+  // Send message
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed || !convId) return;
 
-    const localId = "local-" + Date.now();
     const localMsg = {
-      _id: localId,
+      _id: "local-" + Date.now(),
       text: trimmed,
       senderId: meId,
       createdAt: Date.now(),
@@ -116,7 +153,8 @@ export default function ChatScreen() {
 
     setMessages((prev) => [...prev, localMsg]);
     setText("");
-    setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 30);
+
+    scrollToBottom();
 
     try {
       await sendMessage({ conversationId: convId, text: trimmed });
@@ -125,17 +163,14 @@ export default function ChatScreen() {
     }
   };
 
-  /* --------------------------
-   WHATSAPP STYLE EDITING
-  --------------------------- */
+  // Editing
   const startEditFlow = () => {
     if (!menuForMessage) return;
     setIsEditingMode(true);
     setEditingMessage(menuForMessage);
     setText(menuForMessage.text);
     setMenuVisible(false);
-
-    setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
+    scrollToBottom();
   };
 
   const cancelEdit = () => {
@@ -150,7 +185,6 @@ export default function ChatScreen() {
     const newText = text.trim();
     if (!newText) return cancelEdit();
 
-    // optimistic
     setMessages((prev) =>
       prev.map((m) =>
         String(m._id) === String(editingMessage._id)
@@ -167,81 +201,72 @@ export default function ChatScreen() {
     cancelEdit();
   };
 
-  /* --------------------------
-      CONTEXT MENU
-  --------------------------- */
-  const handleMessageLongPress = (msg: any) => {
-    if (String(msg.senderId) !== String(meId)) return;
-    setMenuForMessage(msg);
-    setMenuVisible(true);
-  };
-
-  const closeMenu = () => {
-    setMenuForMessage(null);
-    setMenuVisible(false);
-  };
-
+  // Delete
   const handleDeleteMessage = async () => {
-    if (!menuForMessage) return closeMenu();
-
     const id = menuForMessage._id;
-
-    // optimistic
     setMessages((prev) => prev.filter((m) => m._id !== id));
     setMenuVisible(false);
-
-    await deleteMessageMut({ messageId: id });
+    deleteMessageMut({ messageId: id });
   };
 
-  /* --------------------------
-      ONLINE STATUS LOGIC
-  --------------------------- */
-  const isOtherOnline = (() => {
-    const lastActive = (other as any)?.lastActive;
-    if (!lastActive) return false;
-    return Date.now() - lastActive < ONLINE_THRESHOLD_MS;
-  })();
+  const getTickColor = (msg: any) => {
+    const readBy = msg.readBy || [];
+    if (readBy.length <= 1) return "#080707ff"; // sent
+    if (!readBy.map(String).includes(String(otherId))) return "#0a0909ff"; // delivered
+    return "#FFFFFF"; // read (white)
+  };
 
-  /* --------------------------
-      RENDER MESSAGE
-  --------------------------- */
+  // Render message
   const renderItem = ({ item }: { item: any }) => {
     const mine = String(item.senderId) === String(meId);
 
     return (
       <Pressable
-        onLongPress={() => handleMessageLongPress(item)}
-        delayLongPress={220}
+        onLongPress={() => {
+          if (mine) {
+            setMenuForMessage(item);
+            setMenuVisible(true);
+          }
+        }}
+        delayLongPress={200}
         style={[
           styles.msgRow,
           { justifyContent: mine ? "flex-end" : "flex-start" },
         ]}
-        android_ripple={{ color: "rgba(0,0,0,0.04)" }}
       >
         <View
           style={[
             styles.bubble,
             {
-              backgroundColor: mine ? COLORS.primary : "#eee",
+              backgroundColor: mine ? COLORS.primary : "#EEE",
               maxWidth: BUBBLE_MAX_WIDTH,
             },
           ]}
         >
           <Text style={{ color: mine ? "#fff" : "#000" }}>{item.text}</Text>
-          <Text style={styles.time}>
-            {new Date(item.createdAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
+
+          <View style={styles.timeRow}>
+            <Text style={styles.time}>
+              {new Date(item.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Text>
+
+            {mine && (
+              <Ionicons
+                name="checkmark-done"
+                size={16}
+                color={getTickColor(item)}
+                style={{ marginLeft: 4 }}
+              />
+            )}
+          </View>
         </View>
       </Pressable>
     );
   };
 
-  /* --------------------------
-      UI
-  --------------------------- */
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: "#fff" }}
@@ -264,11 +289,37 @@ export default function ChatScreen() {
 
         <View style={{ marginLeft: 12 }}>
           <Text style={styles.headerName}>{other?.fullname ?? "Chat"}</Text>
+
           <Text style={styles.typingText}>
-            {isOtherTyping ? "typing…" : isOtherOnline ? "online" : "offline"}
+            {isOtherTyping
+              ? "typing…"
+              : presence?.online
+              ? "online"
+              : presence?.lastSeen
+              ? `last seen ${new Date(presence.lastSeen).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`
+              : "offline"}
           </Text>
         </View>
       </View>
+
+      {/* Floating NEW MESSAGES Indicator */}
+      {unreadNewMessages > 0 && !isAtBottom && (
+        <TouchableOpacity
+          style={styles.newMsgButton}
+          onPress={() => {
+            setIsAtBottom(true);
+            scrollToBottom();
+          }}
+        >
+          <Ionicons name="arrow-down" size={20} color="#fff" />
+          <Text style={{ color: "#fff", marginLeft: 6 }}>
+            {unreadNewMessages} new messages
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Messages */}
       <FlatList
@@ -276,10 +327,12 @@ export default function ChatScreen() {
         data={messages}
         renderItem={renderItem}
         keyExtractor={(item) => String(item._id)}
+        onScroll={handleScroll}
+        scrollEventThrottle={50}
         contentContainerStyle={{ paddingBottom: 80 }}
       />
 
-      {/* EDITING BANNER (WhatsApp) */}
+      {/* Editing Banner */}
       {isEditingMode && (
         <View style={styles.editBanner}>
           <Text style={styles.editBannerTitle}>Editing message</Text>
@@ -320,10 +373,13 @@ export default function ChatScreen() {
         visible={isMenuVisible}
         transparent
         animationType="fade"
-        onRequestClose={closeMenu}
+        onRequestClose={() => setMenuVisible(false)}
       >
-        <Pressable style={contextStyles.overlay} onPress={closeMenu}>
-          <Animated.View style={contextStyles.box}>
+        <Pressable
+          style={contextStyles.overlay}
+          onPress={() => setMenuVisible(false)}
+        >
+          <View style={contextStyles.box}>
             <Text style={contextStyles.title}>Message options</Text>
 
             <Pressable style={contextStyles.row} onPress={startEditFlow}>
@@ -347,13 +403,13 @@ export default function ChatScreen() {
                 contextStyles.row,
                 { justifyContent: "center", marginTop: 6 },
               ]}
-              onPress={closeMenu}
+              onPress={() => setMenuVisible(false)}
             >
               <Text style={[contextStyles.rowText, { fontWeight: "700" }]}>
                 Cancel
               </Text>
             </Pressable>
-          </Animated.View>
+          </View>
         </Pressable>
       </Modal>
     </KeyboardAvoidingView>
@@ -361,8 +417,9 @@ export default function ChatScreen() {
 }
 
 /* --------------------------
-   STYLES
+   Styles
 --------------------------- */
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
@@ -378,7 +435,17 @@ const styles = StyleSheet.create({
 
   msgRow: { flexDirection: "row", padding: 8 },
   bubble: { padding: 12, borderRadius: 16 },
-  time: { fontSize: 10, opacity: 0.7, marginTop: 6, textAlign: "right" },
+
+  timeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  time: {
+    fontSize: 10,
+    opacity: 0.7,
+    textAlign: "right",
+  },
 
   inputBar: {
     flexDirection: "row",
@@ -397,7 +464,20 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 
-  /* WhatsApp Edit Banner */
+  newMsgButton: {
+    position: "absolute",
+    right: 15,
+    bottom: 100,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    zIndex: 50,
+    elevation: 5,
+  },
+
   editBanner: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -418,7 +498,7 @@ const styles = StyleSheet.create({
   },
 });
 
-/* Context menu styles */
+/* Context menu */
 const contextStyles = StyleSheet.create({
   overlay: {
     flex: 1,

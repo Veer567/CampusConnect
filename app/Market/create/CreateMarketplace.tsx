@@ -6,6 +6,7 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+
 import {
   Alert,
   Animated,
@@ -98,7 +99,9 @@ export default function CreateMarketplace() {
       const result = await ImagePicker.launchImageLibraryAsync({
         allowsEditing: true,
         quality: 0.7,
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        
+       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+
       });
 
       if (!result.canceled && result.assets?.[0]?.uri) {

@@ -512,4 +512,18 @@ export const cleanupExpiredPresence = mutation({
     }
   },
 });
+// Convex: add this query to convex/chat.ts (server-side)
+export const getMessagesLive = query({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, { conversationId }) => {
+    // Return the latest 50 messages for a conversation as a live query.
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_createdAt", (q) =>
+        q.eq("conversationId", conversationId)
+      )
+      .order("desc")
+      .take(50);
+  },
+});
 
