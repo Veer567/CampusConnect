@@ -28,6 +28,29 @@ import {
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 const { height } = Dimensions.get("window");
+type RawPost = {
+  _id: string;
+  title?: string;
+  caption?: string;
+  category?: string;
+  imageUrl?: string;
+  author?: {
+    _id: string | null;
+    username?: string;
+    image?: string;
+    fullname?: string;
+  };
+  likes?: number;
+  comments?: number;
+  isLiked?: boolean;
+  isBookmarked?: boolean;
+  _creationTime: number;
+  location?: string;
+  eventDate?: string;
+  isOwner?: boolean;
+  tags?: string[];
+};
+
 
 // Categories
 const categories = [
@@ -99,17 +122,20 @@ const FullFeedSkeleton = () => {
           
 
           {/* ---------- CATEGORY CHIPS ---------- */}
-          <ScrollView
+          <FlatList
+            data={Array.from({ length: 7 })}
+            keyExtractor={(_, i) => i.toString()}
+            renderItem={() => (
+              <View style={feedSkeletonStyles.categoryChip}>
+                <Shimmer />
+              </View>
+            )}
             horizontal
             showsHorizontalScrollIndicator={false}
             style={{ marginBottom: 20 }}
           >
-            {Array.from({ length: 7 }).map((_, i) => (
-              <View key={i} style={feedSkeletonStyles.categoryChip}>
-                <Shimmer />
-              </View>
-            ))}
-          </ScrollView>
+          </FlatList>
+        
 
           {/* ---------- POSTS ---------- */}
           {Array.from({ length: 4 }).map((_, i) => (
@@ -152,30 +178,32 @@ export default function FeedScreen() {
   const isLoading = !posts;
 
   // MAP POSTS
-  const mappedPosts = useMemo(() => {
-    if (!posts) return [];
-    return posts.map((post) => ({
-      _id: post._id,
-      title: post.title ?? "Untitled",
-      caption: post.caption ?? "",
-      category: post.category ?? "Other",
-      imageUrl: post.imageUrl ?? undefined,
-      author: {
-        _id: post.author._id,
-        username: post.author.username ?? "Anonymous",
-        image: post.author.image ?? "",
-      },
-      likes: post.likes ?? 0,
-      comments: post.comments ?? 0,
-      isLiked: !!post.isLiked,
-      isBookmarked: !!post.isBookmarked,
-      _creationTime: post._creationTime,
-      location: post.location ?? undefined,
-      eventDate: post.eventDate ?? undefined,
-      isOwner: post.isOwner ?? false,
-      tags: post.tags ?? [],
-    }));
-  }, [posts]);
+const mappedPosts = useMemo(() => {
+  if (!posts) return [];
+
+  return posts.map((post: RawPost) => ({
+    _id: post._id,
+    title: post.title ?? "Untitled",
+    caption: post.caption ?? "",
+    category: post.category ?? "Other",
+    imageUrl: post.imageUrl,
+    author: {
+      _id: post.author?._id ?? "",
+      username: post.author?.username ?? "Anonymous",
+      image: post.author?.image ?? "",
+    },
+    likes: post.likes ?? 0,
+    comments: post.comments ?? 0,
+    isLiked: !!post.isLiked,
+    isBookmarked: !!post.isBookmarked,
+    _creationTime: post._creationTime,
+    location: post.location,
+    eventDate: post.eventDate,
+    isOwner: !!post.isOwner,
+    tags: post.tags ?? [],
+  }));
+}, [posts]);
+
 
   // CATEGORY ANIM
   const categoryScales = useRef(

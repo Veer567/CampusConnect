@@ -1,5 +1,4 @@
 import CustomStatusBar from "@/components/CustomStatusBar";
-import { Loader } from "@/components/Loader";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
@@ -133,6 +132,7 @@ export default function AddLostItem() {
             <TextInput
               style={styles.input}
               placeholder="Black Laptop Bag"
+              placeholderTextColor="#6B7280" // visible grey
               value={title}
               onChangeText={setTitle}
             />
@@ -142,6 +142,7 @@ export default function AddLostItem() {
               style={[styles.input, { height: hp(12) }]}
               multiline
               placeholder="Describe the item..."
+              placeholderTextColor="#6B7280"
               value={desc}
               onChangeText={setDesc}
             />
@@ -150,6 +151,7 @@ export default function AddLostItem() {
             <TextInput
               style={styles.input}
               placeholder="Library 2nd Floor"
+              placeholderTextColor="#6B7280"
               value={location}
               onChangeText={setLocation}
             />
@@ -200,9 +202,7 @@ export default function AddLostItem() {
                 colors={[COLORS.primary, COLORS.secondary]}
                 style={styles.submitGradient}
               >
-                <Text style={styles.submitText}>
-                 Submit
-                </Text>
+                <Text style={styles.submitText}>Submit</Text>
               </LinearGradient>
             </Animated.View>
           </Pressable>

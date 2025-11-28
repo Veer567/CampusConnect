@@ -42,9 +42,7 @@ export default function ChatScreen() {
   );
   const page = useQuery(
     api.chat.getMessagesPage,
-    convId
-      ? { conversationId: convId, pageSize: 200 }
-      : "skip"
+    convId ? { conversationId: convId, pageSize: 200 } : "skip"
   );
   const typingUsers = useQuery(
     api.chat.getTypingForConversation,
@@ -267,11 +265,7 @@ export default function ChatScreen() {
         <View style={{ marginLeft: 12 }}>
           <Text style={styles.headerName}>{other?.fullname ?? "Chat"}</Text>
           <Text style={styles.typingText}>
-            {isOtherTyping
-              ? "typing…"
-              : isOtherOnline
-              ? "online"
-              : "offline"}
+            {isOtherTyping ? "typing…" : isOtherOnline ? "online" : "offline"}
           </Text>
         </View>
       </View>
@@ -303,6 +297,7 @@ export default function ChatScreen() {
       <View style={styles.inputBar}>
         <TextInput
           placeholder="Message..."
+          placeholderTextColor={COLORS.textSecondary}
           value={text}
           onChangeText={setText}
           style={styles.input}

@@ -1,9 +1,9 @@
 // convex/push.ts
-import axios from "axios";
-import { mutation } from "./_generated/server";
+import { action } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
-export const sendPushNotification = mutation({
+export const sendPushNotification = action({
   args: {
     userId: v.id("users"),
     title: v.string(),
@@ -11,30 +11,34 @@ export const sendPushNotification = mutation({
     data: v.optional(v.any()),
   },
   handler: async (ctx, { userId, title, body, data }) => {
-    const user = await ctx.db.get(userId);
+    // ✅ FIXED: use api.users.getUserById, not string
+    const user = await ctx.runQuery(api.users.getUserById, { userId });
+
     if (!user?.pushToken) {
-      // no token -> skip
       return { ok: false, reason: "no_token" };
     }
 
-    try {
-      const payload = {
-        to: user.pushToken,
-        sound: "default",
-        title,
-        body,
-        data,
-      };
+    const payload = {
+      to: user.pushToken,
+      sound: "default",
+      title,
+      body,
+      data,
+    };
 
-      // axios POST to Expo
-      await axios.post("https://exp.host/--/api/v2/push/send", payload, {
+    try {
+      const res = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        timeout: 7000,
+        body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        return { ok: false, reason: "expo_error" };
+      }
 
       return { ok: true };
     } catch (err) {
-      console.error("sendPushNotification error:", err);
       return { ok: false, reason: String(err) };
     }
   },

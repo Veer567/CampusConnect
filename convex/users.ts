@@ -185,7 +185,7 @@ export const toggleFollow = mutation({
       });
 
       // PUSH Notification
-      await ctx.runMutation(api.push.sendPushNotification, {
+      await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
         userId: args.followingId,
         title: `${currentUser.username} started following you`,
         body: "Tap to view their profile",
@@ -393,7 +393,6 @@ export const getFollowing = query({
 });
 // in convex/users.ts (append)
 
-
 export const savePushToken = mutation({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
@@ -409,5 +408,11 @@ export const savePushToken = mutation({
 
     await ctx.db.patch(me._id, { pushToken: token });
     return { ok: true };
+  },
+});
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    return await ctx.db.get(userId);
   },
 });

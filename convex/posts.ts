@@ -69,8 +69,8 @@ async function notifyUsers(
   }
 ) {
   const now = Date.now();
+
   for (const r of receivers) {
-    // skip self
     if (!r || String(r._id) === String(sender._id)) continue;
 
     // Insert notification row
@@ -85,18 +85,13 @@ async function notifyUsers(
       read: false,
     });
 
-    // Send push (best-effort)
-    try {
-      await ctx.runMutation(api.push.sendPushNotification, {
-        userId: r._id,
-        title: opts.title,
-        body: opts.body,
-        data: opts.data ?? { type: opts.type, postId: opts.postId },
-      });
-    } catch (err) {
-      // don't fail the whole flow if push fails
-      console.error("push send failed:", err);
-    }
+    // Push Notification (scheduled)
+    await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
+      userId: r._id,
+      title: opts.title,
+      body: opts.body,
+      data: opts.data ?? { type: opts.type, postId: opts.postId },
+    });
   }
 }
 
@@ -143,7 +138,9 @@ export const createPost = mutation({
     });
 
     // -------------- mentions in title/caption --------------
-    const mentions = extractFullnameMentions(`${args.title} ${args.caption ?? ""}`);
+    const mentions = extractFullnameMentions(
+      `${args.title} ${args.caption ?? ""}`
+    );
     if (mentions.length > 0) {
       const users = await findUsersByFullnames(ctx, mentions);
       if (users.length > 0) {
@@ -154,7 +151,9 @@ export const createPost = mutation({
           body:
             (args.caption && args.caption.length > 100
               ? args.caption.slice(0, 100) + "…"
-              : args.caption) || args.title || "You were mentioned",
+              : args.caption) ||
+            args.title ||
+            "You were mentioned",
           data: { type: "mention_post", postId },
         });
       }
@@ -298,18 +297,28 @@ export const deletePost = mutation({
     const currentUser = await getAuthenticatedUser(ctx);
     const post = await ctx.db.get(args.postId);
     if (!post) throw new Error("Post not found");
-    if (String(post.userId) !== String(currentUser._id)) throw new Error("Unauthorized");
+    if (String(post.userId) !== String(currentUser._id))
+      throw new Error("Unauthorized");
 
     // delete likes
-    const likes = await ctx.db.query("likes").withIndex("by_post", (q) => q.eq("postId", args.postId)).collect();
+    const likes = await ctx.db
+      .query("likes")
+      .withIndex("by_post", (q) => q.eq("postId", args.postId))
+      .collect();
     for (const l of likes) await ctx.db.delete(l._id);
 
     // delete comments
-    const comments = await ctx.db.query("comments").withIndex("by_target", (q) => q.eq("targetId", args.postId)).collect();
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_target", (q) => q.eq("targetId", args.postId))
+      .collect();
     for (const c of comments) await ctx.db.delete(c._id);
 
     // delete bookmarks
-    const bookmarks = await ctx.db.query("bookmarks").withIndex("by_post", (q) => q.eq("postId", args.postId)).collect();
+    const bookmarks = await ctx.db
+      .query("bookmarks")
+      .withIndex("by_post", (q) => q.eq("postId", args.postId))
+      .collect();
     for (const b of bookmarks) await ctx.db.delete(b._id);
 
     // delete storage file (best-effort)
@@ -336,10 +345,15 @@ export const getPostsByUser = query({
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    const user = args.userId ? await ctx.db.get(args.userId) : await getAuthenticatedUser(ctx);
+    const user = args.userId
+      ? await ctx.db.get(args.userId)
+      : await getAuthenticatedUser(ctx);
     if (!user) throw new Error("User not found");
 
-    const posts = await ctx.db.query("posts").withIndex("by_user", (q) => q.eq("userId", args.userId || user._id)).collect();
+    const posts = await ctx.db
+      .query("posts")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId || user._id))
+      .collect();
     return posts.map((p) => ({ ...p, tags: p.tags || [] }));
   },
 });
@@ -352,7 +366,9 @@ export const searchPosts = query({
     const isHashtag = trimmed.startsWith("#");
     if (isHashtag) {
       const tagQuery = trimmed.replace("#", "");
-      return posts.filter((p) => p.tags?.some((tag) => tag.toLowerCase().startsWith(tagQuery)));
+      return posts.filter((p) =>
+        p.tags?.some((tag) => tag.toLowerCase().startsWith(tagQuery))
+      );
     }
     return posts.filter(
       (p) =>
@@ -374,7 +390,6 @@ export const getRecentPosts = query({
 // posts.ts
 // Convex backend logic for handling post creation, media upload, and fetching feed posts with user metadata.
 
-
 /*───────────────────────────────────────────────
  🔹 Generate a temporary upload URL for images
 ───────────────────────────────────────────────*/
@@ -389,7 +404,6 @@ export const generateUploadUrl = mutation(async (ctx) => {
 /*───────────────────────────────────────────────
  🔹 Create a new post entry in the database
 ───────────────────────────────────────────────*/
-
 
 /*───────────────────────────────────────────────
  🔹 Fetch posts for the feed (with user data)
@@ -526,12 +540,12 @@ export const getActivityStats = query({
 
     const likes = await ctx.db
       .query("likes")
-      .withIndex("by_user", q => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     const bookmarks = await ctx.db
       .query("bookmarks")
-      .withIndex("by_user", q => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     return {

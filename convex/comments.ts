@@ -49,9 +49,9 @@ async function notifyUsers(ctx: any, receivers: any[], sender: any, opts: any) {
   const now = Date.now();
 
   for (const r of receivers) {
-    if (!r || String(r._id) === String(sender._id)) continue; // no self
+    if (!r || String(r._id) === String(sender._id)) continue;
 
-    // Insert notification
+    // Insert DB notification
     await ctx.db.insert("notifications", {
       receiverId: r._id,
       senderId: sender._id,
@@ -62,8 +62,8 @@ async function notifyUsers(ctx: any, receivers: any[], sender: any, opts: any) {
       read: false,
     });
 
-    // Push notification via Expo
-    await ctx.runMutation(api.push.sendPushNotification, {
+    // 🚀 Schedule push notification
+    await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
       userId: r._id,
       title: opts.title,
       body: opts.body,
@@ -75,7 +75,11 @@ async function notifyUsers(ctx: any, receivers: any[], sender: any, opts: any) {
 /*───────────────────────────────────────────────
  🔹 Helper: fetch post or marketplace item
 ───────────────────────────────────────────────*/
-async function getTarget(ctx: any, targetType: "post" | "marketplace", targetId: any) {
+async function getTarget(
+  ctx: any,
+  targetType: "post" | "marketplace",
+  targetId: any
+) {
   const target = await ctx.db.get(targetId);
   return target ? { ...target, type: targetType } : null;
 }
@@ -126,7 +130,8 @@ export const addComment = mutation({
     /*─────────────────────────────────────────────
      🔸 Case 1: Comment on post → notify post owner
     ─────────────────────────────────────────────*/
-    const postOwnerId = targetType === "post" ? target.userId : target.creatorId;
+    const postOwnerId =
+      targetType === "post" ? target.userId : target.creatorId;
 
     if (!parentId && String(postOwnerId) !== String(me._id)) {
       const postOwner = await ctx.db.get(postOwnerId);
@@ -315,13 +320,19 @@ export const deleteComment = mutation({
     const comment = await ctx.db.get(commentId);
     if (!comment) throw new Error("Comment not found.");
 
-    const target = await getTarget(ctx, comment.targetType as "post" | "marketplace", comment.targetId);
+    const target = await getTarget(
+      ctx,
+      comment.targetType as "post" | "marketplace",
+      comment.targetId
+    );
     if (!target) throw new Error("Target not found.");
 
     const isCommentOwner = String(comment.userId) === String(me._id);
     const isPostOwner =
-      (comment.targetType === "post" && String(target.userId) === String(me._id)) ||
-      (comment.targetType === "marketplace" && String(target.creatorId) === String(me._id));
+      (comment.targetType === "post" &&
+        String(target.userId) === String(me._id)) ||
+      (comment.targetType === "marketplace" &&
+        String(target.creatorId) === String(me._id));
 
     if (!isCommentOwner && !isPostOwner) {
       throw new Error("Not authorized to delete");

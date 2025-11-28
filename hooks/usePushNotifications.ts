@@ -13,20 +13,27 @@ export default function usePushNotifications() {
 
   useEffect(() => {
     async function setup() {
+      // 🔥 STEP 1: Request permissions and generate push token
       const token = await registerForPushNotificationsAsync();
 
+      // 🟢 DEBUG: Log the token so you know if your phone supports push
+      console.log("Generated Expo Push Token:", token);
+
+      // 🔥 STEP 2: Save token to backend (Convex)
       if (token) {
         await saveToken({ token });
-        console.log("Push token saved:", token);
+        console.log("Push token saved to Convex:", token);
+      } else {
+        console.warn("⚠️ No push token generated — this device/app cannot receive notifications.");
       }
 
-      // Foreground notifications
+      // 🔥 STEP 3: Listen for foreground notifications
       notificationListener.current =
         Notifications.addNotificationReceivedListener((notif) => {
           console.log("Foreground notification:", notif);
         });
 
-      // When user taps notification
+      // 🔥 STEP 4: Handle notification taps
       responseListener.current =
         Notifications.addNotificationResponseReceivedListener((response) => {
           console.log("Notification tapped:", response);

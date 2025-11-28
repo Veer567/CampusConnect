@@ -11,7 +11,7 @@ import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
 export default function RootLayout() {
   const pathname = usePathname();
 
-  const hiddenScreens = ["/index", "/profile", "/other-profile", "/lost-found"];
+  const hiddenScreens = ["/index", "/profile", "/lost-found"];
   const shouldHide = hiddenScreens.includes(pathname) || pathname.startsWith("/lost-found/");
 
   return (

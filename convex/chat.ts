@@ -1,5 +1,6 @@
 // chat.ts
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
 
@@ -71,7 +72,6 @@ export const sendMessage = mutation({
     if (!conversation.participants.map(String).includes(String(me._id)))
       throw new Error("Not a participant");
 
-    // If we have an image → get URL
     let imageUrl: string | undefined = undefined;
     if (args.storageId) {
       imageUrl = (await ctx.storage.getUrl(args.storageId)) ?? undefined;
@@ -94,9 +94,10 @@ export const sendMessage = mutation({
       lastMessageAt: now,
     });
 
-    // Create notifications for others
+    // Create DB notifications + PUSH notifications
     for (const userId of conversation.participants) {
       if (String(userId) === String(me._id)) continue;
+
       await ctx.db.insert("notifications", {
         receiverId: userId,
         senderId: me._id,
@@ -105,11 +106,28 @@ export const sendMessage = mutation({
         createdAt: now,
         read: false,
       });
+
+      // 🔥 Send Push Notification (using scheduler)
+      await ctx.scheduler.runAfter(
+        0,
+        api.push.sendPushNotification,
+        {
+          userId,
+          title: `${me.username || me.fullname} sent you a message`,
+          body: args.text ?? "📷 Photo",
+          data: {
+            type: "message",
+            conversationId: args.conversationId,
+          },
+        }
+      );
     }
 
     return msgId;
   },
 });
+
+
 export const generateUploadUrl = mutation(async (ctx) => {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Unauthorized");

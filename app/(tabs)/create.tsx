@@ -10,9 +10,9 @@ import * as FileSystem from "expo-file-system/legacy";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 
-import DateTimePicker from "react-native-ui-datepicker";
 import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
+import DateTimePicker from "react-native-ui-datepicker";
 
 import { useRouter } from "expo-router";
 import React, {
@@ -38,8 +38,8 @@ import {
   View,
 } from "react-native";
 
+import { useAlert } from "@/components/GlobalAlert";
 import { SafeAreaView } from "react-native-safe-area-context";
-  import { useAlert } from "@/components/GlobalAlert";
 
 // Custom Alert Component
 import CustomAlert from "@/components/GlobalAlert";
@@ -64,8 +64,6 @@ export default function CreateScreen() {
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertData, setAlertData] = useState({ title: "", message: "" });
   const alert = useAlert();
-
-
 
   const showAlert = (title: string, message: string) => {
     setAlertData({ title, message });
@@ -170,7 +168,6 @@ export default function CreateScreen() {
   const handleShare = useCallback(async () => {
     if (!selectedCategory)
       return alert.show("Missing Category", "Please select a category.");
-
 
     if (!title.trim())
       return alert.show("Event Title Missing", "Please enter the event title.");
@@ -329,6 +326,7 @@ export default function CreateScreen() {
                   placeholder="Event Title"
                   value={title}
                   onChangeText={setTitle}
+                  placeholderTextColor={COLORS.grey}
                   style={styles.input}
                 />
 
@@ -336,6 +334,7 @@ export default function CreateScreen() {
                   placeholder="Description"
                   value={description}
                   onChangeText={setDescription}
+                  placeholderTextColor={COLORS.grey}
                   style={[styles.input, styles.inputMultiline]}
                   multiline
                 />
@@ -344,6 +343,7 @@ export default function CreateScreen() {
                   placeholder="Location"
                   value={location}
                   onChangeText={setLocation}
+                  placeholderTextColor={COLORS.grey}
                   style={styles.input}
                 />
 
@@ -454,9 +454,11 @@ export default function CreateScreen() {
                     placeholder="Add tags..."
                     value={tagInput}
                     onChangeText={setTagInput}
+                    placeholderTextColor={COLORS.grey}
                     onSubmitEditing={handleAddTag}
                     style={{ flex: 1, paddingVertical: 10 }}
                   />
+
                   <TouchableOpacity onPress={handleAddTag}>
                     <Ionicons
                       name="add-circle"
@@ -545,7 +547,7 @@ export default function CreateScreen() {
               </Animated.View>
             </View>
           </KeyboardAvoidingView>
-          </SafeAreaView>
+        </SafeAreaView>
         {/* Custom Alert Modal */}
         <AlertComponent
           visible={alertVisible}
@@ -555,5 +557,5 @@ export default function CreateScreen() {
         />
       </LinearGradient>
     </View>
-  )
+  );
 }

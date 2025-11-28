@@ -11,6 +11,7 @@
 import type * as bookmark from "../bookmark.js";
 import type * as chat from "../chat.js";
 import type * as comments from "../comments.js";
+import type * as debug from "../debug.js";
 import type * as http from "../http.js";
 import type * as lostItems from "../lostItems.js";
 import type * as marketplace from "../marketplace.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   bookmark: typeof bookmark;
   chat: typeof chat;
   comments: typeof comments;
+  debug: typeof debug;
   http: typeof http;
   lostItems: typeof lostItems;
   marketplace: typeof marketplace;

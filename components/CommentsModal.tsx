@@ -5,20 +5,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import React, { useEffect, useState } from "react";
 import {
+  Dimensions,
   FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
-
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Dimensions,
 } from "react-native";
-import CommentItem from "./Comment";
 import { SafeAreaView } from "react-native-safe-area-context";
+import CommentItem from "./Comment";
 
 /* Responsive helpers */
 const { width, height } = Dimensions.get("window");
@@ -57,7 +56,10 @@ export default function CommentsModal({
   onCommentAdded,
 }: Props) {
   const [newComment, setNewComment] = useState("");
-  const [replyTo, setReplyTo] = useState<null | { id: Id<"comments">; username: string }>(null);
+  const [replyTo, setReplyTo] = useState<null | {
+    id: Id<"comments">;
+    username: string;
+  }>(null);
 
   const comments: CommentType[] =
     useQuery(api.comments.getComments, { targetId }) ?? [];
@@ -125,7 +127,10 @@ export default function CommentsModal({
               <CommentItem
                 comment={item}
                 onReply={(comment: CommentType) =>
-                  setReplyTo({ id: comment._id, username: comment.user.username })
+                  setReplyTo({
+                    id: comment._id,
+                    username: comment.user.username,
+                  })
                 }
                 onEdit={(comment: CommentType, text: string) =>
                   editComment({ commentId: comment._id, text })
@@ -140,9 +145,15 @@ export default function CommentsModal({
           {/* REPLY INDICATOR */}
           {replyTo && (
             <View style={styles.replyBanner}>
-              <Text style={styles.replyText}>Replying to @{replyTo.username}</Text>
+              <Text style={styles.replyText}>
+                Replying to @{replyTo.username}
+              </Text>
               <TouchableOpacity onPress={() => setReplyTo(null)}>
-                <Ionicons name="close-circle" size={wp(5.5)} color={COLORS.red} />
+                <Ionicons
+                  name="close-circle"
+                  size={wp(5.5)}
+                  color={COLORS.red}
+                />
               </TouchableOpacity>
             </View>
           )}
@@ -178,11 +189,15 @@ export default function CommentsModal({
             <TextInput
               style={styles.input}
               placeholder="Add a comment..."
+              placeholderTextColor="#6B7280" // darker grey for Android APK
               value={newComment}
               onChangeText={handleTyping}
             />
 
-            <TouchableOpacity onPress={handleSend} disabled={!newComment.trim()}>
+            <TouchableOpacity
+              onPress={handleSend}
+              disabled={!newComment.trim()}
+            >
               <Ionicons
                 name="send"
                 size={wp(6)}
