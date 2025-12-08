@@ -1,3 +1,4 @@
+// app/_layout.tsx
 import { Slot, usePathname } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -6,21 +7,16 @@ import Toast from "react-native-toast-message";
 import CustomStatusBar from "@/components/CustomStatusBar";
 import InitalLayout from "@/components/initalLayout";
 import { COLORS } from "@/constants/themes";
-import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
-
 import { api } from "@/convex/_generated/api";
+import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
 import { useMutation } from "convex/react";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 
-// 🔥 Presence updater component (safe inside provider)
 function PresenceUpdater() {
   const updatePresence = useMutation(api.chat.updatePresence);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      updatePresence().catch(() => {});
-    }, 5000);
-
+    const interval = setInterval(() => updatePresence().catch(() => {}), 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -29,14 +25,14 @@ function PresenceUpdater() {
 
 export default function RootLayout() {
   const pathname = usePathname();
+  const hiddenScreens = ["/index", "/profile", "/lost-found", "/other-profile"];
 
-  const hiddenScreens = ["/index", "/profile", "/lost-found"];
   const shouldHide =
     hiddenScreens.includes(pathname) || pathname.startsWith("/lost-found/");
 
   return (
     <ClerkAndConvexProvider>
-      <PresenceUpdater /> {/* <-- Now Convex works! */}
+      <PresenceUpdater />
 
       <SafeAreaProvider>
         {!shouldHide && (

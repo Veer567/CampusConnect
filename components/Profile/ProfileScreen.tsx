@@ -20,7 +20,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
 import { ActivityStatsCard } from "../../components/Profile/ActivityStatsCard";
 import { ProfileBottomSheet } from "../../components/Profile/ProfileBottomSheet";
-import { ProfileContent } from "../../components/Profile/ProfileContent";
+import ProfileContent from "@/components/Profile/ProfileContent";
+
+
 import { ProfileHeader } from "../../components/Profile/ProfileHeader";
 import { useEffect, useRef } from "react";
 

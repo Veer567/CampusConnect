@@ -215,28 +215,15 @@ async function updateFollowCounts(
 }
 
 export const getActivityStats = query({
-  handler: async (ctx) => {
-    const me = await getAuthenticatedUser(ctx);
-    if (!me) return { likes: 0, bookmarks: 0 };
-
-    // Count likes by user
-    const likes = await ctx.db
-      .query("likes")
-      .withIndex("by_user", (q) => q.eq("userId", me._id))
-      .collect();
-
-    // Count bookmarks by user
-    const bookmarks = await ctx.db
-      .query("bookmarks")
-      .withIndex("by_user", (q) => q.eq("userId", me._id))
-      .collect();
-
-    return {
-      likes: likes.length,
-      bookmarks: bookmarks.length,
-    };
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const likes = await ctx.db.query("likes").withIndex("by_user", q => q.eq("userId", userId)).collect();
+    const bookmarks = await ctx.db.query("bookmarks").withIndex("by_user", q => q.eq("userId", userId)).collect();
+    return { likes: likes.length, bookmarks: bookmarks.length };
   },
 });
+
+
 export const updateProfilePicture = mutation({
   args: {
     storageId: v.id("_storage"),

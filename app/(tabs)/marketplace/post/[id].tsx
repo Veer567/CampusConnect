@@ -76,7 +76,7 @@ export default function MarketplacePostDetail() {
     // after going back, correct the tab
     if (from) {
       setTimeout(() => {
-        router.replace(`/Market?tab=${from}`);
+        router.replace(`/marketplace?tab=${from}`);
       }, 50);
     }
   }

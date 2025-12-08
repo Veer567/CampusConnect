@@ -3,7 +3,7 @@ import AppHeader from "@/components/AppHeader";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { styles } from "@/styles/create.styles";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons , MaterialCommunityIcons} from "@expo/vector-icons";
 import { useMutation } from "convex/react";
 
 import * as FileSystem from "expo-file-system/legacy";
@@ -46,15 +46,46 @@ import CustomAlert from "@/components/GlobalAlert";
 
 const { height } = Dimensions.get("window");
 
-type Category = { id: number; name: string; icon: string };
+type Category = { id: number; name: string; icon: React.JSX.Element };
 
-const categories: Category[] = [
-  { id: 1, name: "Placements", icon: "👨‍💼" },
-  { id: 2, name: "Workshops", icon: "🛠️" },
-  { id: 3, name: "Hackathon", icon: "🚀" },
-  { id: 4, name: "Festivals", icon: "🎉" },
-  { id: 5, name: "Sports", icon: "🏅" },
-  { id: 6, name: "Other", icon: "✨" },
+export const categories = [
+  {
+    id: 0,
+    name: "All",
+    icon: <Ionicons name="grid" size={24} color="#a09ce9ff" />, // purple
+  },
+  {
+    id: 1,
+    name: "Placements",
+    icon: <Ionicons name="briefcase" size={24} color="#FF914D" />, // orange
+  },
+  {
+    id: 2,
+    name: "Workshops",
+    icon: (
+      <MaterialCommunityIcons name="hammer-wrench" size={24} color="#00BFA6" />
+    ), // teal
+  },
+  {
+    id: 3,
+    name: "Hackathon",
+    icon: <Ionicons name="rocket" size={24} color="#FF4F79" />, // pink-red
+  },
+  {
+    id: 4,
+    name: "Festivals",
+    icon: <Ionicons name="sparkles" size={24} color="#FFD233" />, // gold
+  },
+  {
+    id: 5,
+    name: "Sports",
+    icon: <Ionicons name="trophy" size={24} color="#2EC4B6" />, // green-teal
+  },
+  {
+    id: 6,
+    name: "Other",
+    icon: <Ionicons name="ellipsis-horizontal" size={24} color="#8E44AD" />, // purple dark
+  },
 ];
 
 export default function CreateScreen() {
@@ -302,7 +333,7 @@ export default function CreateScreen() {
                         selectedCategory?.id === cat.id &&
                           styles.categoryButtonActive,
                       ]}
-                      onPress={() => setSelectedCategory(cat)}
+                      onPress={() => setSelectedCategory(cat) }
                     >
                       <Text style={styles.categoryIcon}>{cat.icon}</Text>
                       <Text

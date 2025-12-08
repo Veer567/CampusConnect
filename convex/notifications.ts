@@ -100,3 +100,23 @@ export const deleteNotification = mutation({
     return { ok: true };
   },
 });
+
+export const clearAllNotifications = mutation({
+  handler: async (ctx) => {
+    const me = await getAuthenticatedUser(ctx); // use same logic
+
+    // Fetch all notifs for this user
+    const notifs = await ctx.db
+      .query("notifications")
+      .withIndex("by_receiver", (q) => q.eq("receiverId", me._id))
+      .collect();
+
+    // Delete each
+    for (const n of notifs) {
+      await ctx.db.delete(n._id);
+    }
+
+    return { ok: true };
+  },
+});
+

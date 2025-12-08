@@ -1,6 +1,7 @@
 // app/components/ActivityStatsCard.tsx
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
+import { useProfile } from "@/hooks/useProfile";
 import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -16,13 +17,10 @@ export function ActivityStatsCard() {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-  const stats = useQuery(api.users.getActivityStats) ?? {
-    likes: 0,
-    bookmarks: 0,
-  };
+  const { stats } = useProfile();
 
-  const likes = stats.likes ?? 0;
-  const bookmarks = stats.bookmarks ?? 0;
+  const likes = stats?.likes ?? 0;
+  const bookmarks = stats?.bookmarks ?? 0;
 
   const navItems = [
     { label: "Likes", value: likes, route: "/likes" as const },

@@ -356,9 +356,6 @@ export default function LostFoundScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.sparklesBtn}>
-            <Ionicons name="sparkles" size={20} color="#fff" />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.searchWrapper}>

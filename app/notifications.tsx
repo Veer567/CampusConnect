@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
+
 import {
   differenceInCalendarWeeks,
   formatDistanceToNow,
@@ -22,7 +23,6 @@ import {
   Image,
   Platform,
   Pressable,
- 
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -132,6 +132,7 @@ function SkeletonRow() {
 export default function NotificationsScreen() {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
+  const clearAll = useMutation(api.notifications.clearAllNotifications);
 
   // Convex data
   const me = useQuery(
@@ -445,19 +446,33 @@ export default function NotificationsScreen() {
 
   return (
     <LinearGradient colors={["#EFF6FF", "#FFFFFF"]} style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}edges={[]}>
+      <SafeAreaView style={styles.container} edges={[]}>
         <AppHeader
           title="Notifications"
-          rightIcon="checkmark-done-outline"
+          rightIcon="trash-outline"
           onRightPress={async () => {
-            try {
-              await markAllRead({});
-            } catch {
-              Alert.alert("Error", "Could not mark all read");
-            }
+            Alert.alert(
+              "Clear All Notifications",
+              "Are you sure you want to clear all notifications? This action cannot be undone.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Clear All",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      await clearAll();
+                    } catch (e) {
+                      Alert.alert(
+                        "Error",
+                        "Could not clear notifications. Please try again."
+                      );
+                    }
+                  },
+                },
+              ]
+            );
           }}
-          showBackButton
-          onBackPress={() => router.back()}
         />
 
         {loading ? (

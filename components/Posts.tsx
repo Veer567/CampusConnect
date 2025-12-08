@@ -1,7 +1,7 @@
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons , MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
@@ -65,14 +65,49 @@ const T = ({ children, onPress, style, disabled = false }: any) => (
 );
 
 // Category icons
-const CATEGORY_META: Record<string, { icon: string }> = {
-  Hackathon: { icon: "🚀" },
-  Placements: { icon: "👨‍💼" },
-  Workshops: { icon: "🛠️" },
-  Festivals: { icon: "🎉" },
-  Sports: { icon: "🏅" },
-  Other: { icon: "✨" },
-};
+export const categories = [
+  {
+    id: 0,
+    name: "All",
+    icon: <Ionicons name="grid" size={24} color="#a09ce9ff" />, // purple
+  },
+  {
+    id: 1,
+    name: "Placements",
+    icon: <Ionicons name="briefcase" size={24} color="#FF914D" />, // orange
+  },
+  {
+    id: 2,
+    name: "Workshops",
+    icon: (
+      <MaterialCommunityIcons
+        name="hammer-wrench"
+        size={24}
+        color="#00BFA6"
+      />
+    ), // teal
+  },
+  {
+    id: 3,
+    name: "Hackathon",
+    icon: <Ionicons name="rocket" size={24} color="#FF4F79" />, // pink-red
+  },
+  {
+    id: 4,
+    name: "Festivals",
+    icon: <Ionicons name="sparkles" size={24} color="#FFD233" />, // gold
+  },
+  {
+    id: 5,
+    name: "Sports",
+    icon: <Ionicons name="trophy" size={24} color="#2EC4B6" />, // green-teal
+  },
+  {
+    id: 6,
+    name: "Other",
+    icon: <Ionicons name="ellipsis-horizontal" size={24} color="#8E44AD" />, // purple dark
+  },
+];
 
 export default function Post({ post, onDeleted }: PostProps) {
   const router = useRouter();
@@ -226,7 +261,7 @@ export default function Post({ post, onDeleted }: PostProps) {
               style={styles.categoryBadgeInline}
             >
               <Text style={styles.categoryEmoji}>
-                {CATEGORY_META[post.category]?.icon ?? "✨"}
+                {categories.find(c => c.name === post.category)?.icon ?? "✨"}
               </Text>
               <Text style={styles.categoryText}>{post.category}</Text>
             </LinearGradient>

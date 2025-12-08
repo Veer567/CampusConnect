@@ -17,7 +17,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ProfileContent } from "@/components/Profile/ProfileContent";
+import ProfileContent from "@/components/Profile/ProfileContent";
+
 import { ProfileHeader } from "@/components/Profile/ProfileHeader";
 import { Id } from "@/convex/_generated/dataModel";
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
@@ -51,11 +52,9 @@ export default function OtherUserProfile() {
   if (isLoading) return <ProfileSkeleton />;
 
   return (
-    <SafeAreaView style={styles.screen} edges={[]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 50 }}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 15 }}
       >
         <ProfileHeader
           imageUrl={user.image}
@@ -393,8 +392,8 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#fff",
-    marginTop: 50,
-    marginHorizontal: 12,
+    paddingHorizontal: 12, // ✔ consistent on all devices
+    paddingTop: 10,
   },
 
   loadingBox: { flex: 1, justifyContent: "center", alignItems: "center" },

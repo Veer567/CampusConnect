@@ -6,10 +6,12 @@ import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import usePushNotifications from "@/hooks/usePushNotifications";
 import { feedStyles } from "@/styles/feed.styles";
-import { Ionicons } from "@expo/vector-icons";
+
 import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -53,15 +55,50 @@ type RawPost = {
 
 
 // Categories
-const categories = [
-  { id: 0, name: "All", icon: "📄" },
-  { id: 1, name: "Placements", icon: "👨‍💼" },
-  { id: 2, name: "Workshops", icon: "🛠️" },
-  { id: 3, name: "Hackathon", icon: "🚀" },
-  { id: 4, name: "Festivals", icon: "🎉" },
-  { id: 5, name: "Sports", icon: "🏅" },
-  { id: 6, name: "Other", icon: "✨" },
+export const categories = [
+  {
+    id: 0,
+    name: "All",
+    icon: <Ionicons name="grid" size={24} color="#a09ce9ff" />, // purple
+  },
+  {
+    id: 1,
+    name: "Placements",
+    icon: <Ionicons name="briefcase" size={24} color="#FF914D" />, // orange
+  },
+  {
+    id: 2,
+    name: "Workshops",
+    icon: (
+      <MaterialCommunityIcons
+        name="hammer-wrench"
+        size={24}
+        color="#00BFA6"
+      />
+    ), // teal
+  },
+  {
+    id: 3,
+    name: "Hackathon",
+    icon: <Ionicons name="rocket" size={24} color="#FF4F79" />, // pink-red
+  },
+  {
+    id: 4,
+    name: "Festivals",
+    icon: <Ionicons name="sparkles" size={24} color="#FFD233" />, // gold
+  },
+  {
+    id: 5,
+    name: "Sports",
+    icon: <Ionicons name="trophy" size={24} color="#2EC4B6" />, // green-teal
+  },
+  {
+    id: 6,
+    name: "Other",
+    icon: <Ionicons name="ellipsis-horizontal" size={24} color="#8E44AD" />, // purple dark
+  },
 ];
+
 
 /* ----------------------------------------------------------
    FULL SCREEN SKELETON LOADER

@@ -1,7 +1,9 @@
+// components/Profile/ProfileContent.tsx
+
 import { COLORS } from "@/constants/themes";
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
-import React from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   Text,
   TextInput,
@@ -9,128 +11,177 @@ import {
   View,
   StyleSheet,
   Dimensions,
+  Animated,
+  Pressable,
 } from "react-native";
 
 const { width, height } = Dimensions.get("window");
-
-// RESPONSIVE HELPERS
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
 
-interface ProfileContentProps {
-  emails: string[];
-  departments: string[];
-  interests: string[];
-  resumeUrl?: string;
-  editing: boolean;
-  setEmails: (emails: string[] | ((prev: string[]) => string[])) => void;
-  openSheet: (type: "email" | "department" | "interest") => void;
-  removeEmail: (index: number) => void;
-  removeDepartment: (index: number) => void;
-  removeInterest: (index: number) => void;
-  pickResume: () => void;
-}
+/*──────────────────────────────
+  Subtle Toast (clean version)
+──────────────────────────────*/
+const Toast = ({ visible, message }: { visible: boolean; message: string }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
 
-export function ProfileContent(props: ProfileContentProps) {
-  const {
-    emails,
-    departments,
-    interests,
-    resumeUrl,
-    editing,
-    setEmails,
-    openSheet,
-    removeEmail,
-    removeDepartment,
-    removeInterest,
-    pickResume,
-  } = props;
+  useEffect(() => {
+    if (visible) {
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+
+      setTimeout(() => {
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }).start();
+      }, 1800);
+    }
+  }, [visible]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.toast,
+        {
+          opacity,
+        },
+      ]}
+    >
+      <Text style={styles.toastText}>{message}</Text>
+    </Animated.View>
+  );
+};
+
+/*──────────────────────────────
+  Soft-press animation
+──────────────────────────────*/
+const SoftPress = ({ children, style }: any) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () =>
+    Animated.timing(scale, {
+      toValue: 0.97,
+      duration: 80,
+      useNativeDriver: true,
+    }).start();
+
+  const onPressOut = () =>
+    Animated.timing(scale, {
+      toValue: 1,
+      duration: 80,
+      useNativeDriver: true,
+    }).start();
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable onPressIn={onPressIn} onPressOut={onPressOut} style={style}>
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+};
+
+/*──────────────────────────────
+  MAIN COMPONENT
+──────────────────────────────*/
+export default function ProfileContent({
+  emails,
+  departments,
+  interests,
+  resumeUrl,
+  editing,
+  setEmails,
+  openSheet,
+  removeEmail,
+  removeDepartment,
+  removeInterest,
+  pickResume,
+}: any) {
+  const [toast, setToast] = useState(false);
+  const showSaved = () => setToast(true);
 
   return (
     <>
-      {/* ===== INFO BOX ===== */}
-      <View style={styles.card}>
+      {/* BASIC INFO CARD */}
+      <View style={styles.infoCard}>
         {/* Primary Email */}
         <View style={styles.row}>
           <Ionicons name="mail-outline" size={18} color={COLORS.primary} />
 
           {editing ? (
             <TextInput
+              placeholder="Primary email"
               value={emails[0] ?? ""}
+              style={styles.input}
               onChangeText={(t) => setEmails([t, ...emails.slice(1)])}
-              placeholder="Primary email *"
-              style={styles.inputUnderline}
-              autoCapitalize="none"
             />
           ) : (
-            <Text style={styles.textMain}>
-              {emails[0] ?? "—"}{" "}
-              {emails[0] && (
-                <Text style={{ color: COLORS.primary }}>(Primary)</Text>
-              )}
-            </Text>
+            <Text style={styles.text}>{emails[0] ?? "—"}</Text>
           )}
         </View>
 
-        {/* Additional Emails */}
-        {emails.slice(1).length > 0 ? (
-          <View style={styles.listWrapper}>
-            {emails.slice(1).map((email, i) => (
-              <View key={i} style={styles.listItem}>
-                <Text style={styles.listText}>{email}</Text>
-                {editing && (
-                  <TouchableOpacity onPress={() => removeEmail(i + 1)}>
-                    <Text style={styles.removeText}>Remove</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
+        {/* Additional emails */}
+        {emails.slice(1).map((email: string, i: number) => (
+          <View key={i} style={styles.itemRow}>
+            <Text style={styles.subItem}>{email}</Text>
+            {editing && (
+              <TouchableOpacity onPress={() => removeEmail(i + 1)}>
+                <Ionicons name="close" size={18} color="#ff4d4d" />
+              </TouchableOpacity>
+            )}
           </View>
-        ) : (
-          editing && <Text style={styles.placeholder}>No additional emails</Text>
-        )}
+        ))}
 
         {/* Department */}
-        <View style={styles.row}>
-          <Ionicons name="school-outline" size={18} color={COLORS.primary} />
-
-          {editing ? (
-            <TouchableOpacity onPress={() => openSheet("department")}>
-              <Text style={styles.selectText}>
-                {departments[0] ?? "Pick Department"}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.textMain}>{departments[0] ?? "—"}</Text>
-          )}
+        <View style={[styles.row, { marginTop: hp(1) }]}>
+          <Ionicons
+            name="school-outline"
+            size={18}
+            color={COLORS.primary}
+          />
+          <TouchableOpacity
+            disabled={!editing}
+            onPress={() => openSheet("department")}
+          >
+            <Text style={styles.text}>
+              {departments[0] ?? (editing ? "Pick Department" : "—")}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Resume */}
         <TouchableOpacity
-          style={styles.row}
+          style={[styles.row, { marginTop: hp(1) }]}
           onPress={() => resumeUrl && Linking.openURL(resumeUrl)}
         >
-          <Ionicons name="link-outline" size={18} color={COLORS.blue} />
-          <Text style={styles.resumeLink}>
+          <Ionicons name="document-outline" size={18} color={COLORS.blue} />
+          <Text style={[styles.text, { color: COLORS.blue }]}>
             {resumeUrl ? "View Resume" : editing ? "Upload Resume" : "No Resume"}
           </Text>
         </TouchableOpacity>
 
-        {/* Editing Actions */}
         {editing && (
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionBtn} onPress={pickResume}>
-              <Text style={styles.actionText}>Upload Resume</Text>
+          <View style={styles.smallBtnRow}>
+            <TouchableOpacity style={styles.smallBtn} onPress={pickResume}>
+              <Text style={styles.smallBtnText}>Upload Resume</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionBtn} onPress={() => openSheet("email")}>
-              <Text style={styles.actionText}>Add Email</Text>
+            <TouchableOpacity
+              style={styles.smallBtn}
+              onPress={() => openSheet("email")}
+            >
+              <Text style={styles.smallBtnText}>Add Email</Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
 
-      {/* ===== INTERESTS ===== */}
+      {/* INTERESTS */}
       <Section
         title="Interests"
         items={interests}
@@ -139,7 +190,7 @@ export function ProfileContent(props: ProfileContentProps) {
         onRemove={removeInterest}
       />
 
-      {/* ===== DEPARTMENTS ===== */}
+      {/* DEPARTMENT LIST */}
       <Section
         title="Departments"
         items={departments}
@@ -147,196 +198,172 @@ export function ProfileContent(props: ProfileContentProps) {
         onAdd={() => openSheet("department")}
         onRemove={removeDepartment}
       />
+
+      {/* Toast */}
+      <Toast visible={toast} message="Saved successfully" />
     </>
   );
 }
 
-/* Reusable Section Component */
-function Section({
-  title,
-  items,
-  editing,
-  onAdd,
-  onRemove,
-}: {
-  title: string;
-  items: string[];
-  editing: boolean;
-  onAdd: () => void;
-  onRemove: (index: number) => void;
-}) {
+/*──────────────────────────────
+  CLEAN SECTION (LinkedIn style)
+──────────────────────────────*/
+function Section({ title, items, editing, onAdd, onRemove }: any) {
   return (
-    <View style={{ marginTop: hp(2) }}>
-      {/* Header */}
+    <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{title}</Text>
         {editing && (
           <TouchableOpacity onPress={onAdd}>
-            <Text style={styles.addText}>+ Add</Text>
+            <Text style={styles.add}>+ Add</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Items */}
-      <View style={styles.tagWrapper}>
-        {items.length === 0 && !editing ? (
-          <Text style={styles.placeholder}>No {title.toLowerCase()} added</Text>
-        ) : (
-          items.map((item, i) => (
-            <View key={i} style={styles.tag}>
-              <Text style={styles.tagText}>{item}</Text>
-              {editing && (
-                <TouchableOpacity onPress={() => onRemove(i)}>
-                  <Text style={styles.removeText}>Remove</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ))
+      <View style={styles.tagContainer}>
+        {items.map((item: string, i: number) => (
+          <SoftPress key={i} style={styles.tag}>
+            <Text style={styles.tagText}>{item}</Text>
+            {editing && (
+              <TouchableOpacity onPress={() => onRemove(i)}>
+                <Ionicons name="close" size={16} color="#999" />
+              </TouchableOpacity>
+            )}
+          </SoftPress>
+        ))}
+
+        {items.length === 0 && !editing && (
+          <Text style={styles.emptyText}>No {title.toLowerCase()} added</Text>
         )}
       </View>
     </View>
   );
 }
 
+/*──────────────────────────────
+  STYLES
+──────────────────────────────*/
 const styles = StyleSheet.create({
-  /* Card */
-  card: {
-    marginTop: hp(1.5),
+  infoCard: {
     backgroundColor: "#fff",
-    borderRadius: 14,
     padding: wp(4),
+    borderRadius: 12,
+    marginTop: hp(1),
     marginHorizontal: wp(1),
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
   },
 
-  /* Row */
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: wp(2),
-    marginBottom: hp(1),
   },
 
-  /* Text */
-  textMain: {
-    color: "#333",
-    fontSize: wp(3.8),
+  text: {
+    fontSize: wp(3.7),
+    color: COLORS.text,
+  },
+
+  input: {
     flex: 1,
-  },
-
-  inputUnderline: {
     borderBottomWidth: 1,
-    borderColor: "#eee",
-    paddingVertical: 4,
-    flex: 1,
-    fontSize: wp(3.8),
+    borderColor: "#ddd",
+    fontSize: wp(3.7),
+    paddingVertical: 3,
   },
 
-  selectText: {
-    color: COLORS.primary,
-    fontSize: wp(3.8),
-  },
-
-  resumeLink: {
-    color: COLORS.blue,
-    fontSize: wp(3.8),
-  },
-
-  placeholder: {
-    color: "#aaa",
-    fontSize: wp(3.3),
-    fontStyle: "italic",
-    marginTop: hp(0.6),
-  },
-
-  /* List Items */
-  listWrapper: { marginTop: hp(1), gap: hp(0.6) },
-
-  listItem: {
+  itemRow: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#f8fbff",
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(1),
-    borderRadius: 8,
+    marginTop: hp(0.8),
   },
 
-  listText: {
+  subItem: {
+    fontSize: wp(3.5),
     color: "#555",
-    fontSize: wp(3.6),
-    flex: 1,
   },
 
-  removeText: {
-    color: "red",
-    fontWeight: "600",
-  },
-
-  /* Action Buttons */
-  actionRow: {
-    marginTop: hp(1.2),
+  smallBtnRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    marginTop: hp(1.5),
     gap: wp(2),
   },
 
-  actionBtn: {
-    borderRadius: 10,
+  smallBtn: {
     paddingHorizontal: wp(3),
-    paddingVertical: hp(1),
-    backgroundColor: "#fff",
+    paddingVertical: hp(0.7),
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: "#ddd",
   },
 
-  actionText: {
+  smallBtnText: {
+    fontSize: wp(3.5),
     color: COLORS.primary,
-    fontSize: wp(3.6),
   },
 
-  /* SECTION */
+  /* Section */
+  section: {
+    marginTop: hp(2),
+    marginHorizontal: wp(1),
+  },
+
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    marginBottom: hp(1),
   },
 
   sectionTitle: {
-    color: COLORS.primary,
-    fontSize: wp(4.5),
+    fontSize: wp(4),
     fontWeight: "700",
-  },
-
-  addText: {
     color: COLORS.primary,
-    fontSize: wp(3.7),
   },
 
-  tagWrapper: {
+  add: {
+    fontSize: wp(3.7),
+    color: COLORS.blue,
+  },
+
+  /* Tags */
+  tagContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: wp(2),
-    marginTop: hp(1),
   },
 
   tag: {
-    backgroundColor: "#f3f7ff",
-    borderRadius: 20,
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(0.8),
-    borderWidth: 1,
-    borderColor: COLORS.secondary,
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.8),
+    borderRadius: 20,
+    backgroundColor: "#f1f3f5",
+    gap: wp(1.5),
   },
 
   tagText: {
-    color: COLORS.secondary,
-    fontWeight: "600",
-    fontSize: wp(3.6),
+    fontSize: wp(3.5),
+    color: "#333",
+  },
+
+  emptyText: {
+    fontSize: wp(3.4),
+    color: "#999",
+  },
+
+  toast: {
+    position: "absolute",
+    bottom: hp(6),
+    left: wp(10),
+    right: wp(10),
+    padding: wp(3),
+    backgroundColor: "rgba(0,0,0,0.75)",
+    borderRadius: 10,
+    alignItems: "center",
+  },
+
+  toastText: {
+    color: "#fff",
+    fontSize: wp(3.5),
   },
 });
