@@ -3,7 +3,7 @@ import AppHeader from "@/components/AppHeader";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { styles } from "@/styles/create.styles";
-import { Ionicons , MaterialCommunityIcons} from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
 
 import * as FileSystem from "expo-file-system/legacy";
@@ -38,22 +38,18 @@ import {
   View,
 } from "react-native";
 
-import { useAlert } from "@/components/GlobalAlert";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Custom Alert Component
 import CustomAlert from "@/components/GlobalAlert";
+import { useToast } from "@/components/Toast/ToastProvider";
 
 const { height } = Dimensions.get("window");
 
 type Category = { id: number; name: string; icon: React.JSX.Element };
 
 export const categories = [
-  {
-    id: 0,
-    name: "All",
-    icon: <Ionicons name="grid" size={24} color="#a09ce9ff" />, // purple
-  },
+
   {
     id: 1,
     name: "Placements",
@@ -91,15 +87,7 @@ export const categories = [
 export default function CreateScreen() {
   const router = useRouter();
 
-  // Alert Modal State
-  const [alertVisible, setAlertVisible] = useState(false);
-  const [alertData, setAlertData] = useState({ title: "", message: "" });
-  const alert = useAlert();
-
-  const showAlert = (title: string, message: string) => {
-    setAlertData({ title, message });
-    setAlertVisible(true);
-  };
+  const toast = useToast();
 
   // Form Data
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -198,22 +186,37 @@ export default function CreateScreen() {
 
   const handleShare = useCallback(async () => {
     if (!selectedCategory)
-      return alert.show("Missing Category", "Please select a category.");
+      return toast.show(
+        { title: "Missing Category", message: "Please select a category." },
+        "error"
+      );
 
     if (!title.trim())
-      return alert.show("Event Title Missing", "Please enter the event title.");
+      return toast.show(
+        {
+          title: "Event Title Missing",
+          message: "Please enter the event title.",
+        },
+        "error"
+      );
 
     if (!description.trim())
-      return alert.show("Description Missing", "Add a description.");
+      return toast.show(
+        { title: "Description Missing", message: "Add a description." },
+        "error"
+      );
 
     if (!location.trim())
-      return alert.show("Location Missing", "Please enter event location.");
-
-    if (!eventDate.trim())
-      return alert.show("Event Date Missing", "Select a date for the event.");
+      return toast.show(
+        { title: "Location Missing", message: "Please enter event location." },
+        "error"
+      );
 
     if (!selectedImage)
-      return alert.show("Image Missing", "Please upload an event image.");
+      return toast.show(
+        { title: "Image Missing", message: "Please upload an event image." },
+        "error"
+      );
 
     if (isSharing) return;
 
@@ -232,9 +235,7 @@ export default function CreateScreen() {
         }
       );
 
-      if (uploadResult.status !== 200) {
-        throw new Error("Upload failed");
-      }
+      if (uploadResult.status !== 200) throw new Error("Upload failed");
 
       const { storageId } = JSON.parse(uploadResult.body);
 
@@ -248,20 +249,20 @@ export default function CreateScreen() {
         tags: tags.map((t) => t.toLowerCase()),
       });
 
-      showAlert("Post Created 🎉", "Your event has been shared successfully!");
-
-      setTitle("");
-      setDescription("");
-      setLocation("");
-      setEventDate("");
-      setTags([]);
-      setSelectedCategory(null);
-      setSelectedImage(null);
+      toast.show(
+        {
+          title: "Post Created 🎉",
+          message: "Your event has been shared successfully!",
+        },
+        "success"
+      );
 
       router.replace("/(tabs)");
     } catch (error) {
-      console.error("Error sharing post:", error);
-      showAlert("Error", "Unable to share post. Try again.");
+      toast.show(
+        { title: "Error", message: "Unable to share post. Try again." },
+        "error"
+      );
     }
 
     setIsSharing(false);
@@ -333,7 +334,7 @@ export default function CreateScreen() {
                         selectedCategory?.id === cat.id &&
                           styles.categoryButtonActive,
                       ]}
-                      onPress={() => setSelectedCategory(cat) }
+                      onPress={() => setSelectedCategory(cat)}
                     >
                       <Text style={styles.categoryIcon}>{cat.icon}</Text>
                       <Text
@@ -560,7 +561,7 @@ export default function CreateScreen() {
             <View style={styles.fabContainer}>
               <Animated.View style={{ transform: [{ scale: fabScale }] }}>
                 <TouchableOpacity
-                  disabled={!isFormValid || isSharing}
+                  disabled={isSharing}
                   onPress={handleShare}
                   style={[styles.fab, !isFormValid && styles.fabDisabled]}
                 >
@@ -580,12 +581,6 @@ export default function CreateScreen() {
           </KeyboardAvoidingView>
         </SafeAreaView>
         {/* Custom Alert Modal */}
-        <AlertComponent
-          visible={alertVisible}
-          title={alertData.title}
-          message={alertData.message}
-          onClose={() => setAlertVisible(false)}
-        />
       </LinearGradient>
     </View>
   );

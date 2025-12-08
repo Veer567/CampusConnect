@@ -5,10 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import { router, useNavigation } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import { useToast } from "@/components/Toast/ToastProvider";
+
 import {
-  Alert,
   Animated,
   Dimensions,
   Image,
@@ -36,6 +37,22 @@ export default function AddLostItem() {
   const [loading, setLoading] = useState(false);
 
   const createLostItem = useMutation(api.lostItems.addLostItem);
+  const navigation = useNavigation();
+  const toast = useToast();
+
+  useEffect(() => {
+    // hide tab bar
+    navigation.setOptions({
+      tabBarStyle: { display: "none" },
+    });
+
+    return () => {
+      // restore tab bar when leaving
+      navigation.setOptions({
+        tabBarStyle: undefined,
+      });
+    };
+  }, []);
 
   // shimmer animation
   const shimmer = useRef(new Animated.Value(0)).current;
@@ -71,10 +88,44 @@ export default function AddLostItem() {
   };
 
   const handleSubmit = async () => {
-    if (!title || !desc || !location) {
-      Alert.alert("Missing fields", "Please fill all required fields.");
-      return;
+    if(!image) {
+      toast.show(
+        {
+          title: "Image Required",
+          message: "Please upload an image of the item.",
+        },
+        "error"
+      );
     }
+    if (!title.trim())
+      return toast.show(
+        { title: "Missing Title", message: "Please enter the item title." },
+        "error"
+      );
+
+    if (!desc.trim())
+      return toast.show(
+        { title: "Missing Description", message: "Please describe the item." },
+        "error"
+      );
+
+    if (!location.trim())
+      return toast.show(
+        {
+          title: "Missing Location",
+          message: "Please enter where the item was lost or found.",
+        },
+        "error"
+      );
+
+    if (!image)
+      return toast.show(
+        {
+          title: "Image Required",
+          message: "Please upload an image of the item.",
+        },
+        "error"
+      );
 
     try {
       setLoading(true);
@@ -88,9 +139,23 @@ export default function AddLostItem() {
         imageUrl: image ?? "",
       });
 
+      toast.show(
+        {
+          title: "Success 🎉",
+          message: "Your lost/found item has been posted.",
+        },
+        "success"
+      );
+
       router.back();
     } catch (err) {
-      Alert.alert("Error", "Failed to upload item.");
+      toast.show(
+        {
+          title: "Upload Failed",
+          message: "Could not upload the item. Try again.",
+        },
+        "error"
+      );
       console.log(err);
     } finally {
       setLoading(false);

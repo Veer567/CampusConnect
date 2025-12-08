@@ -6,7 +6,6 @@ import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Animated,
   Dimensions,
   FlatList,
   Image,
@@ -293,14 +292,18 @@ export default function ChatScreen() {
           <Text style={styles.typingText}>
             {isOtherTyping
               ? "typing…"
-              : presence?.online
-              ? "online"
-              : presence?.lastSeen
-              ? `last seen ${new Date(presence.lastSeen).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}`
-              : "offline"}
+              : presence === undefined
+                ? "loading…"
+                : presence.online
+                  ? "online"
+                  : presence.lastSeen
+                    ? `last seen ${new Date(
+                        presence.lastSeen
+                      ).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}`
+                    : "offline"}
           </Text>
         </View>
       </View>
@@ -450,6 +453,7 @@ const styles = StyleSheet.create({
   inputBar: {
     flexDirection: "row",
     padding: 10,
+    marginBottom: 10,
     borderTopWidth: 1,
     borderColor: "#ddd",
     alignItems: "center",

@@ -32,7 +32,7 @@ import { Image } from "expo-image";
 import AppHeader from "@/components/AppHeader";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import Toast from "react-native-toast-message";
+import {useToast} from "@/components/Toast/ToastProvider";
 import dayjs from "dayjs";
 import DateTimePicker from "react-native-ui-datepicker";
 
@@ -49,6 +49,7 @@ const categories = [
 
 export default function EditPostScreen() {
   const { postId } = useLocalSearchParams<{ postId?: string }>();
+  const toast = useToast();
 
   const posts = useQuery(api.posts.getPostsByUser, { userId: undefined });
   const post = posts?.find((p) => p._id === postId);
@@ -176,11 +177,11 @@ export default function EditPostScreen() {
     if (isUpdating || !post) return;
 
     if (!title.trim()) {
-      Toast.show({ type: "error", text1: "Title required" });
+      toast.show({ title: "Error", message: "Title required" }, "error");
       return;
     }
     if (!caption.trim()) {
-      Toast.show({ type: "error", text1: "Description required" });
+      toast.show({ title: "Error", message: "Description required" }, "error");
       return;
     }
 
@@ -236,11 +237,11 @@ export default function EditPostScreen() {
         ...(finalStorageId ? { storageId: finalStorageId } : {}),
       });
 
-      Toast.show({ type: "success", text1: "Post updated!" });
+      toast.show({ title: "Success", message: "Post updated!" }, "success");
       setTimeout(() => router.back(), 350);
     } catch (err) {
       console.error(err);
-      Toast.show({ type: "error", text1: "Failed to update" });
+      toast.show({ title: "Error", message: "Failed to update" }, "error");
     } finally {
       setIsUpdating(false);
     }

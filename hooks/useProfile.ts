@@ -8,6 +8,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Animated } from "react-native";
 import { triggerProfileImageUpdate } from "./useProfileImageCache";
+import { useToast } from "@/components/Toast/ToastProvider";
 
 
 const MU_DEPARTMENTS = [
@@ -52,7 +53,7 @@ const EMAIL_DOMAINS = ["@gmail.com", "@yahoo.com", "@outlook.com", "@marwadiuniv
 export function useProfile(profileId?: string) {
   const { user } = useUser();
   const { signOut } = useAuth();
-
+  const toast = useToast();
   // ────── QUERIES ──────
   const current = useQuery(
     profileId ? api.users.getUserProfile : api.users.getUserByClerkId,
@@ -202,9 +203,21 @@ export function useProfile(profileId?: string) {
         resumeUrl,
       });
       setEditing(false);
-      Alert.alert("Saved", "Profile updated successfully.");
+      toast.show(
+        {
+          title: "Saved",
+          message: "Profile updated successfully.",
+        },
+        "success"
+      );
     } catch (err) {
-      Alert.alert("Error", String(err));
+      toast.show(
+        {
+          title: "Error",
+          message: String(err),
+        },
+        "error"
+      );
     }
   };
 

@@ -58,7 +58,7 @@ export default function ChatList() {
 
   return (
     <View style={styles.screen}>
-      <AppHeader title="Chats" rightIcon="chatbubbles" />
+      <AppHeader title="Chats"  />
 
       <ScrollView>
         {conversations.map((c: any) => {

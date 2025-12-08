@@ -54,11 +54,13 @@ export const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: hp(1),
     marginTop: hp(2),
+   
   },
 
   // 🎯 Category Section
   categoryScroll: {
     paddingVertical: hp(1),
+    marginLeft: wp(1.5),
   },
   categoryButton: {
     flexDirection: "row",
@@ -75,6 +77,7 @@ export const styles = StyleSheet.create({
   categoryButtonActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
+    marginLeft: wp(1.6),
   },
   categoryIcon: {
     fontSize: wp(4.5),

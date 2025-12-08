@@ -11,18 +11,36 @@ import { api } from "@/convex/_generated/api";
 import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
 import { useMutation } from "convex/react";
 import React, { useEffect } from "react";
-
+import { AppState, AppStateStatus } from "react-native";
+import { ToastProvider } from "@/components/Toast/ToastProvider";
 function PresenceUpdater() {
   const updatePresence = useMutation(api.chat.updatePresence);
 
   useEffect(() => {
-    const interval = setInterval(() => updatePresence().catch(() => {}), 5000);
-    return () => clearInterval(interval);
-  }, []);
+    // Fire immediately so other users see us online fast
+    updatePresence().catch(() => {});
+
+    // Periodic heartbeat
+    const interval = setInterval(() => {
+      updatePresence().catch(() => {});
+    }, 8000); // ~8s is fine (server considers online if lastSeen < 15s)
+
+    // Also update when app comes to foreground
+    const onAppStateChange = (next: AppStateStatus) => {
+      if (next === "active") {
+        updatePresence().catch(() => {});
+      }
+    };
+    const sub = AppState.addEventListener("change", onAppStateChange);
+
+    return () => {
+      clearInterval(interval);
+      sub.remove();
+    };
+  }, [updatePresence]);
 
   return null;
 }
-
 export default function RootLayout() {
   const pathname = usePathname();
   const hiddenScreens = ["/index", "/profile", "/lost-found", "/other-profile"];
@@ -43,12 +61,13 @@ export default function RootLayout() {
         )}
 
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <InitalLayout>
-            <Slot />
-          </InitalLayout>
+          <ToastProvider>
+            <InitalLayout>
+              <Slot />
+            </InitalLayout>
+          </ToastProvider>
         </GestureHandlerRootView>
 
-        <Toast />
       </SafeAreaProvider>
     </ClerkAndConvexProvider>
   );

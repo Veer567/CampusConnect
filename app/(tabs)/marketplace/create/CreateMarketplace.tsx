@@ -365,6 +365,7 @@ export default function CreateMarketplace() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+
       >
         {/* Back */}
         <TouchableOpacity
@@ -602,7 +603,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: {
     padding: wp(5),
-    paddingBottom: hp(3),
+    paddingBottom: hp(8),
     backgroundColor: COLORS.background,
   },
   backRow: {

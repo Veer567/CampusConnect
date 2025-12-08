@@ -1,11 +1,13 @@
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Ionicons , MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
+import { useToast } from "./Toast/ToastProvider";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useAlert } from "@/components/GlobalAlert";
 import {
   Alert,
   Dimensions,
@@ -47,6 +49,7 @@ interface PostProps {
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 
+
 /* ---------------------------------------------------------
    UNIVERSAL PRESSABLE COMPONENT (INLINE)
 --------------------------------------------------------- */
@@ -80,11 +83,7 @@ export const categories = [
     id: 2,
     name: "Workshops",
     icon: (
-      <MaterialCommunityIcons
-        name="hammer-wrench"
-        size={24}
-        color="#00BFA6"
-      />
+      <MaterialCommunityIcons name="hammer-wrench" size={24} color="#00BFA6" />
     ), // teal
   },
   {
@@ -111,6 +110,8 @@ export const categories = [
 
 export default function Post({ post, onDeleted }: PostProps) {
   const router = useRouter();
+  const alert = useAlert();
+  const toast = useToast();
 
   const currentUserId: Id<"users"> | undefined = undefined;
   const cacheBuster = useProfileImageCache(post.author._id);
@@ -196,24 +197,33 @@ export default function Post({ post, onDeleted }: PostProps) {
 
   const openOptions = () => actionSheetRef.current?.show();
 
-  const confirmDelete = () =>
-    Alert.alert("Delete Post?", "This action is irreversible.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deletePostMutation({ postId: post._id });
-            onDeleted?.(post._id);
-            Toast.show({
-              type: "success",
-              text1: "Post deleted",
-            });
-          } catch {}
-        },
-      },
-    ]);
+ const confirmDelete = () => {
+
+  alert.show({
+    title: "Delete Post?",
+    message: "This action cannot be undone. Are you sure you want to delete this post?",
+    confirmText: "Delete",
+    cancelText: "Cancel",
+    onConfirm: async () => {
+      try {
+        await deletePostMutation({ postId: post._id });
+        onDeleted?.(post._id);
+
+        toast.show(
+          { title: "Post Deleted", message: "Your post was removed successfully." },
+          "success"
+        );
+      } catch {
+        toast.show(
+          { title: "Delete Failed", message: "Unable to delete post. Try again." },
+          "error"
+        );
+      }
+    },
+    onCancel: () => {},
+  });
+};
+
 
   const handleEdit = () => {
     actionSheetRef.current?.hide();
@@ -261,7 +271,7 @@ export default function Post({ post, onDeleted }: PostProps) {
               style={styles.categoryBadgeInline}
             >
               <Text style={styles.categoryEmoji}>
-                {categories.find(c => c.name === post.category)?.icon ?? "✨"}
+                {categories.find((c) => c.name === post.category)?.icon ?? "✨"}
               </Text>
               <Text style={styles.categoryText}>{post.category}</Text>
             </LinearGradient>
@@ -463,13 +473,14 @@ const styles = StyleSheet.create({
 
   threeDotButton: {
     padding: 5,
+    marginLeft: -wp(3),
     marginTop: -20,
   },
 
   categoryBadgeInline: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: wp(1),
+    
     marginTop: -20,
     paddingHorizontal: wp(2.8),
     paddingVertical: wp(0.8),
