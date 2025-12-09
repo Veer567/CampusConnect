@@ -28,7 +28,7 @@ export default function MarketplaceTabs({ initialTab }: MarketplaceTabsProps) {
       </LinearGradient>
 
       {/* TOP TABS */}
-      <TopTabs initialTab={initialTab} />
+      <TopTabs initialTab={initialTab || "project"} />
     </SafeAreaView>
   );
 }

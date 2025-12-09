@@ -295,9 +295,9 @@ export default function SearchScreen() {
    STYLES
 ------------------------------------------------------- */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#fff" , },
 
-  header: { paddingHorizontal: 16, marginBottom: 4, paddingTop: 4 },
+  header: { paddingHorizontal: 16, marginBottom: 4, paddingTop: 4 , marginTop: Platform.OS === "android" ? -25 : 0},
   headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
 
   headerTitle: { fontSize: 22, fontWeight: "700", marginLeft: 14 },

@@ -178,7 +178,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
             value={followers}
             onPress={() =>
               router.push({
-                pathname: "/followers",
+                pathname: "/profile/followers",
                 params: { userId, from: "profile" },
               })
             }
@@ -189,7 +189,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
             value={following}
             onPress={() =>
               router.push({
-                pathname: "/following",
+                pathname: "/profile/following",
                 params: { userId, from: "profile" },
               })
             }
@@ -200,7 +200,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
             value={posts}
             onPress={() =>
               router.push({
-                pathname: "/user-posts",
+                pathname: "/profile/user-posts",
                 params: { userId, from: "profile" },
               })
             }
@@ -318,6 +318,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: wp(12),
     marginTop: hp(2.2),
+    marginLeft: -wp(3.5),
+    
   },
 
   statValue: {

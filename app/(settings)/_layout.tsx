@@ -1,32 +1,21 @@
-// app/(settings)/_layout.tsx
-
-import { Stack, useRouter } from "expo-router";
-import { BackHandler } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { Stack, useRouter } from "expo-router";
 import React from "react";
+import { BackHandler } from "react-native";
 
 export default function SettingsLayout() {
   const router = useRouter();
 
-  // Fix Android hardware back button
+  // Fix Android hardware back button — go back instead of replacing history
   useFocusEffect(
     React.useCallback(() => {
       const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-        router.replace("/(tabs)/profile"); // ⇦ your profile path
+        router.back(); // <- use back() so history behaves normally
         return true;
       });
 
       return () => sub.remove();
-    }, [])
-  );
-
-  // Fix iOS gesture back
-  useFocusEffect(
-    React.useCallback(() => {
-      return () => {
-        router.replace("/(tabs)/profile"); // ⇦ your profile path
-      };
-    }, [])
+    }, [router])
   );
 
   return (

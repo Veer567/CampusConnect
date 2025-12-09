@@ -24,13 +24,23 @@ export default function About() {
   return (
     <ScrollView style={styles.container}>
       {/* Back Button */}
-      <Pressable style={styles.backBtn} onPress={() => router.back()}>
+     
+      <Pressable
+        style={styles.backBtn}
+        onPress={() => {
+          // prefer going back; if user landed here directly and back() does nothing,
+          // you can still navigate to settings as a fallback.
+          try {
+            router.back();
+          } catch {
+            router.replace("/(settings)");
+          }
+        }}
+      >
         <Ionicons name="arrow-back" size={26} color="#222" />
       </Pressable>
-
       {/* Title */}
       <Text style={styles.title}>About Us</Text>
-
       {/* SECTION: About Project */}
       <View style={styles.sectionBox}>
         <Text style={styles.heading}>What is CampusConnect?</Text>
@@ -41,7 +51,6 @@ export default function About() {
           and found items — CampusConnect brings everything into one place.
         </Text>
       </View>
-
       {/* SECTION: Mission */}
       <View style={styles.sectionBox}>
         <Text style={styles.heading}>Our Mission</Text>
@@ -51,7 +60,6 @@ export default function About() {
           communication and student productivity.
         </Text>
       </View>
-
       {/* SECTION: Features */}
       <View style={styles.sectionBox}>
         <Text style={styles.heading}>Key Features</Text>
@@ -69,7 +77,6 @@ export default function About() {
           </Text>
         </View>
       </View>
-
       {/* SECTION: Why */}
       <View style={styles.sectionBox}>
         <Text style={styles.heading}>Why We Built This</Text>
@@ -79,7 +86,6 @@ export default function About() {
           making student life organized, simple, and efficient.
         </Text>
       </View>
-
       {/* SECTION: Developers */}
       <View style={[styles.sectionBox, { marginBottom: 50 }]}>
         <Text style={styles.heading}>Project Team</Text>

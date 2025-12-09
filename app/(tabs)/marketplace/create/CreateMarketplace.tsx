@@ -1,3 +1,4 @@
+import { useToast } from "@/components/Toast/ToastProvider";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -179,20 +180,69 @@ export default function CreateMarketplace() {
   /* ---------------------------------------------------------
      SUBMIT
   --------------------------------------------------------- */
+  const toast = useToast();
   const submit = useCallback(async () => {
-    if (!title.trim() || !description.trim()) {
-      Alert.alert("Missing fields", "Please enter title and description.");
-      return;
+    // Title
+    if (!title.trim()) {
+      return toast.show(
+        { title: "Missing Title", message: "Please enter a title." },
+        "error"
+      );
+    }
+
+    // Description
+    if (!description.trim()) {
+      return toast.show(
+        { title: "Missing Description", message: "Please enter description." },
+        "error"
+      );
+    }
+
+    
+
+
+    // Hackathon-only validation
+    if (postType === "hackathon" && !eventDate) {
+      return toast.show(
+        {
+          title: "Event Date Missing",
+          message: "Please select the event date.",
+        },
+        "error"
+      );
+    }
+
+    // last date
+    if (!lastDateToJoin) {
+      return toast.show(
+        { title: "Last Date Missing", message: "Enter last date to join." },
+        "error"
+      );
+    }
+
+    // Location
+    if (!location.trim()) {
+      return toast.show(
+        { title: "Location Missing", message: "Please enter the location." },
+        "error"
+      );
+    }
+    //Looking For
+    if (!lookingFor.trim()) {
+      return toast.show(
+        { title: "Looking For Missing", message: "Please enter looking for." },
+        "error"
+      );
     }
 
     setLoading(true);
 
-    const tagArray = tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
     try {
+      const tagArray = tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
+
       await createPost({
         type: postType,
         title: title.trim(),
@@ -205,13 +255,25 @@ export default function CreateMarketplace() {
         imageUrl: image || undefined,
       });
 
+      toast.show(
+        {
+          title: "Post Published 🎉",
+          message: "Your marketplace post is now live!",
+        },
+        "success"
+      );
+
       router.replace(`/marketplace?tab=${postType}`);
     } catch (err) {
-      console.error("Create marketplace post error:", err);
-      Alert.alert("Failed", "Could not create post. Try again.");
+      toast.show(
+        { title: "Failed to Publish", message: "Something went wrong." },
+        "error"
+      );
     } finally {
       setLoading(false);
     }
+
+    // ⬇️ CLOSE the submit() function here
   }, [
     title,
     description,
@@ -365,7 +427,6 @@ export default function CreateMarketplace() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-
       >
         {/* Back */}
         <TouchableOpacity

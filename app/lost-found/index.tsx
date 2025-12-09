@@ -30,6 +30,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import CustomStatusBar from "@/components/CustomStatusBar";
 
 const FALLBACK_IMG_1 = "/mnt/data/9f283b40-577e-431e-bb73-41b517de1473.png";
 const FALLBACK_IMG_2 = "/mnt/data/a1903931-2540-4e0a-8519-dd8d2e2a9649.png";
@@ -338,12 +339,16 @@ export default function LostFoundScreen() {
   // UI
   // ==========================================================
   return (
-    <View style={styles.container}>
+    <><CustomStatusBar /><View style={styles.container}>
+
       {/* HEADER */}
       <LinearGradient
-        colors={[COLORS.primary, COLORS.primary]}
-        style={[styles.header, { paddingTop: insets.top + 16 }]}
+        colors={[COLORS.primary, COLORS.secondary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.header, { paddingTop: 10 }]}
       >
+
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
             <View style={styles.iconWrapper}>
@@ -366,8 +371,7 @@ export default function LostFoundScreen() {
               placeholderTextColor="#999"
               style={styles.searchInput}
               value={search}
-              onChangeText={setSearch}
-            />
+              onChangeText={setSearch} />
           </View>
         </View>
       </LinearGradient>
@@ -378,8 +382,7 @@ export default function LostFoundScreen() {
           <Ionicons
             name="checkmark-circle-outline"
             size={20}
-            color={COLORS.primary}
-          />
+            color={COLORS.primary} />
           <Text style={styles.statNumber}>{stats.foundCount}</Text>
           <Text style={styles.statLabel}>Found</Text>
         </View>
@@ -394,8 +397,7 @@ export default function LostFoundScreen() {
           <Ionicons
             name="remove-circle-outline"
             size={20}
-            color={COLORS.primary}
-          />
+            color={COLORS.primary} />
           <Text style={styles.statNumber}>{stats.lostCount}</Text>
           <Text style={styles.statLabel}>Lost</Text>
         </View>
@@ -417,16 +419,13 @@ export default function LostFoundScreen() {
                 style={[styles.filterChip, active && styles.filterChipActive]}
               >
                 <Ionicons
-                  name={
-                    s === "Lost"
-                      ? "alert-circle-outline"
-                      : s === "Found"
-                        ? "checkmark-circle-outline"
-                        : "albums-outline"
-                  }
+                  name={s === "Lost"
+                    ? "alert-circle-outline"
+                    : s === "Found"
+                      ? "checkmark-circle-outline"
+                      : "albums-outline"}
                   size={16}
-                  color={active ? "#fff" : COLORS.textSecondary}
-                />
+                  color={active ? "#fff" : COLORS.textSecondary} />
                 <Text
                   style={[styles.filterText, active && styles.filterTextActive]}
                 >
@@ -441,43 +440,35 @@ export default function LostFoundScreen() {
       {/* LIST */}
       <FlatList
         data={(isLoading ? [1, 2, 3, 4] : filtered) as any}
-        keyExtractor={(item, index) =>
-          isLoading ? `skeleton-${index}` : item._id
-        }
+        keyExtractor={(item, index) => isLoading ? `skeleton-${index}` : item._id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) =>
-          isLoading ? (
-            <LostItemSkeleton />
-          ) : (
-            <LostItemCard
-              item={item}
-              me={me}
-              navigation={navigation}
-              onStartChat={getOrStartConv}
-              onOpenOptions={() => openItemOptions(item)}
-              markFoundMut={markFoundMut}
-              markReunitedMut={markReunitedMut}
-              onOwnerMarkFound={(itm: any) => {
-                setConfirmAction("reunite");
-                setConfirmItem(itm);
-                openConfirmModal();
-              }}
-            />
-          )
-        }
-        ListEmptyComponent={
-          !isLoading ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="cube-outline" size={64} color="#999" />
-              <Text style={styles.emptyTitle}>No items found</Text>
-              <Text style={styles.emptySubtitle}>
-                Try another filter or add an item
-              </Text>
-            </View>
-          ) : null
-        }
-      />
+        renderItem={({ item }) => isLoading ? (
+          <LostItemSkeleton />
+        ) : (
+          <LostItemCard
+            item={item}
+            me={me}
+            navigation={navigation}
+            onStartChat={getOrStartConv}
+            onOpenOptions={() => openItemOptions(item)}
+            markFoundMut={markFoundMut}
+            markReunitedMut={markReunitedMut}
+            onOwnerMarkFound={(itm: any) => {
+              setConfirmAction("reunite");
+              setConfirmItem(itm);
+              openConfirmModal();
+            } } />
+        )}
+        ListEmptyComponent={!isLoading ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="cube-outline" size={64} color="#999" />
+            <Text style={styles.emptyTitle}>No items found</Text>
+            <Text style={styles.emptySubtitle}>
+              Try another filter or add an item
+            </Text>
+          </View>
+        ) : null} />
 
       {/* FAB */}
       <Animated.View
@@ -539,8 +530,7 @@ export default function LostFoundScreen() {
                 backgroundColor: "rgba(0,0,0,0.4)",
               },
               { opacity: confirmAnim },
-            ]}
-          />
+            ]} />
         </TouchableWithoutFeedback>
 
         <View style={{ justifyContent: "flex-end", flex: 1 }}>
@@ -605,8 +595,7 @@ export default function LostFoundScreen() {
               {/* Confirm */}
               <TouchableOpacity
                 style={{
-                  backgroundColor:
-                    confirmAction === "delete" ? COLORS.red : COLORS.primary,
+                  backgroundColor: confirmAction === "delete" ? COLORS.red : COLORS.primary,
                   paddingVertical: 14,
                   borderRadius: 12,
                 }}
@@ -648,7 +637,7 @@ export default function LostFoundScreen() {
           </Animated.View>
         </View>
       </Modal>
-    </View>
+    </View></>
   );
 }
 

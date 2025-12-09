@@ -1,19 +1,17 @@
-import React, { useEffect } from "react";
-import {
-
-  ScrollView,
-  Text,
-  Pressable,
-  StyleSheet,
-  View,
-  BackHandler,
-  SafeAreaView,
-} from "react-native";
+import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { ComponentProps } from "react";
-import { useAuth } from "@clerk/clerk-expo";
-
+import React, { useEffect } from "react";
+import {
+  BackHandler,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 export default function SettingsDrawer() {
   const router = useRouter();
@@ -24,10 +22,27 @@ export default function SettingsDrawer() {
   const items: { label: string; icon: IconName; route: string }[] = [
     { label: "FAQ", icon: "help-circle-outline", route: "/(settings)/faq" },
     { label: "Support", icon: "headset-outline", route: "/(settings)/support" },
-    { label: "Report Issue", icon: "alert-circle-outline", route: "/(settings)/report" },
-    { label: "Terms & Conditions", icon: "document-text-outline", route: "/(settings)/terms" },
-    { label: "Privacy Policy", icon: "shield-checkmark-outline", route: "/(settings)/privacy" },
+    {
+      label: "Report Issue",
+      icon: "alert-circle-outline",
+      route: "/(settings)/report",
+    },
+    {
+      label: "Terms & Conditions",
+      icon: "document-text-outline",
+      route: "/(settings)/terms",
+    },
+    {
+      label: "Privacy Policy",
+      icon: "shield-checkmark-outline",
+      route: "/(settings)/privacy",
+    },
     { label: "About Us", icon: "people-outline", route: "/(settings)/about" },
+    {
+      label: "AI Assistant",
+      icon: "sparkles-outline",
+      route: "/(settings)/ai-bot",
+    },
   ];
 
   // Android back button → return to Profile

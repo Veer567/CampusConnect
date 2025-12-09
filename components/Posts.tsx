@@ -1,3 +1,4 @@
+import { useAlert } from "@/components/GlobalAlert";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -5,11 +6,8 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
-import { useToast } from "./Toast/ToastProvider";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useAlert } from "@/components/GlobalAlert";
 import {
-  Alert,
   Dimensions,
   Image,
   Pressable,
@@ -17,6 +15,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useToast } from "./Toast/ToastProvider";
 
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
 import { useRouter } from "expo-router";
@@ -48,7 +47,6 @@ interface PostProps {
 
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
-
 
 /* ---------------------------------------------------------
    UNIVERSAL PRESSABLE COMPONENT (INLINE)
@@ -197,33 +195,38 @@ export default function Post({ post, onDeleted }: PostProps) {
 
   const openOptions = () => actionSheetRef.current?.show();
 
- const confirmDelete = () => {
+  const confirmDelete = () => {
+    alert.show({
+      title: "Delete Post?",
+      message:
+        "This action cannot be undone. Are you sure you want to delete this post?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      onConfirm: async () => {
+        try {
+          await deletePostMutation({ postId: post._id });
+          onDeleted?.(post._id);
 
-  alert.show({
-    title: "Delete Post?",
-    message: "This action cannot be undone. Are you sure you want to delete this post?",
-    confirmText: "Delete",
-    cancelText: "Cancel",
-    onConfirm: async () => {
-      try {
-        await deletePostMutation({ postId: post._id });
-        onDeleted?.(post._id);
-
-        toast.show(
-          { title: "Post Deleted", message: "Your post was removed successfully." },
-          "success"
-        );
-      } catch {
-        toast.show(
-          { title: "Delete Failed", message: "Unable to delete post. Try again." },
-          "error"
-        );
-      }
-    },
-    onCancel: () => {},
-  });
-};
-
+          toast.show(
+            {
+              title: "Post Deleted",
+              message: "Your post was removed successfully.",
+            },
+            "success"
+          );
+        } catch {
+          toast.show(
+            {
+              title: "Delete Failed",
+              message: "Unable to delete post. Try again.",
+            },
+            "error"
+          );
+        }
+      },
+      onCancel: () => {},
+    });
+  };
 
   const handleEdit = () => {
     actionSheetRef.current?.hide();
@@ -236,6 +239,9 @@ export default function Post({ post, onDeleted }: PostProps) {
     ? `${post.author.image}?t=${cacheBuster}`
     : "https://i.pravatar.cc/300";
 
+  const refresh = useCallback(() => {
+    setCommentsCount((prev) => prev + 1);
+  }, []);
   return (
     <View style={styles.card}>
       {/* ---------------------------------- HEADER ---------------------------------- */}
@@ -403,9 +409,7 @@ export default function Post({ post, onDeleted }: PostProps) {
         targetType="post"
         visible={showComments}
         onClose={() => setShowComments(false)}
-        currentUserId={currentUserId}
-        postOwnerId={post.author._id}
-        onCommentAdded={() => setCommentsCount((c) => c + 1)}
+        onCommentAdded={refresh}
       />
 
       {/* ---------------------------------- ACTION SHEET ---------------------------------- */}
@@ -480,7 +484,7 @@ const styles = StyleSheet.create({
   categoryBadgeInline: {
     flexDirection: "row",
     alignItems: "center",
-    
+
     marginTop: -20,
     paddingHorizontal: wp(2.8),
     paddingVertical: wp(0.8),

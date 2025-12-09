@@ -23,8 +23,8 @@ export function ActivityStatsCard() {
   const bookmarks = stats?.bookmarks ?? 0;
 
   const navItems = [
-    { label: "Likes", value: likes, route: "/likes" as const },
-    { label: "Bookmarks", value: bookmarks, route: "/bookmarks" as const },
+    { label: "Likes", value: likes, route: "/profile/likes" as const },
+    { label: "Bookmarks", value: bookmarks, route: "/profile/bookmarks" as const },
   ];
 
   const cardWidth = (width - 60) / 2;

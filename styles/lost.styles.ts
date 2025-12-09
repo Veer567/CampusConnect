@@ -15,7 +15,8 @@ export const styles = StyleSheet.create({
   /* --------------------------------- HEADER -------------------------------- */
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 50, // was 10 → pushes background lower
+    
+    paddingBottom: 20, // was 10 → pushes background lower
   },
 
   headerContent: {

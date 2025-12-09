@@ -1,34 +1,32 @@
-// app/bookmarks.tsx
-import React from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS } from "@/constants/themes";
+// app/profile/bookmarks.tsx
 import AppHeader from "@/components/AppHeader";
-import { useQuery, useMutation } from "convex/react";
+import { Loader } from "@/components/Loader";
+import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { Ionicons } from "@expo/vector-icons";
+import { useMutation, useQuery } from "convex/react";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import Toast from "react-native-toast-message";
-import { Loader } from "@/components/Loader";
+import React from "react";
+import {
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 
-// Responsive helpers
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
 
 export default function Bookmarks() {
   const router = useRouter();
-
   const bookmarks = useQuery(api.bookmark.getBookmarks);
   const toggleBookmark = useMutation(api.bookmark.toggleBookmark);
 
@@ -45,6 +43,20 @@ export default function Bookmarks() {
     }
   };
 
+  const openPost = (postId: string) => {
+    // Push post-details. If you want post-details inside profile stack, put it under this folder
+    router.push({
+      pathname: "/post-details",
+      params: { postId, from: "profile" },
+    });
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) return router.back();
+    // fallback: bring the tabs view to profile tab
+    router.replace("/(tabs)/profile");
+  };
+
   return (
     <LinearGradient
       colors={["#F8FAFF", "#FFFFFF"]}
@@ -53,19 +65,17 @@ export default function Bookmarks() {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.container} edges={[]}>
-        {/* <-- MATCHES Likes screen: showBackButton + replace to /profile */}
         <AppHeader
           title="Bookmarks"
           rightIcon="bookmark"
           showBackButton={true}
-          onBackPress={() => router.replace("/profile")}
+          onBackPress={handleBack}
         />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
-          {/* LOADING */}
           {bookmarks === undefined && (
             <View style={styles.emptyBox}>
               <Ionicons name="time-outline" size={wp(15)} color={COLORS.grey} />
@@ -73,7 +83,6 @@ export default function Bookmarks() {
             </View>
           )}
 
-          {/* EMPTY */}
           {bookmarks?.length === 0 && bookmarks !== undefined && (
             <View style={styles.emptyBox}>
               <Ionicons
@@ -85,24 +94,19 @@ export default function Bookmarks() {
             </View>
           )}
 
-          {/* LIST */}
           {bookmarks?.map((item: any) => (
             <TouchableOpacity
               key={item._id}
               activeOpacity={0.9}
               style={styles.card}
-              onPress={() =>
-                router.push(`/post-details?postId=${item._id}`)
-              }
+              onPress={() => openPost(item._id)}
             >
-              {/* Thumbnail */}
               {item.imageUrl ? (
                 <Image source={{ uri: item.imageUrl }} style={styles.thumb} />
               ) : (
                 <View style={[styles.thumb, { backgroundColor: "#ccc" }]} />
               )}
 
-              {/* Content */}
               <View style={styles.info}>
                 <Text style={styles.title} numberOfLines={2}>
                   {item.title}
@@ -131,7 +135,6 @@ export default function Bookmarks() {
                 )}
               </View>
 
-              {/* Remove */}
               <TouchableOpacity
                 onPress={() => handleRemoveBookmark(item._id)}
                 style={styles.removeBtn}
