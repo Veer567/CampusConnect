@@ -18,6 +18,12 @@ export const styles = StyleSheet.create({
     
     paddingBottom: 20, // was 10 → pushes background lower
   },
+  fabButton:{
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    zIndex: 10,
+  },
 
   headerContent: {
     flexDirection: "row",

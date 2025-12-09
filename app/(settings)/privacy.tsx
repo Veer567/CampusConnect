@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import useBackToSettingsRoot from "@/hooks/useBackToSettingsRoot";
 import {
   ScrollView,
   Text,
@@ -10,6 +11,7 @@ import {
 
 export default function PrivacyPolicy() {
   const router = useRouter();
+  useBackToSettingsRoot();
 
   return (
     <ScrollView style={styles.container}>

@@ -6,12 +6,13 @@ import React, { useEffect } from "react";
 import {
   BackHandler,
   Pressable,
-  SafeAreaView,
+  
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsDrawer() {
   const router = useRouter();
@@ -20,6 +21,11 @@ export default function SettingsDrawer() {
   type IconName = ComponentProps<typeof Ionicons>["name"];
 
   const items: { label: string; icon: IconName; route: string }[] = [
+    {
+      label: "Account",
+      icon: "person-circle-outline",
+      route: "/(settings)/account",
+    },
     { label: "FAQ", icon: "help-circle-outline", route: "/(settings)/faq" },
     { label: "Support", icon: "headset-outline", route: "/(settings)/support" },
     {
@@ -38,11 +44,6 @@ export default function SettingsDrawer() {
       route: "/(settings)/privacy",
     },
     { label: "About Us", icon: "people-outline", route: "/(settings)/about" },
-    {
-      label: "AI Assistant",
-      icon: "sparkles-outline",
-      route: "/(settings)/ai-bot",
-    },
   ];
 
   // Android back button → return to Profile
@@ -56,7 +57,7 @@ export default function SettingsDrawer() {
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={[]}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Settings</Text>
 

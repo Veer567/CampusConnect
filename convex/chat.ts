@@ -108,25 +108,20 @@ export const sendMessage = mutation({
       });
 
       // 🔥 Send Push Notification (using scheduler)
-      await ctx.scheduler.runAfter(
-        0,
-        api.push.sendPushNotification,
-        {
-          userId,
-          title: `${me.username || me.fullname} sent you a message`,
-          body: args.text ?? "📷 Photo",
-          data: {
-            type: "message",
-            conversationId: args.conversationId,
-          },
-        }
-      );
+      await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
+        userId,
+        title: `${me.username || me.fullname} sent you a message`,
+        body: args.text ?? "📷 Photo",
+        data: {
+          type: "message",
+          conversationId: args.conversationId,
+        },
+      });
     }
 
     return msgId;
   },
 });
-
 
 export const generateUploadUrl = mutation(async (ctx) => {
   const identity = await ctx.auth.getUserIdentity();
@@ -375,9 +370,7 @@ export const getUnreadMessageCount = query({
     const me = await getAuthenticatedUser(ctx);
 
     // fetch conversations where I'm a participant
-    const conversations = await ctx.db
-      .query("conversations")
-      .collect();
+    const conversations = await ctx.db.query("conversations").collect();
 
     const myConversations = conversations.filter((c) =>
       c.participants.map(String).includes(String(me._id))
@@ -406,7 +399,6 @@ export const getUnreadMessageCount = query({
 
     return unreadTotal;
   },
-  
 });
 
 export const deleteMessage = mutation({
@@ -420,7 +412,7 @@ export const deleteMessage = mutation({
       throw new Error("Not your message");
 
     await ctx.db.delete(messageId);
-  }
+  },
 });
 
 export const editMessage = mutation({
@@ -434,7 +426,7 @@ export const editMessage = mutation({
       throw new Error("Not your message");
 
     await ctx.db.patch(messageId, { text });
-  }
+  },
 });
 /*───────────────────────────────────────────
   USER PRESENCE (Online / Last Seen)
@@ -447,9 +439,10 @@ export const updatePresence = mutation({
   args: {},
   handler: async (ctx) => {
     const me = await getAuthenticatedUser(ctx);
+    if (!me) return; // User logged out → skip
+
     const now = Date.now();
 
-    // Check if entry exists
     const existing = await ctx.db
       .query("presence")
       .withIndex("by_user", (q) => q.eq("userId", me._id))
@@ -526,4 +519,3 @@ export const getMessagesLive = query({
       .take(50);
   },
 });
-

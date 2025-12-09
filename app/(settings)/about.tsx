@@ -33,7 +33,7 @@ export default function About() {
           try {
             router.back();
           } catch {
-            router.replace("/(settings)");
+            router.replace("/(settings)/SettingsDrawer");
           }
         }}
       >

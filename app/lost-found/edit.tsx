@@ -3,11 +3,13 @@ import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
+import { useToast } from "@/components/Toast/ToastProvider";
 
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -16,21 +18,21 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Dimensions,
   View,
 } from "react-native";
 
-import { useRoute, useNavigation } from "@react-navigation/native";
-import CustomStatusBar from "@/components/CustomStatusBar";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
+
 
 export default function EditLostItem() {
   // ⭐ FIXED: Now inside component, not global
   const route = useRoute();
   const navigation = useNavigation<any>();
   const { id } = route.params as { id: string };
+  const toast = useToast();
 
   // ITEM QUERY
   const item = useQuery(
@@ -82,10 +84,10 @@ export default function EditLostItem() {
         imageUrl: imageUrl || undefined,
       });
 
-      Alert.alert("Updated!", "Your item was successfully updated.");
+      toast.show({ type: "success", message: "Your item was successfully updated." });
       navigation.goBack(); // ⭐ FIXED
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Update failed");
+      toast.show({ type: "error", message: err.message || "Update failed" });
     }
   };
 
@@ -99,12 +101,12 @@ export default function EditLostItem() {
 
   // UI
   return (
-    <><CustomStatusBar /><KeyboardAvoidingView
+    <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: "#F8FAFC" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.header}>Edit Lost & Found Item</Text>
+        <Text style={styles.header}>Edit Item</Text>
 
         {/* Title */}
         <Text style={styles.label}>Item Title *</Text>
@@ -113,7 +115,8 @@ export default function EditLostItem() {
           value={title}
           onChangeText={setTitle}
           placeholder="Black Laptop Bag"
-          placeholderTextColor="#aaa" />
+          placeholderTextColor="#aaa"
+        />
 
         {/* Description */}
         <Text style={styles.label}>Description *</Text>
@@ -123,7 +126,8 @@ export default function EditLostItem() {
           multiline
           onChangeText={setDescription}
           placeholder="Describe the item..."
-          placeholderTextColor="#aaa" />
+          placeholderTextColor="#aaa"
+        />
 
         {/* Location */}
         <Text style={styles.label}>Location *</Text>
@@ -132,7 +136,8 @@ export default function EditLostItem() {
           value={location}
           onChangeText={setLocation}
           placeholder="Library 2nd Floor"
-          placeholderTextColor="#aaa" />
+          placeholderTextColor="#aaa"
+        />
 
         {/* Status */}
         <Text style={styles.label}>Status</Text>
@@ -144,10 +149,7 @@ export default function EditLostItem() {
               onPress={() => setStatus(s as "lost" | "found")}
             >
               <Text
-                style={[
-                  styles.chipText,
-                  status === s && { color: "#fff" },
-                ]}
+                style={[styles.chipText, status === s && { color: "#fff" }]}
               >
                 {s.toUpperCase()}
               </Text>
@@ -173,7 +175,7 @@ export default function EditLostItem() {
           <Text style={styles.submitText}>Save Changes</Text>
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView></>
+    </KeyboardAvoidingView>
   );
 }
 

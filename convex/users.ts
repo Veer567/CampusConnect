@@ -217,12 +217,17 @@ async function updateFollowCounts(
 export const getActivityStats = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    const likes = await ctx.db.query("likes").withIndex("by_user", q => q.eq("userId", userId)).collect();
-    const bookmarks = await ctx.db.query("bookmarks").withIndex("by_user", q => q.eq("userId", userId)).collect();
+    const likes = await ctx.db
+      .query("likes")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const bookmarks = await ctx.db
+      .query("bookmarks")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
     return { likes: likes.length, bookmarks: bookmarks.length };
   },
 });
-
 
 export const updateProfilePicture = mutation({
   args: {
@@ -401,5 +406,56 @@ export const getUserById = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
     return await ctx.db.get(userId);
+  },
+});
+export const deleteUserData = mutation({
+  args: { clerkId: v.string() },
+  handler: async (ctx, { clerkId }) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkId))
+      .unique();
+
+    if (!user) return;
+
+    // Delete user record
+    await ctx.db.delete(user._id);
+
+    // Delete follows
+    const follows = await ctx.db.query("follows").collect();
+    for (const f of follows) {
+      if (
+        String(f.followerId) === String(user._id) ||
+        String(f.followingId) === String(user._id)
+      ) {
+        await ctx.db.delete(f._id);
+      }
+    }
+
+    // Delete presence
+    const presence = await ctx.db
+      .query("presence")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .unique();
+    if (presence) await ctx.db.delete(presence._id);
+
+    // Delete messages & conversations references
+    const messages = await ctx.db.query("messages").collect();
+    for (const m of messages) {
+      if (String(m.senderId) === String(user._id)) {
+        await ctx.db.delete(m._id);
+      }
+    }
+
+    // Delete notifications
+    const notifications = await ctx.db.query("notifications").collect();
+    for (const n of notifications) {
+      if (
+        String(n.receiverId) === String(user._id) ||
+        String(n.senderId) === String(user._id)
+      ) {
+        await ctx.db.delete(n._id);
+      }
+    }
   },
 });

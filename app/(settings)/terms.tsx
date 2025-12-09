@@ -2,9 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { ScrollView, Text, StyleSheet, Pressable, View } from "react-native";
 
+import useBackToSettingsRoot from "@/hooks/useBackToSettingsRoot";
+
 export default function Terms() {
   const router = useRouter();
-
+  useBackToSettingsRoot();
   return (
     <ScrollView style={styles.container}>
       

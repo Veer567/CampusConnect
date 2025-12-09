@@ -1,3 +1,7 @@
+// ==========================================================
+// LOST & FOUND SCREEN — Updated with GlobalAlert + Toast
+// ==========================================================
+
 import { api } from "@/convex/_generated/api";
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
 import { styles } from "@/styles/lost.styles";
@@ -13,34 +17,32 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import ActionSheet from "react-native-actions-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { shimmerStyles as sh } from "../../styles/lost.styles";
-
 import { COLORS } from "@/constants/themes";
 import {
-  Alert,
   Animated,
   BackHandler,
   FlatList,
-  Modal,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
-import CustomStatusBar from "@/components/CustomStatusBar";
+import { shimmerStyles as sh } from "../../styles/lost.styles";
 
-const FALLBACK_IMG_1 = "/mnt/data/9f283b40-577e-431e-bb73-41b517de1473.png";
-const FALLBACK_IMG_2 = "/mnt/data/a1903931-2540-4e0a-8519-dd8d2e2a9649.png";
+import CustomStatusBar from "@/components/CustomStatusBar";
+import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
+import { useToast } from "@/components/Toast/ToastProvider";
+
+const FALLBACK_IMG_1 = "https://i.pravatar.cc/200";
+const FALLBACK_IMG_2 = "https://i.pravatar.cc/300";
 
 const STATUS_FILTERS = ["All", "Lost", "Found"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
-type ConfirmAction = "delete" | "reunite" | null;
 
 // ==========================================================
-// SKELETON COMPONENT
+// SKELETON FOR LOADING ITEMS
 // ==========================================================
 function LostItemSkeleton() {
   const shimmer = useRef(new Animated.Value(0)).current;
@@ -57,69 +59,40 @@ function LostItemSkeleton() {
 
   const translateX = shimmer.interpolate({
     inputRange: [0, 1],
-    outputRange: [-150, 150], // width of shimmer slide
+    outputRange: [-150, 150],
   });
 
   const Shimmer = () => (
     <Animated.View
-      style={[
-        sh.shimmerOverlay,
-        {
-          transform: [{ translateX }],
-        },
-      ]}
+      style={[sh.shimmerOverlay, { transform: [{ translateX }] }]}
     />
   );
 
   return (
     <View style={[styles.card, { opacity: 0.9 }]}>
-      {/* Image Block */}
-      <View
-        style={[
-          styles.cardImageContainer,
-          sh.shimmerContainer,
-          { backgroundColor: "#e5e5e5" },
-        ]}
-      >
+      <View style={[styles.cardImageContainer, sh.shimmerContainer]}>
         <Shimmer />
       </View>
 
       <View style={{ padding: 12 }}>
-        {/* Row */}
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View
             style={[
               sh.shimmerContainer,
-              {
-                height: 40,
-                width: 40,
-                borderRadius: 20,
-                backgroundColor: "#d4d4d4",
-              },
+              { height: 40, width: 40, borderRadius: 20 },
             ]}
           >
             <Shimmer />
           </View>
 
           <View style={{ marginLeft: 10, flex: 1 }}>
-            <View
-              style={[
-                sh.shimmerContainer,
-                { height: 12, width: "60%", backgroundColor: "#e0e0e0" },
-              ]}
-            >
+            <View style={[sh.shimmerContainer, { height: 12, width: "60%" }]}>
               <Shimmer />
             </View>
-
             <View
               style={[
                 sh.shimmerContainer,
-                {
-                  marginTop: 6,
-                  height: 10,
-                  width: "40%",
-                  backgroundColor: "#d9d9d9",
-                },
+                { height: 10, width: "40%", marginTop: 6 },
               ]}
             >
               <Shimmer />
@@ -127,64 +100,22 @@ function LostItemSkeleton() {
           </View>
         </View>
 
-        {/* Title */}
         <View
           style={[
             sh.shimmerContainer,
-            {
-              marginTop: 12,
-              height: 14,
-              width: "80%",
-              backgroundColor: "#e0e0e0",
-            },
+            { marginTop: 12, height: 14, width: "80%" },
           ]}
         >
           <Shimmer />
         </View>
 
-        {/* Description */}
         <View
           style={[
             sh.shimmerContainer,
-            {
-              marginTop: 8,
-              height: 12,
-              width: "90%",
-              backgroundColor: "#dadada",
-            },
+            { marginTop: 8, height: 12, width: "90%" },
           ]}
         >
           <Shimmer />
-        </View>
-
-        {/* Meta */}
-        <View style={{ marginTop: 15 }}>
-          <View
-            style={[
-              sh.shimmerContainer,
-              {
-                height: 10,
-                width: "55%",
-                backgroundColor: "#e0e0e0",
-                marginBottom: 6,
-              },
-            ]}
-          >
-            <Shimmer />
-          </View>
-
-          <View
-            style={[
-              sh.shimmerContainer,
-              {
-                height: 10,
-                width: "35%",
-                backgroundColor: "#d9d9d9",
-              },
-            ]}
-          >
-            <Shimmer />
-          </View>
         </View>
       </View>
     </View>
@@ -204,16 +135,13 @@ export default function LostFoundScreen() {
   const actionSheetRef = useRef<any>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
+  const toast = useToast();
+  const showAlert = useAlert((s) => s.show);
+
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
 
-  const [confirmVisible, setConfirmVisible] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
-  const [confirmItem, setConfirmItem] = useState<any | null>(null);
-  const confirmAnim = useRef(new Animated.Value(0)).current;
-
-  // BACK FIX
   useFocusEffect(
     React.useCallback(() => {
       const handler = () => {
@@ -252,11 +180,8 @@ export default function LostFoundScreen() {
   const getOrStartConv = useMutation(api.chat.getOrStartConversation);
   const markReunitedMut = useMutation(api.lostItems.markItemReunited);
   const markFoundMut = useMutation(api.lostItems.markItemFound);
-  const deleteLostItemMutation = useMutation(
-    (api.lostItems as any).deleteLostItem
-  );
+  const deleteLostItem = useMutation(api.lostItems.deleteLostItem);
 
-  // FILTERING
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return itemsList;
@@ -269,7 +194,7 @@ export default function LostFoundScreen() {
     });
   }, [search, itemsList]);
 
-  // ACTION SHEET
+  // ACTION SHEET HANDLERS
   const openItemOptions = (item: any) => {
     setSelectedItem(item);
     actionSheetRef.current?.show();
@@ -277,53 +202,35 @@ export default function LostFoundScreen() {
 
   const handleEdit = () => {
     actionSheetRef.current?.hide();
-    if (!selectedItem) return;
     navigation.navigate("LostFoundEdit", { id: selectedItem._id });
   };
 
   const handleDelete = () => {
     actionSheetRef.current?.hide();
-    setConfirmAction("delete");
-    setConfirmItem(selectedItem);
-    openConfirmModal();
+
+    showAlert({
+      title: "Delete Item?",
+      message: "This item will be permanently removed.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      onConfirm: async () => {
+        try {
+          await deleteLostItem({ id: selectedItem._id });
+          toast.show({
+            type: "success",
+            message: "Item deleted successfully.",
+          });
+        } catch (err) {
+          toast.show({ type: "error", message: "Failed to delete item." });
+        }
+      },
+    });
   };
 
-  function openConfirmModal() {
-    setConfirmVisible(true);
-    Animated.timing(confirmAnim, {
-      toValue: 1,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  }
-
-  function closeConfirmModal() {
-    Animated.timing(confirmAnim, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: true,
-    }).start(() => setConfirmVisible(false));
-  }
-
-  const performConfirmAction = async () => {
-    if (!confirmAction || !confirmItem) return closeConfirmModal();
-
-    try {
-      if (confirmAction === "delete")
-        await deleteLostItemMutation({ id: confirmItem._id });
-      else if (confirmAction === "reunite")
-        await markReunitedMut({ id: confirmItem._id });
-    } catch (e) {
-      Alert.alert("Error", String(e));
-    }
-    closeConfirmModal();
-  };
-
-  // CREATE NEW ITEM
   const handleCreatePress = () => {
     Animated.sequence([
       Animated.timing(scaleAnim, {
-        toValue: 0.92,
+        toValue: 0.9,
         duration: 100,
         useNativeDriver: true,
       }),
@@ -332,23 +239,25 @@ export default function LostFoundScreen() {
         duration: 100,
         useNativeDriver: true,
       }),
-    ]).start(() => navigation.navigate("LostFoundAdd"));
+    ]).start();
+
+    navigation.navigate("LostFoundAdd");
   };
 
   // ==========================================================
   // UI
   // ==========================================================
   return (
-    <><CustomStatusBar /><View style={styles.container}>
-
+    <View style={styles.container}>
+     
       {/* HEADER */}
       <LinearGradient
         colors={[COLORS.primary, COLORS.secondary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
+        
         style={[styles.header, { paddingTop: 10 }]}
       >
-
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
             <View style={styles.iconWrapper}>
@@ -360,9 +269,9 @@ export default function LostFoundScreen() {
               <Text style={styles.headerSubtitle}>Help find missing items</Text>
             </View>
           </View>
-
         </View>
 
+        {/* SEARCH */}
         <View style={styles.searchWrapper}>
           <View style={styles.searchContainer}>
             <Ionicons name="search-outline" size={16} color="#999" />
@@ -371,7 +280,8 @@ export default function LostFoundScreen() {
               placeholderTextColor="#999"
               style={styles.searchInput}
               value={search}
-              onChangeText={setSearch} />
+              onChangeText={setSearch}
+            />
           </View>
         </View>
       </LinearGradient>
@@ -382,7 +292,8 @@ export default function LostFoundScreen() {
           <Ionicons
             name="checkmark-circle-outline"
             size={20}
-            color={COLORS.primary} />
+            color={COLORS.primary}
+          />
           <Text style={styles.statNumber}>{stats.foundCount}</Text>
           <Text style={styles.statLabel}>Found</Text>
         </View>
@@ -397,7 +308,8 @@ export default function LostFoundScreen() {
           <Ionicons
             name="remove-circle-outline"
             size={20}
-            color={COLORS.primary} />
+            color={COLORS.primary}
+          />
           <Text style={styles.statNumber}>{stats.lostCount}</Text>
           <Text style={styles.statLabel}>Lost</Text>
         </View>
@@ -405,11 +317,7 @@ export default function LostFoundScreen() {
 
       {/* FILTERS */}
       <View style={styles.filtersSection}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterScrollContent}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {STATUS_FILTERS.map((s) => {
             const active = statusFilter === s;
             return (
@@ -419,13 +327,16 @@ export default function LostFoundScreen() {
                 style={[styles.filterChip, active && styles.filterChipActive]}
               >
                 <Ionicons
-                  name={s === "Lost"
-                    ? "alert-circle-outline"
-                    : s === "Found"
-                      ? "checkmark-circle-outline"
-                      : "albums-outline"}
+                  name={
+                    s === "Lost"
+                      ? "alert-circle-outline"
+                      : s === "Found"
+                        ? "checkmark-circle-outline"
+                        : "albums-outline"
+                  }
                   size={16}
-                  color={active ? "#fff" : COLORS.textSecondary} />
+                  color={active ? "#fff" : COLORS.textSecondary}
+                />
                 <Text
                   style={[styles.filterText, active && styles.filterTextActive]}
                 >
@@ -440,35 +351,57 @@ export default function LostFoundScreen() {
       {/* LIST */}
       <FlatList
         data={(isLoading ? [1, 2, 3, 4] : filtered) as any}
-        keyExtractor={(item, index) => isLoading ? `skeleton-${index}` : item._id}
+        keyExtractor={(item, index) =>
+          isLoading ? `skeleton-${index}` : item._id
+        }
         contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => isLoading ? (
-          <LostItemSkeleton />
-        ) : (
-          <LostItemCard
-            item={item}
-            me={me}
-            navigation={navigation}
-            onStartChat={getOrStartConv}
-            onOpenOptions={() => openItemOptions(item)}
-            markFoundMut={markFoundMut}
-            markReunitedMut={markReunitedMut}
-            onOwnerMarkFound={(itm: any) => {
-              setConfirmAction("reunite");
-              setConfirmItem(itm);
-              openConfirmModal();
-            } } />
-        )}
-        ListEmptyComponent={!isLoading ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="cube-outline" size={64} color="#999" />
-            <Text style={styles.emptyTitle}>No items found</Text>
-            <Text style={styles.emptySubtitle}>
-              Try another filter or add an item
-            </Text>
-          </View>
-        ) : null} />
+        renderItem={({ item }) =>
+          isLoading ? (
+            <LostItemSkeleton />
+          ) : (
+            <LostItemCard
+              item={item}
+              me={me}
+              navigation={navigation}
+              onStartChat={getOrStartConv}
+              onOpenOptions={() => openItemOptions(item)}
+              onOwnerMarkFound={(itm: any) =>
+                showAlert({
+                  title: "Mark as Reunited?",
+                  message: "This will mark the item as reunited.",
+                  confirmText: "Confirm",
+                  cancelText: "Cancel",
+                  onConfirm: async () => {
+                    try {
+                      await markReunitedMut({ id: itm._id });
+                      toast.show({
+                        type: "success",
+                        message: "Item marked as reunited.",
+                      });
+                    } catch {
+                      toast.show({
+                        type: "error",
+                        message: "Failed to update item.",
+                      });
+                    }
+                  },
+                })
+              }
+            />
+          )
+        }
+        ListEmptyComponent={
+          !isLoading ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="cube-outline" size={64} color="#999" />
+              <Text style={styles.emptyTitle}>No items found</Text>
+              <Text style={styles.emptySubtitle}>
+                Try another filter or add one
+              </Text>
+            </View>
+          ) : null
+        }
+      />
 
       {/* FAB */}
       <Animated.View
@@ -518,126 +451,9 @@ export default function LostFoundScreen() {
         </View>
       </ActionSheet>
 
-      {/* CONFIRM MODAL */}
-      {/* CONFIRM MODAL */}
-      {/* CONFIRM MODAL */}
-      <Modal visible={confirmVisible} transparent animationType="none">
-        <TouchableWithoutFeedback onPress={closeConfirmModal}>
-          <Animated.View
-            style={[
-              {
-                flex: 1,
-                backgroundColor: "rgba(0,0,0,0.4)",
-              },
-              { opacity: confirmAnim },
-            ]} />
-        </TouchableWithoutFeedback>
-
-        <View style={{ justifyContent: "flex-end", flex: 1 }}>
-          <Animated.View
-            style={[
-              {
-                backgroundColor: "#fff",
-                paddingHorizontal: 20,
-                paddingTop: 20,
-                paddingBottom: 32,
-                borderTopLeftRadius: 20,
-                borderTopRightRadius: 20,
-                shadowColor: "#000",
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 8,
-              },
-              {
-                transform: [
-                  {
-                    translateY: confirmAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [200, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            {/* Title */}
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: "700",
-                textAlign: "center",
-                color: COLORS.text,
-                marginBottom: 8,
-              }}
-            >
-              {confirmAction === "delete"
-                ? "Delete Item?"
-                : "Mark as Reunited?"}
-            </Text>
-
-            {/* Message */}
-            <Text
-              style={{
-                fontSize: 15,
-                textAlign: "center",
-                color: COLORS.textSecondary,
-                marginBottom: 24,
-                lineHeight: 20,
-              }}
-            >
-              {confirmAction === "delete"
-                ? "This item will be permanently removed."
-                : "This will mark the item as reunited."}
-            </Text>
-
-            {/* Buttons */}
-            <View style={{ gap: 12 }}>
-              {/* Confirm */}
-              <TouchableOpacity
-                style={{
-                  backgroundColor: confirmAction === "delete" ? COLORS.red : COLORS.primary,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                }}
-                onPress={performConfirmAction}
-              >
-                <Text
-                  style={{
-                    color: "#fff",
-                    textAlign: "center",
-                    fontSize: 16,
-                    fontWeight: "700",
-                  }}
-                >
-                  {confirmAction === "delete" ? "Delete" : "Confirm"}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Cancel */}
-              <TouchableOpacity
-                style={{
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  backgroundColor: "#f2f2f2",
-                }}
-                onPress={closeConfirmModal}
-              >
-                <Text
-                  style={{
-                    color: COLORS.text,
-                    textAlign: "center",
-                    fontSize: 16,
-                    fontWeight: "600",
-                  }}
-                >
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
-    </View></>
+      {/* GLOBAL CONFIRMATION MODAL */}
+      <GlobalAlert />
+    </View>
   );
 }
 
@@ -659,11 +475,10 @@ function LostItemCard({
   );
 
   const cache = useProfileImageCache(String(item.reporterId));
+
   const avatarUri = userProfile?.image
     ? `${userProfile.image}?t=${cache}`
-    : item.reporterImage
-      ? `${item.reporterImage}?t=${cache}`
-      : FALLBACK_IMG_1;
+    : FALLBACK_IMG_1;
 
   const createdAgo = formatDistanceToNow(new Date(item.createdAt), {
     addSuffix: true,
@@ -678,10 +493,7 @@ function LostItemCard({
     const conv = await onStartChat({ otherUserId: item.reporterId });
     const conversationId = conv?._id ?? conv;
 
-    // FULL SAFETY CHECKS → Prevents ArgumentValidationError
-    if (!conversationId) return;
-    if (!me?._id) return;
-    if (!item.reporterId) return;
+    if (!conversationId || !me?._id) return;
 
     router.push(
       `/chat-screen?conversationId=${conversationId}&currentUserId=${me._id}&otherUserId=${item.reporterId}`

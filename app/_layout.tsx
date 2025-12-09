@@ -43,10 +43,10 @@ function PresenceUpdater() {
 }
 export default function RootLayout() {
   const pathname = usePathname();
-  const hiddenScreens = ["/index", "/profile", "/lost-found", "/other-profile"];
+  const hiddenScreens = ["/index", "/profile",  "/other-profile"];
 
   const shouldHide =
-    hiddenScreens.includes(pathname) || pathname.startsWith("/lost-found/");
+    hiddenScreens.includes(pathname) || pathname.startsWith("/hello");
 
   return (
     <ClerkAndConvexProvider>

@@ -1,63 +1,98 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ScrollView, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+
+import useBackToSettingsRoot from "@/hooks/useBackToSettingsRoot";
+import {
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
+import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
+import { useToast } from "@/components/Toast/ToastProvider";
 
 export default function Support() {
   const router = useRouter();
   const send = useMutation(api.settings.sendSupportMessage);
+  const showAlert = useAlert((s) => s.show);
+  const toast = useToast();
+  useBackToSettingsRoot();
 
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 
+  /* ---------------------- SUBMIT SUPPORT MESSAGE ---------------------- */
   const submit = async () => {
-    if (!email || !message) return Alert.alert("Missing info", "Please fill all fields");
+    if (!email.trim() || !message.trim()) {
+      return showAlert({
+        title: "Missing Information",
+        message: "Please fill out both fields before submitting.",
+        confirmText: "OK",
+      });
+    }
 
     await send({ email, message });
 
-    Alert.alert("Success", "Your message was sent");
-    router.back();
+    showAlert({
+      title: "Message Sent",
+      message: "Your issue has been successfully submitted to support.",
+      confirmText: "OK",
+      onConfirm: () => router.back(),
+    });
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <TouchableOpacity style={styles.back} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={26} />
-      </TouchableOpacity>
+    <>
+      <ScrollView style={styles.container}>
+        <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={26} />
+        </TouchableOpacity>
 
-      <Text style={styles.title}>Contact Support</Text>
+        <Text style={styles.title}>Contact Support</Text>
 
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="example@gmail.com"
-        value={email}
-        onChangeText={setEmail}
-      />
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="example@gmail.com"
+          value={email}
+          onChangeText={setEmail}
+        />
 
-      <Text style={styles.label}>Message</Text>
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="Describe your issue"
-        multiline
-        value={message}
-        onChangeText={setMessage}
-      />
+        <Text style={styles.label}>Message</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Describe your issue..."
+          multiline
+          value={message}
+          onChangeText={setMessage}
+        />
 
-      <TouchableOpacity style={styles.btn} onPress={submit}>
-        <Text style={styles.btnText}>Send Message</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={styles.btn} onPress={submit}>
+          <Text style={styles.btnText}>Send Message</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* ⭐ Required for confirmation modals */}
+      <GlobalAlert />
+    </>
   );
 }
 
+/* ---------------------- STYLES ---------------------- */
+
 const styles = StyleSheet.create({
   container: { padding: 20, backgroundColor: "#fff", flex: 1 },
+
   back: { paddingBottom: 10 },
+
   title: { fontSize: 26, fontWeight: "700", marginBottom: 25 },
+
   label: { fontSize: 15, marginTop: 10 },
+
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
@@ -65,12 +100,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 6,
   },
-  textArea: { height: 140 },
+
+  textArea: { height: 140, textAlignVertical: "top" },
+
   btn: {
     marginTop: 30,
     backgroundColor: "#007AFF",
     padding: 14,
     borderRadius: 10,
   },
-  btnText: { textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "700" },
+
+  btnText: {
+    textAlign: "center",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });

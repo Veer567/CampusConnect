@@ -163,8 +163,7 @@ export default function AddLostItem() {
   };
 
   return (
-    <>
-      <CustomStatusBar />
+  
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -273,7 +272,7 @@ export default function AddLostItem() {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
-    </>
+  
   );
 }
 
