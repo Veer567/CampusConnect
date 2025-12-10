@@ -34,6 +34,8 @@ const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const passwordRef = useRef<TextInput>(null);
+
 
   // shimmer animation
   const shimmer = useRef(new Animated.Value(0)).current;
@@ -107,13 +109,14 @@ const LoginScreen: React.FC = () => {
       setLoading(false);
     }
   };
+  
 
   return (
     <SafeAreaView style={localStyles.safeArea}>
       <KeyboardAvoidingView
         style={localStyles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 30 : 25}
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
@@ -148,12 +151,14 @@ const LoginScreen: React.FC = () => {
               placeholder="Enter your Marwadi email"
               placeholderTextColor="#9AA0A6"
               style={localStyles.input}
+               onSubmitEditing={() => passwordRef.current?.focus()}
               textContentType="username"
             />
 
             <Text style={localStyles.label}>Password</Text>
             <View style={localStyles.passwordRow}>
               <TextInput
+                ref={passwordRef}   // ← ADD REF
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}

@@ -13,34 +13,40 @@ import { useMutation } from "convex/react";
 import React, { useEffect } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
+import { useAuth } from "@clerk/clerk-expo";
+
 function PresenceUpdater() {
   const updatePresence = useMutation(api.chat.updatePresence);
+  const { isSignedIn } = useAuth(); // ← Check if user is authenticated
 
   useEffect(() => {
-    // Fire immediately so other users see us online fast
+    if (!isSignedIn) return; // ← STOP calling Convex if user not logged in
+
+    // Fire immediately
     updatePresence().catch(() => {});
 
     // Periodic heartbeat
     const interval = setInterval(() => {
       updatePresence().catch(() => {});
-    }, 8000); // ~8s is fine (server considers online if lastSeen < 15s)
+    }, 8000);
 
-    // Also update when app comes to foreground
     const onAppStateChange = (next: AppStateStatus) => {
       if (next === "active") {
         updatePresence().catch(() => {});
       }
     };
+
     const sub = AppState.addEventListener("change", onAppStateChange);
 
     return () => {
       clearInterval(interval);
       sub.remove();
     };
-  }, [updatePresence]);
+  }, [isSignedIn, updatePresence]); // ← Add isSignedIn to dependency array
 
   return null;
 }
+
 export default function RootLayout() {
   const pathname = usePathname();
   const hiddenScreens = ["/index", "/profile",  "/other-profile"];

@@ -22,6 +22,7 @@ import ProfileContent from "@/components/Profile/ProfileContent";
 import { ProfileHeader } from "@/components/Profile/ProfileHeader";
 import { Id } from "@/convex/_generated/dataModel";
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
@@ -71,22 +72,31 @@ export default function OtherUserProfile() {
           posts={user.posts}
           userId={user._id}
         />
-
+        {/* Follow Button */}
         <TouchableOpacity
-          style={isFollowing ? styles.followingBtn : styles.followBtn}
+          style={isFollowing ? styles.followingBtnNew : styles.followBtnNew}
+          activeOpacity={0.7}
           onPress={() => toggleFollow({ followingId: user._id })}
         >
-          <Text style={styles.followBtnText}>
-            {isFollowing ? "Following ✔" : "Follow"}
-          </Text>
+          {isFollowing ? (
+            <>
+              <Ionicons name="checkmark-circle" size={18} color="#fff" />
+              <Text style={styles.followBtnNewText}>Following</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="person-add" size={18} color="#fff" />
+              <Text style={styles.followBtnNewText}>Follow</Text>
+            </>
+          )}
         </TouchableOpacity>
 
+        {/* Message Button */}
         <TouchableOpacity
-          style={styles.messageBtn}
+          style={styles.messageBtnNew}
+          activeOpacity={0.7}
           onPress={async () => {
-            const conv = await getOrStartConv({
-              otherUserId: user._id,
-            });
+            const conv = await getOrStartConv({ otherUserId: user._id });
 
             const conversationId =
               typeof conv === "object" && conv && "_id" in conv
@@ -98,22 +108,25 @@ export default function OtherUserProfile() {
             );
           }}
         >
-          <Text style={styles.messageText}>Message 💬</Text>
+          <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+          <Text style={styles.messageBtnNewText}>Message</Text>
         </TouchableOpacity>
 
-        <ProfileContent
-          emails={user.emails || []}
-          departments={user.departments || []}
-          interests={user.interests || []}
-          resumeUrl={user.resumeUrl}
-          editing={false}
-          setEmails={() => {}}
-          openSheet={() => {}}
-          removeEmail={() => {}}
-          removeDepartment={() => {}}
-          removeInterest={() => {}}
-          pickResume={() => {}}
-        />
+        <View style={styles.contentCard}>
+          <ProfileContent
+            emails={user.emails || []}
+            departments={user.departments || []}
+            interests={user.interests || []}
+            resumeUrl={user.resumeUrl}
+            editing={false}
+            setEmails={() => {}}
+            openSheet={() => {}}
+            removeEmail={() => {}}
+            removeDepartment={() => {}}
+            removeInterest={() => {}}
+            pickResume={() => {}}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -434,5 +447,85 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     fontSize: wp(4),
+  },
+  /* BEAUTIFUL FOLLOW BUTTON */
+  followBtnNew: {
+    marginTop: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    borderRadius: 50,
+    width: "75%",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+
+  /* FOLLOWING (green gradient-ish look) */
+  followingBtnNew: {
+    marginTop: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#4caf50",
+    paddingVertical: 14,
+    borderRadius: 50,
+    width: "75%",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+
+  followBtnNewText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: wp(4),
+  },
+
+  /* MESSAGE BUTTON */
+  messageBtnNew: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#5865F2",
+    paddingVertical: 14,
+    borderRadius: 50,
+    width: "75%",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+
+  messageBtnNewText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: wp(4),
+  },
+  contentCard: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 14,
+    marginTop: 18,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
 });

@@ -12,13 +12,16 @@ const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!);
 
 export default function ClerkAndConvexProvider({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!} tokenCache={tokenCache}>
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <ClerkLoaded>
+    <ClerkProvider 
+      publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!} 
+      tokenCache={tokenCache}
+    >
+      <ClerkLoaded>
+        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
           <PresenceUpdater />
           {children}
-        </ClerkLoaded>
-      </ConvexProviderWithClerk>
+        </ConvexProviderWithClerk>
+      </ClerkLoaded>
     </ClerkProvider>
   );
 }
@@ -26,14 +29,19 @@ export default function ClerkAndConvexProvider({ children }: { children: React.R
 /* ---------------- Presence Updater ---------------- */
 function PresenceUpdater() {
   const updatePresence = useMutation(api.chat.updatePresence);
+  const { isSignedIn } = useAuth();
 
   useEffect(() => {
-    const id = setInterval(() => {
+    if (!isSignedIn) return; // ← only run if authenticated
+
+    updatePresence().catch(() => {});
+
+    const interval = setInterval(() => {
       updatePresence().catch(() => {});
     }, 5000);
 
-    return () => clearInterval(id);
-  }, []);
+    return () => clearInterval(interval);
+  }, [isSignedIn]);
 
   return null;
 }

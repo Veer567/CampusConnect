@@ -1,4 +1,6 @@
-// app/search.tsx
+// --------------------
+// BEAUTIFUL NEW SEARCH UI
+// --------------------
 
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
@@ -7,21 +9,23 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+
 import {
   Animated,
   Image,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
 /* -------------------------------------------------------
-   SIMPLE SHIMMER (INLINE)
+   SHIMMER (same as before)
 ------------------------------------------------------- */
 function Shimmer({ style }: any) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -56,43 +60,18 @@ function Shimmer({ style }: any) {
 }
 
 /* -------------------------------------------------------
-   SIMPLE SKELETON LOADING
+   USER SKELETON (Better looking)
 ------------------------------------------------------- */
-function SimpleSearchSkeleton() {
+function UserSkeletonList() {
   return (
-    <View style={{ padding: 16 }}>
-      {/* Search bar */}
-      <Shimmer style={{ width: "100%", height: 45, borderRadius: 10 }} />
-
-      <View style={{ height: 20 }} />
-
-      {/* List rows */}
-      {Array.from({ length: 6 }).map((_, i) => (
-        <View
-          key={i}
-          style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}
-        >
-          {/* avatar */}
-          <Shimmer
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              marginRight: 14,
-            }}
-          />
-
-          {/* name + subtitle */}
-          <View style={{ flex: 1 }}>
-            <Shimmer
-              style={{
-                width: "70%",
-                height: 14,
-                borderRadius: 6,
-                marginBottom: 10,
-              }}
-            />
-            <Shimmer style={{ width: "40%", height: 14, borderRadius: 6 }} />
+    <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <View key={i} style={{ flexDirection: "row", marginBottom: 22 }}>
+          <Shimmer style={{ width: 55, height: 55, borderRadius: 28 }} />
+          <View style={{ marginLeft: 14, flex: 1 }}>
+            <Shimmer style={{ height: 16, width: "50%", borderRadius: 6 }} />
+            <View style={{ height: 10 }} />
+            <Shimmer style={{ height: 12, width: "35%", borderRadius: 6 }} />
           </View>
         </View>
       ))}
@@ -101,7 +80,34 @@ function SimpleSearchSkeleton() {
 }
 
 /* -------------------------------------------------------
-   DEBOUNCE HOOK
+   POST SKELETON (Card Look)
+------------------------------------------------------- */
+function PostSkeletonList() {
+  return (
+    <View style={{ paddingHorizontal: 16, marginTop: 10 }}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: "row",
+            marginBottom: 20,
+            alignItems: "center",
+          }}
+        >
+          <Shimmer style={{ width: 60, height: 60, borderRadius: 8 }} />
+          <View style={{ marginLeft: 14, flex: 1 }}>
+            <Shimmer style={{ height: 15, width: "70%", borderRadius: 6 }} />
+            <View style={{ height: 8 }} />
+            <Shimmer style={{ height: 12, width: "50%", borderRadius: 6 }} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/* -------------------------------------------------------
+   DEBOUNCE
 ------------------------------------------------------- */
 function useDebounce(value: string, delay = 300) {
   const [debounced, setDebounced] = useState(value);
@@ -113,21 +119,21 @@ function useDebounce(value: string, delay = 300) {
 }
 
 /* -------------------------------------------------------
-   MAIN SCREEN
+   MAIN UI
 ------------------------------------------------------- */
 export default function SearchScreen() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query);
   const trimmed = debouncedQuery.trim().toLowerCase();
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
   const { user } = useUser();
   const clerkId = user?.id;
 
-  // queries
   const me = useQuery(api.users.getUserByClerkId, { clerkId: clerkId || "" });
   const users = useQuery(api.users.searchUsers, { q: trimmed });
   const posts = useQuery(api.posts.searchPosts, { q: trimmed });
-  const recentPosts = useQuery(api.posts.getRecentPosts, { limit: 12 });
   const recentSearches = useQuery(
     api.users.getRecentSearches,
     me ? { userId: me._id } : "skip"
@@ -135,16 +141,24 @@ export default function SearchScreen() {
 
   const saveRecentSearch = useMutation(api.users.saveRecentSearch);
 
-  const isLoading =
-    users === undefined ||
-    posts === undefined ||
-    recentPosts === undefined ||
-    recentSearches === undefined;
+  const showUserShimmer = users === undefined && trimmed.length > 0;
+  const showPostShimmer = posts === undefined && trimmed.length > 0;
 
+  /* Fade animation */
+  useEffect(() => {
+    const loaded = users !== undefined && posts !== undefined;
+
+    Animated.timing(fadeAnim, {
+      toValue: loaded ? 1 : 0,
+      duration: loaded ? 220 : 0,
+      useNativeDriver: true,
+    }).start();
+  }, [users, posts]);
+
+  /* Filter Logic */
   const isHashtag = query.startsWith("#");
   const tagLower = query.replace("#", "").toLowerCase();
 
-  /* USERS FILTER */
   const filteredUsers = useMemo(() => {
     if (!trimmed || isHashtag) return [];
     return (
@@ -155,7 +169,6 @@ export default function SearchScreen() {
     );
   }, [users, trimmed]);
 
-  /* POSTS FILTER */
   const filteredPosts = useMemo(() => {
     if (!trimmed) return [];
     if (isHashtag) {
@@ -176,33 +189,32 @@ export default function SearchScreen() {
     }
   };
 
-  /* SHOW SIMPLE SKELETON WHILE LOADING */
-  if (isLoading) return <SimpleSearchSkeleton />;
-
-  /* ----------------------------------------
-       MAIN UI
-  ---------------------------------------- */
+  /* -------------------------------------------------------
+       COMPONENT UI
+  ------------------------------------------------------- */
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={26} color={COLORS.text} />
-          </TouchableOpacity>
+     {/* HEADER */}
+<View style={styles.header}>
+  <View style={styles.headerRowSide}>
+    <Pressable onPress={() => router.back()} style={{ marginRight: 6 }}>
+      <Ionicons name="arrow-back" size={26} color={COLORS.text} />
+    </Pressable>
 
-          <Text style={styles.headerTitle}>Search</Text>
-        </View>
+    <Text style={styles.headerTitle}>Search</Text>
+  </View>
 
-        <TextInput
-          autoFocus
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search users, posts or #tags..."
-          style={styles.searchInput}
-          placeholderTextColor="#999"
-        />
-      </View>
+  <TextInput
+    autoFocus
+    value={query}
+    onChangeText={setQuery}
+    placeholder="Search users, posts or #tags..."
+    style={styles.searchInput}
+    placeholderTextColor="#999"
+  />
+</View>
+
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* RECENT SEARCHES */}
@@ -213,73 +225,102 @@ export default function SearchScreen() {
               <Text style={styles.sectionTitle}>Recent Searches</Text>
 
               {recentSearches.map((r: any) => (
-                <TouchableOpacity
+                <Pressable
                   key={r._id}
                   onPress={() => setQuery(r.query)}
                   style={styles.recentRow}
                 >
                   <Ionicons name="time-outline" size={19} color="#999" />
                   <Text style={styles.recentText}>{r.query}</Text>
-                </TouchableOpacity>
+                </Pressable>
               ))}
             </View>
           )}
 
-        {/* USERS */}
-        {filteredUsers.length > 0 && (
+        {/* USERS SECTION */}
+        {trimmed.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Users</Text>
 
-            {filteredUsers.map((u: any) => (
-              <TouchableOpacity
-                key={u._id}
-                style={styles.userRow}
-                onPress={() => {
-                  saveSearch();
-                  router.push(`/other-profile?userId=${u._id}`);
-                }}
-              >
-                <Image source={{ uri: u.image }} style={styles.userAvatar} />
-                <Text style={styles.userName}>{u.fullname}</Text>
-              </TouchableOpacity>
-            ))}
+            {showUserShimmer ? (
+              <UserSkeletonList />
+            ) : (
+              <Animated.View style={{ opacity: fadeAnim }}>
+                {filteredUsers.map((u: any) => (
+                  <Pressable
+                    key={u._id}
+                    style={styles.userCard}
+                    android_ripple={{ color: "#ddd" }}
+                    onPress={() => {
+                      saveSearch();
+                      router.push(`/other-profile?userId=${u._id}`);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: u.image }}
+                      style={styles.userAvatar}
+                    />
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.userName}>{u.fullname}</Text>
+                      <Text style={styles.userHint}>Tap to view profile</Text>
+                    </View>
+
+                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                  </Pressable>
+                ))}
+              </Animated.View>
+            )}
           </View>
         )}
 
-        {/* POSTS */}
-        {filteredPosts.length > 0 && (
+        {/* POSTS SECTION */}
+
+        {trimmed.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Posts</Text>
 
-            {filteredPosts.map((p: any) => (
-              <TouchableOpacity
-                key={p._id}
-                style={styles.postRow}
-                onPress={() => {
-                  saveSearch();
-                  router.push(`/post-details?postId=${p._id}`);
-                }}
-              >
-                <Image source={{ uri: p.imageUrl }} style={styles.postThumb} />
+            {showPostShimmer ? (
+              <PostSkeletonList />
+            ) : (
+              <Animated.View style={{ opacity: fadeAnim }}>
+                {filteredPosts.map((p: any) => (
+                  <Pressable
+                    key={p._id}
+                    style={styles.postCard}
+                    android_ripple={{ color: "#eaeaea" }}
+                    onPress={() => {
+                      saveSearch();
+                      router.push(`/post-details?postId=${p._id}`);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: p.imageUrl }}
+                      style={styles.postThumb}
+                    />
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.postTitle}>{p.title ?? "Untitled"}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.postTitle}>{p.title}</Text>
 
-                  <View style={styles.tagRow}>
-                    {p.tags?.slice(0, 3).map((t: string, i: number) => (
-                      <Text key={i} style={styles.tag}>
-                        #{t}
-                      </Text>
-                    ))}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                      <View style={styles.tagRow}>
+                        {p.tags?.slice(0, 3).map((t: string, i: number) => (
+                          <Text key={i} style={styles.tag}>
+                            #{t}
+                          </Text>
+                        ))}
+                      </View>
+                    </View>
+                  </Pressable>
+                ))}
+              </Animated.View>
+            )}
           </View>
         )}
 
         {/* NO RESULTS */}
         {trimmed &&
+          !showUserShimmer &&
+          !showPostShimmer &&
           filteredUsers.length === 0 &&
           filteredPosts.length === 0 && (
             <Text style={styles.noResults}>No results found</Text>
@@ -292,32 +333,42 @@ export default function SearchScreen() {
 }
 
 /* -------------------------------------------------------
-   STYLES
+   STYLES (modern clean)
 ------------------------------------------------------- */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" , },
+  container: { flex: 1, backgroundColor: "#fff" },
 
-  header: { paddingHorizontal: 16, marginBottom: 4, paddingTop: 4 , marginTop: Platform.OS === "android" ? -25 : 0},
-  headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  header: {
+    paddingHorizontal: 16,
 
-  headerTitle: { fontSize: 22, fontWeight: "700", marginLeft: 14 },
+    marginTop: Platform.OS === "android" ? -30 : 0,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 10,
+    marginTop: 6,
+  },
 
   searchInput: {
     width: "100%",
-    backgroundColor: "#f2f2f2",
-    borderRadius: 10,
+    backgroundColor: "#f4f4f4",
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: Platform.OS === "android" ? 10 : 12,
+    paddingVertical: 12,
     fontSize: 16,
     color: COLORS.text,
+    marginBottom: 6,
   },
 
-  section: { marginTop: 20, paddingHorizontal: 16 },
-
+  section: {
+    marginTop: 22,
+    paddingHorizontal: 16,
+  },
   sectionTitle: {
     fontWeight: "700",
-    fontSize: 16,
-    marginBottom: 10,
+    fontSize: 17,
+    marginBottom: 12,
   },
 
   recentRow: {
@@ -325,36 +376,67 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
   },
-  recentText: { marginLeft: 10, fontSize: 16 },
+  recentText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: "#555",
+  },
 
-  userRow: {
+  /* USERS */
+  userCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    backgroundColor: "#fafafa",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
   },
   userAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 55,
+    height: 55,
+    borderRadius: 28,
     marginRight: 12,
   },
-  userName: { fontSize: 17 },
+  userName: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#111",
+  },
+  userHint: {
+    fontSize: 12,
+    color: "#888",
+  },
 
-  postRow: {
+  /* POSTS */
+  postCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    backgroundColor: "#fafafa",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
   },
   postThumb: {
-    width: 48,
-    height: 48,
+    width: 60,
+    height: 60,
     borderRadius: 8,
-    backgroundColor: "#eee",
     marginRight: 12,
   },
-  postTitle: { fontSize: 16, fontWeight: "600" },
-  tagRow: { flexDirection: "row", marginTop: 3 },
-  tag: { color: COLORS.primary, marginRight: 6 },
+  postTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111",
+  },
+  tagRow: {
+    flexDirection: "row",
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
+  tag: {
+    color: COLORS.primary,
+    marginRight: 8,
+    fontSize: 13,
+  },
 
   noResults: {
     textAlign: "center",
@@ -362,4 +444,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#777",
   },
+  headerRowSide: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 5,
+},
+
 });

@@ -269,7 +269,7 @@ const mappedPosts = useMemo(() => {
           {/* HEADER */}
           <View style={{ position: "relative" }}>
             <AppHeader
-              title="Campus Connect 🎓"
+              title="Campus Connect "
               alignLeft
               showBackButton={false}
             />

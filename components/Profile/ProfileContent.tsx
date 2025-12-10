@@ -3,17 +3,19 @@
 import { COLORS } from "@/constants/themes";
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
-import React, { useRef, useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+ 
 import {
+  Animated,
+  Dimensions,
+  Pressable,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  StyleSheet,
-  Dimensions,
-  Animated,
-  Pressable,
 } from "react-native";
+import { DEPARTMENTS } from "@/constants/departments";
 
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
@@ -85,6 +87,33 @@ const SoftPress = ({ children, style }: any) => {
     </Animated.View>
   );
 };
+function SingleDepartment({ title, department, editing, onSelect }: any) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+
+        {editing && (
+          <TouchableOpacity onPress={onSelect}>
+            <Text style={styles.add}>{department ? "Change" : "Pick"}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.tagContainer}>
+        {department ? (
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>{department}</Text>
+          </View>
+        ) : (
+          !editing && (
+            <Text style={styles.emptyText}>No department selected</Text>
+          )
+        )}
+      </View>
+    </View>
+  );
+}
 
 /*──────────────────────────────
   MAIN COMPONENT
@@ -139,14 +168,11 @@ export default function ProfileContent({
 
         {/* Department */}
         <View style={[styles.row, { marginTop: hp(1) }]}>
-          <Ionicons
-            name="school-outline"
-            size={18}
-            color={COLORS.primary}
-          />
+          <Ionicons name="school-outline" size={18} color={COLORS.primary} />
           <TouchableOpacity
             disabled={!editing}
-            onPress={() => openSheet("department")}
+            onPress={() => openSheet("department", DEPARTMENTS)}
+
           >
             <Text style={styles.text}>
               {departments[0] ?? (editing ? "Pick Department" : "—")}
@@ -161,7 +187,11 @@ export default function ProfileContent({
         >
           <Ionicons name="document-outline" size={18} color={COLORS.blue} />
           <Text style={[styles.text, { color: COLORS.blue }]}>
-            {resumeUrl ? "View Resume" : editing ? "Upload Resume" : "No Resume"}
+            {resumeUrl
+              ? "View Resume"
+              : editing
+                ? "Upload Resume"
+                : "No Resume"}
           </Text>
         </TouchableOpacity>
 
@@ -191,12 +221,11 @@ export default function ProfileContent({
       />
 
       {/* DEPARTMENT LIST */}
-      <Section
-        title="Departments"
-        items={departments}
+      <SingleDepartment
+        title="Department"
+        department={departments[0]}
         editing={editing}
-        onAdd={() => openSheet("department")}
-        onRemove={removeDepartment}
+        onSelect={() => openSheet("department")}
       />
 
       {/* Toast */}

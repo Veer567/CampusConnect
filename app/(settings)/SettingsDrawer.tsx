@@ -59,6 +59,7 @@ export default function SettingsDrawer() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={[]}>
       <ScrollView contentContainerStyle={styles.container}>
+        
         <Text style={styles.title}>Settings</Text>
 
         <View style={styles.card}>
