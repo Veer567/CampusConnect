@@ -136,9 +136,6 @@ export default function OtherUserProfile() {
   SKELETON LOADING UI
 ───────────────────────────────────────────────*/
 
-/*───────────────────────────────────────────────
-  NEW SHIMMER (Same as ProfileScreen)
-───────────────────────────────────────────────*/
 
 const Shimmer = ({ style }: any) => {
   const shimmerAnim = useRef(new Animated.Value(0)).current;

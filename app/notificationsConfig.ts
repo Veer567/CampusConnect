@@ -1,12 +1,10 @@
-// app/notificationsConfig.ts
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
 export async function registerForPushNotificationsAsync() {
   try {
-    const { status: existingStatus } =
-      await Notifications.getPermissionsAsync();
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
     if (existingStatus !== "granted") {
@@ -20,16 +18,13 @@ export async function registerForPushNotificationsAsync() {
       Constants.expoConfig?.extra?.eas?.projectId ??
       Constants.easConfig?.projectId;
 
-    const token = (
-      await Notifications.getExpoPushTokenAsync({ projectId })
-    ).data;
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
 
     if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("default", {
-        name: "default",
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: "#FF231F7C",
+      await Notifications.setNotificationChannelAsync("messages", {
+        name: "Messages",
+        importance: Notifications.AndroidImportance.DEFAULT,
+        sound: "default"
       });
     }
 
