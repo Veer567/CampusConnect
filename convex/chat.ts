@@ -1,4 +1,4 @@
-// chat.ts
+// convex/chat.ts
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
@@ -107,15 +107,16 @@ export const sendMessage = mutation({
         read: false,
       });
 
-      // 🔥 Send Push Notification (using scheduler)
+      // 🔥 Send MessagingStyle Push Notification (use new signature)
+      // We schedule to run immediately via scheduler to avoid blocking
       await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
         userId,
-        title: `${me.username || me.fullname} sent you a message`,
-        body: args.text ?? "📷 Photo",
-        data: {
-          type: "message",
-          conversationId: args.conversationId,
-        },
+        senderName: me.username || me.fullname || "Someone",
+        senderAvatar: me.image ?? undefined,
+        messages: [args.text ?? (imageUrl ? "📷 Photo" : "Attachment")],
+        chatId: String(args.conversationId),
+        screen: "/chat/[id]",
+        tab: "/(tabs)/messages",
       });
     }
 
@@ -311,6 +312,7 @@ export const getTypingForConversation = query({
     return entries.filter((e) => e.expiresAt > now);
   },
 });
+
 export const getOrStartConversation = mutation({
   args: {
     otherUserId: v.id("users"),
@@ -428,6 +430,7 @@ export const editMessage = mutation({
     await ctx.db.patch(messageId, { text });
   },
 });
+
 /*───────────────────────────────────────────
   USER PRESENCE (Online / Last Seen)
 ───────────────────────────────────────────*/
@@ -505,6 +508,7 @@ export const cleanupExpiredPresence = mutation({
     }
   },
 });
+
 // Convex: add this query to convex/chat.ts (server-side)
 export const getMessagesLive = query({
   args: { conversationId: v.id("conversations") },
@@ -517,5 +521,104 @@ export const getMessagesLive = query({
       )
       .order("desc")
       .take(50);
+  },
+});
+
+/*───────────────────────────────────────────
+  NEW: Inline reply & mark-as-read mutations (for notifications)
+───────────────────────────────────────────*/
+
+/**
+ * Send a message using inline reply (triggered from notification)
+ */
+export const sendReplyFromNotification = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    text: v.string(),
+  },
+  handler: async (ctx, { conversationId, text }) => {
+    const me = await getAuthenticatedUser(ctx);
+    if (!me) throw new Error("Unauthorized");
+
+    const now = Date.now();
+
+    const messageId = await ctx.db.insert("messages", {
+      conversationId,
+      senderId: me._id,
+      text,
+      createdAt: now,
+      readBy: [me._id],
+    });
+
+    await ctx.db.patch(conversationId, {
+      lastMessage: text,
+      lastMessageAt: now,
+    });
+
+    // increment unread for other participants
+    const conv = await ctx.db.get(conversationId);
+    if (conv?.participants) {
+      for (const p of conv.participants) {
+        if (String(p) === String(me._id)) continue;
+        // create DB notification entry
+        await ctx.db.insert("notifications", {
+          receiverId: p,
+          senderId: me._id,
+          type: "message",
+          conversationId,
+          createdAt: now,
+          read: false,
+        });
+
+        // send push to other participant(s) as a quick message alert
+        await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
+          userId: p,
+          senderName: me.username || me.fullname || "Someone",
+          senderAvatar: me.image ?? undefined,
+          messages: [text],
+          chatId: String(conversationId),
+          screen: "/chat/[id]",
+          tab: "/(tabs)/messages",
+        });
+      }
+    }
+
+    return { ok: true, messageId };
+  },
+});
+
+/**
+ * Mark a conversation as read for the current user
+ */
+export const markChatAsRead = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, { conversationId }) => {
+    const me = await getAuthenticatedUser(ctx);
+    if (!me) throw new Error("Unauthorized");
+
+    // Mark all messages in this conversation as read by current user
+    const msgs = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_createdAt", (q) =>
+        q.eq("conversationId", conversationId)
+      )
+      .collect();
+
+    for (const m of msgs) {
+      const readBy = m.readBy ?? [];
+      if (!readBy.map(String).includes(String(me._id))) {
+        await ctx.db.patch(m._id, { readBy: [...readBy, me._id] });
+      }
+    }
+
+    // Also create a notification record (optional) or update chat meta
+    await ctx.db.patch(conversationId, {
+      // optionally reset unread counters stored on conversation
+      // unreadCountPerUser: { ...(conv.unreadCountPerUser || {}), [me._id]: 0 }
+    });
+
+    return { ok: true };
   },
 });

@@ -2,7 +2,6 @@
 import { Slot, usePathname } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import Toast from "react-native-toast-message";
 
 import CustomStatusBar from "@/components/CustomStatusBar";
 import InitalLayout from "@/components/initalLayout";
@@ -15,25 +14,23 @@ import { AppState, AppStateStatus } from "react-native";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import { useAuth } from "@clerk/clerk-expo";
 
+import { NotificationProvider } from "@/components/NotificationManager"; // <-- ADD THIS
+
 function PresenceUpdater() {
   const updatePresence = useMutation(api.chat.updatePresence);
-  const { isSignedIn } = useAuth(); // ← Check if user is authenticated
+  const { isSignedIn } = useAuth();
 
   useEffect(() => {
-    if (!isSignedIn) return; // ← STOP calling Convex if user not logged in
+    if (!isSignedIn) return;
 
-    // Fire immediately
     updatePresence().catch(() => {});
 
-    // Periodic heartbeat
     const interval = setInterval(() => {
       updatePresence().catch(() => {});
     }, 8000);
 
     const onAppStateChange = (next: AppStateStatus) => {
-      if (next === "active") {
-        updatePresence().catch(() => {});
-      }
+      if (next === "active") updatePresence().catch(() => {});
     };
 
     const sub = AppState.addEventListener("change", onAppStateChange);
@@ -42,39 +39,42 @@ function PresenceUpdater() {
       clearInterval(interval);
       sub.remove();
     };
-  }, [isSignedIn, updatePresence]); // ← Add isSignedIn to dependency array
+  }, [isSignedIn, updatePresence]);
 
   return null;
 }
 
 export default function RootLayout() {
   const pathname = usePathname();
-  const hiddenScreens = ["/index", "/profile",  "/other-profile"];
+  const hiddenScreens = ["/index", "/profile", "/other-profile"];
 
   const shouldHide =
     hiddenScreens.includes(pathname) || pathname.startsWith("/hello");
 
   return (
     <ClerkAndConvexProvider>
-      <PresenceUpdater />
+      <NotificationProvider> {/* <-- WRAP ENTIRE APP */}
 
-      <SafeAreaProvider>
-        {!shouldHide && (
-          <CustomStatusBar
-            colors={[COLORS.primary, COLORS.secondary]}
-            style="light"
-          />
-        )}
+        <PresenceUpdater />
 
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <ToastProvider>
-            <InitalLayout>
-              <Slot />
-            </InitalLayout>
-          </ToastProvider>
-        </GestureHandlerRootView>
+        <SafeAreaProvider>
+          {!shouldHide && (
+            <CustomStatusBar
+              colors={[COLORS.primary, COLORS.secondary]}
+              style="light"
+            />
+          )}
 
-      </SafeAreaProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <ToastProvider>
+              <InitalLayout>
+                <Slot />
+              </InitalLayout>
+            </ToastProvider>
+          </GestureHandlerRootView>
+        </SafeAreaProvider>
+
+      </NotificationProvider>
     </ClerkAndConvexProvider>
   );
 }

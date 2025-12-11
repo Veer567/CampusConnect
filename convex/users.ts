@@ -187,9 +187,12 @@ export const toggleFollow = mutation({
       // PUSH Notification
       await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
         userId: args.followingId,
-        title: `${currentUser.username} started following you`,
-        body: "Tap to view their profile",
-        data: { type: "follow", userId: currentUser._id },
+        senderName: currentUser.username || currentUser.fullname,
+        senderAvatar: currentUser.image ?? undefined,
+        messages: [`${currentUser.username} started following you`],
+        chatId: "FOLLOW_EVENT", // not a real chat, but required
+        screen: "/profile/[id]",
+        tab: "/(tabs)/home",
       });
     }
   },

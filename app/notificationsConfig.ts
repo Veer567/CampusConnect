@@ -1,10 +1,11 @@
-import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
+import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 export async function registerForPushNotificationsAsync() {
   try {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
     if (existingStatus !== "granted") {
@@ -18,13 +19,17 @@ export async function registerForPushNotificationsAsync() {
       Constants.expoConfig?.extra?.eas?.projectId ??
       Constants.easConfig?.projectId;
 
-    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId }))
+      .data;
 
     if (Platform.OS === "android") {
       await Notifications.setNotificationChannelAsync("messages", {
         name: "Messages",
-        importance: Notifications.AndroidImportance.DEFAULT,
-        sound: "default"
+        importance: Notifications.AndroidImportance.MAX,
+        sound: "default",
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+        showBadge: true,
       });
     }
 

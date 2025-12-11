@@ -1,7 +1,7 @@
 // convex/debug.ts
-import { action, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
+import { action, mutation } from "./_generated/server";
 
 /**
  * SIMPLE DEBUG: Return current timestamp (to verify function runs)
@@ -26,9 +26,12 @@ export const testPushAction = action({
   ): Promise<{ ok: boolean; reason?: string }> => {
     const res = await ctx.runAction(api.push.sendPushNotification, {
       userId,
-      title: "Convex Action Test",
-      body: "Your push action works!",
-      data: { debug: true },
+      senderName: "Convex Debug",
+      senderAvatar: undefined,
+      messages: ["Convex Action Test"],
+      chatId: "DEBUG_CHAT",
+      screen: "/",
+      tab: "/(tabs)/home",
     });
 
     // ensure type is exactly what we return
@@ -44,15 +47,15 @@ export const testPushScheduler = mutation({
   args: { userId: v.id("users") },
 
   // 👇 explicit handler type
-  handler: async (
-    ctx,
-    { userId }
-  ): Promise<{ scheduled: boolean }> => {
+  handler: async (ctx, { userId }): Promise<{ scheduled: boolean }> => {
     await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
       userId,
-      title: "Convex Scheduler Test",
-      body: "Scheduler works!",
-      data: { debug: true },
+      senderName: "Convex Scheduler",
+      senderAvatar: undefined,
+      messages: ["Scheduler works!"],
+      chatId: "DEBUG_CHAT",
+      screen: "/",
+      tab: "/(tabs)/home",
     });
 
     return { scheduled: true };
