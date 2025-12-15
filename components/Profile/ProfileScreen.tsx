@@ -302,6 +302,8 @@ export default function ProfileScreen({
               setYear={setYear}
               openImageCropper={openImageCropper}
               isOwner={isOwner}
+              username={current.username}
+        
               posts={current.posts}
               followers={current.followers}
               following={current.following}

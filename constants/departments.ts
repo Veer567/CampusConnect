@@ -1,3 +1,4 @@
+// constants/departments.ts
 export const DEPARTMENTS = [
   "Computer Engineering",
   "Information Technology",

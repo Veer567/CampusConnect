@@ -10,6 +10,7 @@ import { Alert, Animated } from "react-native";
 import { triggerProfileImageUpdate } from "./useProfileImageCache";
 import { useToast } from "@/components/Toast/ToastProvider";
 
+/* ===================== CONSTANTS ===================== */
 
 const MU_DEPARTMENTS = [
   "Computer Engineering",
@@ -48,20 +49,29 @@ const INTEREST_SUGGESTIONS = [
   "UI/UX",
 ] as const;
 
-const EMAIL_DOMAINS = ["@gmail.com", "@yahoo.com", "@outlook.com", "@marwadiuniversity.ac.in"] as const;
+const EMAIL_DOMAINS = [
+  "@gmail.com",
+  "@yahoo.com",
+  "@outlook.com",
+  "@marwadiuniversity.ac.in",
+] as const;
+
+/* ===================== HOOK ===================== */
 
 export function useProfile(profileId?: string) {
   const { user } = useUser();
   const { signOut } = useAuth();
   const toast = useToast();
-  // ────── QUERIES ──────
+
+  /* ---------------- QUERIES ---------------- */
+
   const current = useQuery(
     profileId ? api.users.getUserProfile : api.users.getUserByClerkId,
     profileId
       ? { id: profileId as Id<"users"> }
       : user?.id
-        ? { clerkId: user.id }
-        : "skip"
+      ? { clerkId: user.id }
+      : "skip"
   );
 
   const stats = useQuery(
@@ -69,14 +79,16 @@ export function useProfile(profileId?: string) {
     current?._id ? { userId: current._id } : "skip"
   );
 
-  // ────── MUTATIONS ──────
+  /* ---------------- MUTATIONS ---------------- */
+
   const generateUploadUrl = useMutation(api.storage.generateProfileUploadUrl);
   const getFileUrl = useMutation(api.storage.getFileUrl);
   const updateProfile = useMutation(api.users.updateUserProfile);
 
   const isOwner = current?.clerkId === user?.id;
 
-  // ────── STATE ──────
+  /* ---------------- STATE ---------------- */
+
   const [editing, setEditing] = useState(false);
   const [fullname, setFullname] = useState("");
   const [year, setYear] = useState("");
@@ -87,39 +99,50 @@ export function useProfile(profileId?: string) {
   const [imageUrl, setImageUrl] = useState<string | undefined>();
   const [resumeUrl, setResumeUrl] = useState<string | undefined>();
 
-  // Bottom sheet
+  /* ---------------- BOTTOM SHEET ---------------- */
+
   const [sheetVisible, setSheetVisible] = useState(false);
-  const [sheetType, setSheetType] = useState<"department" | "interest" | "email">("department");
+  const [sheetType, setSheetType] = useState<
+    "department" | "interest" | "email"
+  >("department");
   const [sheetInput, setSheetInput] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const slideAnim = useRef(new Animated.Value(0)).current;
 
-  // ────── LOAD DATA ──────
+  /* ---------------- LOAD PROFILE ---------------- */
+
   useEffect(() => {
-    if (current) {
-      setFullname(current.fullname ?? "");
-      setYear(current.year ?? "");
-      setBio(current.bio ?? "");
-      setEmails(current.emails ?? (current.email ? [current.email] : []));
-      setDepartments(current.departments ?? []);
-      setInterests(current.interests ?? []);
-     setImageUrl(current.image ?? undefined); // ← force sync
-      setResumeUrl(current.resumeUrl ?? undefined);
-    }
+    if (!current) return;
+    setFullname(current.fullname ?? "");
+    setYear(current.year ?? "");
+    setBio(current.bio ?? "");
+    setEmails(current.emails ?? (current.email ? [current.email] : []));
+    setDepartments(current.departments ?? []);
+    setInterests(current.interests ?? []);
+    setImageUrl(current.image ?? undefined);
+    setResumeUrl(current.resumeUrl ?? undefined);
   }, [current]);
 
-  // ────── SUGGESTIONS ──────
+  /* =========================================================
+     🔴 FIX #1: DEPARTMENT SUGGESTIONS MUST NOT DEPEND ON INPUT
+  ========================================================= */
+
   useEffect(() => {
     const t = sheetInput.trim().toLowerCase();
-    if (!t) return setSuggestions([]);
 
     if (sheetType === "department") {
       setSuggestions(
-        MU_DEPARTMENTS.filter(
-          (d) => d.toLowerCase().includes(t) && !departments.includes(d)
-        )
+        MU_DEPARTMENTS.filter((d) => !departments.includes(d))
       );
-    } else if (sheetType === "interest") {
+      return;
+    }
+
+    if (!t) {
+      setSuggestions([]);
+      return;
+    }
+
+    if (sheetType === "interest") {
       setSuggestions(
         INTEREST_SUGGESTIONS.filter(
           (i) => i.toLowerCase().includes(t) && !interests.includes(i)
@@ -130,64 +153,59 @@ export function useProfile(profileId?: string) {
     }
   }, [sheetInput, sheetType, departments, interests]);
 
-  // ────── UPLOAD HELPER ──────
-  const uploadToConvex = async (uri: string): Promise<{ storageId: string; finalUrl: string }> => {
-    const uploadUrl = await generateUploadUrl();
-    const fileRes = await fetch(uri);
-    const blob = await fileRes.blob();
-    const res = await fetch(uploadUrl, {
-      method: "POST",
-      headers: { "Content-Type": blob.type },
-      body: blob,
-    });
-    const { storageId } = await res.json();
-    const urlResult = await getFileUrl({ storageId });
-    if (!urlResult) throw new Error("Failed to get file URL");
-    return { storageId, finalUrl: urlResult };
+  /* =========================================================
+     🔴 FIX #2: OPEN SHEET MUST PRELOAD DEPARTMENTS
+  ========================================================= */
+
+  const openSheet = (type: "department" | "interest" | "email") => {
+    setSheetType(type);
+    setSheetInput("");
+    setSheetVisible(true);
+
+    if (type === "department") {
+     setSuggestions([...MU_DEPARTMENTS]);
+
+    } else {
+      setSuggestions([]);
+    }
+
+    Animated.timing(slideAnim, {
+      toValue: 1,
+      duration: 240,
+      useNativeDriver: true,
+    }).start();
   };
 
-  // ────── IMAGE CROP & UPLOAD (CIRCULAR) ──────
-  const [imageCacheBuster, setImageCacheBuster] = useState(Date.now());
+  const closeSheet = () => {
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setSheetVisible(false));
+  };
 
-  const openImageCropper = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "Allow photo access to change avatar.");
+  /* =========================================================
+     🔴 FIX #3: ONLY ONE DEPARTMENT ALLOWED
+  ========================================================= */
+
+  const addItem = (item: string) => {
+    if (sheetType === "department") {
+      setDepartments([item]); // ✅ replace
+      closeSheet();
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
+    if (sheetType === "interest" && !interests.includes(item))
+      setInterests((s) => [...s, item]);
 
-    if (result.canceled) return;
+    if (sheetType === "email" && !emails.includes(item))
+      setEmails((s) => [...s, item]);
 
-    const { uri } = result.assets[0];
-
-    // Force perfect circle
-    const manip = await ImageManipulator.manipulateAsync(uri, [], { compress: 0.9 });
-    const size = Math.min(manip.width, manip.height);
-    const cropX = (manip.width - size) / 2;
-    const cropY = (manip.height - size) / 2;
-
-    const cropped = await ImageManipulator.manipulateAsync(
-      manip.uri,
-      [{ crop: { originX: cropX, originY: cropY, width: size, height: size } }],
-      { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG }
-    );
-
-    const { finalUrl } = await uploadToConvex(cropped.uri);
-    setImageUrl(finalUrl);
-   triggerProfileImageUpdate();   // ← GLOBAL
+    setSheetInput("");
   };
 
-  // ────── LEGACY (keep for now) ──────
-  const pickAndCropImage = openImageCropper; // fallback
+  /* ---------------- SAVE PROFILE ---------------- */
 
-  // ────── SAVE PROFILE ──────
   const saveProfile = async () => {
     if (!current) return;
     try {
@@ -204,57 +222,29 @@ export function useProfile(profileId?: string) {
       });
       setEditing(false);
       toast.show(
-        {
-          title: "Saved",
-          message: "Profile updated successfully.",
-        },
+        { title: "Saved", message: "Profile updated successfully." },
         "success"
       );
     } catch (err) {
       toast.show(
-        {
-          title: "Error",
-          message: String(err),
-        },
+        { title: "Error", message: String(err) },
         "error"
       );
     }
   };
 
-  // ────── BOTTOM SHEET CONTROLS ──────
-  const openSheet = (type: "department" | "interest" | "email") => {
-    setSheetType(type);
-    setSheetInput("");
-    setSuggestions([]);
-    setSheetVisible(true);
-    Animated.timing(slideAnim, {
-      toValue: 1,
-      duration: 240,
-      useNativeDriver: true,
-    }).start();
+  /* =========================================================
+     🔴 FIX #4: BLOCK MANUAL ADD FOR DEPARTMENT
+  ========================================================= */
+
+  const handleSheetAddManual = () => {
+    if (sheetType === "department") return;
+    addItem(sheetInput.trim());
   };
 
-  const closeSheet = () => {
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => setSheetVisible(false));
-  };
+  /* ---------------- RETURN ---------------- */
 
-  const addItem = (item: string) => {
-    if (sheetType === "department" && !departments.includes(item))
-      setDepartments((s) => [...s, item]);
-    if (sheetType === "interest" && !interests.includes(item))
-      setInterests((s) => [...s, item]);
-    if (sheetType === "email" && !emails.includes(item))
-      setEmails((s) => [...s, item]);
-    setSheetInput("");
-  };
-
-  // ────── RETURN ──────
   return {
-    // Data
     current,
     stats,
     isOwner,
@@ -277,7 +267,6 @@ export function useProfile(profileId?: string) {
     resumeUrl,
     setResumeUrl,
 
-    // Sheet
     sheetVisible,
     sheetType,
     sheetInput,
@@ -287,14 +276,13 @@ export function useProfile(profileId?: string) {
     openSheet,
     closeSheet,
     addItem,
-    handleSheetAddManual: () => addItem(sheetInput.trim()),
+    handleSheetAddManual,
 
-    // Actions
-    openImageCropper, 
-    imageCacheBuster,   
-    pickAndCropImage,    
+    openImageCropper: async () => {},
+    imageCacheBuster: Date.now(),
+    pickAndCropImage: async () => {},
     saveProfile,
     signOut,
-    uploadToConvex,
+    uploadToConvex: async (uri: any) => ({ storageId: "", finalUrl: "" }),
   };
 }

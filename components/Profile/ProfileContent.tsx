@@ -1,10 +1,7 @@
-// components/Profile/ProfileContent.tsx
-
 import { COLORS } from "@/constants/themes";
 import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
 import React, { useEffect, useRef, useState } from "react";
- 
 import {
   Animated,
   Dimensions,
@@ -15,14 +12,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { DEPARTMENTS } from "@/constants/departments";
 
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
 
 /*──────────────────────────────
-  Subtle Toast (clean version)
+  Toast
 ──────────────────────────────*/
 const Toast = ({ visible, message }: { visible: boolean; message: string }) => {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -46,52 +42,59 @@ const Toast = ({ visible, message }: { visible: boolean; message: string }) => {
   }, [visible]);
 
   return (
-    <Animated.View
-      style={[
-        styles.toast,
-        {
-          opacity,
-        },
-      ]}
-    >
+    <Animated.View style={[styles.toast, { opacity }]}>
       <Text style={styles.toastText}>{message}</Text>
     </Animated.View>
   );
 };
 
 /*──────────────────────────────
-  Soft-press animation
+  Soft Press
 ──────────────────────────────*/
 const SoftPress = ({ children, style }: any) => {
   const scale = useRef(new Animated.Value(1)).current;
 
-  const onPressIn = () =>
-    Animated.timing(scale, {
-      toValue: 0.97,
-      duration: 80,
-      useNativeDriver: true,
-    }).start();
-
-  const onPressOut = () =>
-    Animated.timing(scale, {
-      toValue: 1,
-      duration: 80,
-      useNativeDriver: true,
-    }).start();
-
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable onPressIn={onPressIn} onPressOut={onPressOut} style={style}>
+      <Pressable
+        onPressIn={() =>
+          Animated.timing(scale, {
+            toValue: 0.97,
+            duration: 80,
+            useNativeDriver: true,
+          }).start()
+        }
+        onPressOut={() =>
+          Animated.timing(scale, {
+            toValue: 1,
+            duration: 80,
+            useNativeDriver: true,
+          }).start()
+        }
+        style={style}
+      >
         {children}
       </Pressable>
     </Animated.View>
   );
 };
-function SingleDepartment({ title, department, editing, onSelect }: any) {
+
+/*──────────────────────────────
+  Department Section (SINGLE source)
+──────────────────────────────*/
+function SingleDepartment({
+  department,
+  editing,
+  onSelect,
+}: {
+  department?: string;
+  editing: boolean;
+  onSelect: () => void;
+}) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionTitle}>Department</Text>
 
         {editing && (
           <TouchableOpacity onPress={onSelect}>
@@ -106,9 +109,42 @@ function SingleDepartment({ title, department, editing, onSelect }: any) {
             <Text style={styles.tagText}>{department}</Text>
           </View>
         ) : (
-          !editing && (
-            <Text style={styles.emptyText}>No department selected</Text>
-          )
+          <Text style={styles.emptyText}>No department selected</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+/*──────────────────────────────
+  Generic Section
+──────────────────────────────*/
+function Section({ title, items, editing, onAdd, onRemove }: any) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {editing && (
+          <TouchableOpacity onPress={onAdd}>
+            <Text style={styles.add}>+ Add</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.tagContainer}>
+        {items.map((item: string, i: number) => (
+          <SoftPress key={i} style={styles.tag}>
+            <Text style={styles.tagText}>{item}</Text>
+            {editing && (
+              <TouchableOpacity onPress={() => onRemove(i)}>
+                <Ionicons name="close" size={16} color="#999" />
+              </TouchableOpacity>
+            )}
+          </SoftPress>
+        ))}
+
+        {items.length === 0 && !editing && (
+          <Text style={styles.emptyText}>No {title.toLowerCase()} added</Text>
         )}
       </View>
     </View>
@@ -127,21 +163,18 @@ export default function ProfileContent({
   setEmails,
   openSheet,
   removeEmail,
-  removeDepartment,
   removeInterest,
   pickResume,
 }: any) {
   const [toast, setToast] = useState(false);
-  const showSaved = () => setToast(true);
 
   return (
     <>
-      {/* BASIC INFO CARD */}
+      {/* BASIC INFO */}
       <View style={styles.infoCard}>
         {/* Primary Email */}
         <View style={styles.row}>
           <Ionicons name="mail-outline" size={18} color={COLORS.primary} />
-
           {editing ? (
             <TextInput
               placeholder="Primary email"
@@ -165,20 +198,6 @@ export default function ProfileContent({
             )}
           </View>
         ))}
-
-        {/* Department */}
-        <View style={[styles.row, { marginTop: hp(1) }]}>
-          <Ionicons name="school-outline" size={18} color={COLORS.primary} />
-          <TouchableOpacity
-            disabled={!editing}
-            onPress={() => openSheet("department", DEPARTMENTS)}
-
-          >
-            <Text style={styles.text}>
-              {departments[0] ?? (editing ? "Pick Department" : "—")}
-            </Text>
-          </TouchableOpacity>
-        </View>
 
         {/* Resume */}
         <TouchableOpacity
@@ -220,9 +239,8 @@ export default function ProfileContent({
         onRemove={removeInterest}
       />
 
-      {/* DEPARTMENT LIST */}
+      {/* ✅ SINGLE DEPARTMENT SECTION (FIXED) */}
       <SingleDepartment
-        title="Department"
         department={departments[0]}
         editing={editing}
         onSelect={() => openSheet("department")}
@@ -231,41 +249,6 @@ export default function ProfileContent({
       {/* Toast */}
       <Toast visible={toast} message="Saved successfully" />
     </>
-  );
-}
-
-/*──────────────────────────────
-  CLEAN SECTION (LinkedIn style)
-──────────────────────────────*/
-function Section({ title, items, editing, onAdd, onRemove }: any) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {editing && (
-          <TouchableOpacity onPress={onAdd}>
-            <Text style={styles.add}>+ Add</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <View style={styles.tagContainer}>
-        {items.map((item: string, i: number) => (
-          <SoftPress key={i} style={styles.tag}>
-            <Text style={styles.tagText}>{item}</Text>
-            {editing && (
-              <TouchableOpacity onPress={() => onRemove(i)}>
-                <Ionicons name="close" size={16} color="#999" />
-              </TouchableOpacity>
-            )}
-          </SoftPress>
-        ))}
-
-        {items.length === 0 && !editing && (
-          <Text style={styles.emptyText}>No {title.toLowerCase()} added</Text>
-        )}
-      </View>
-    </View>
   );
 }
 
@@ -330,7 +313,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 
-  /* Section */
   section: {
     marginTop: hp(2),
     marginHorizontal: wp(1),
@@ -353,7 +335,6 @@ const styles = StyleSheet.create({
     color: COLORS.blue,
   },
 
-  /* Tags */
   tagContainer: {
     flexDirection: "row",
     flexWrap: "wrap",

@@ -36,7 +36,6 @@ export function ProfileBottomSheet({
   handleAddManual: () => void;
 }) {
   const screenHeight = Dimensions.get("window").height;
-
   const sheetHeight = Math.max(screenHeight * 0.42, 300);
 
   const translateY = slideAnim.interpolate({
@@ -53,7 +52,7 @@ export function ProfileBottomSheet({
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      {/* DARK BACKDROP */}
+      {/* BACKDROP */}
       <TouchableWithoutFeedback onPress={closeSheet}>
         <View
           style={{
@@ -95,34 +94,38 @@ export function ProfileBottomSheet({
                   </TouchableOpacity>
                 </View>
 
-                {/* ------------------------------
-                    DEPARTMENT MODE (single select)
-                -------------------------------- */}
+                {/* =====================================================
+                    DEPARTMENT MODE (FIXED)
+                ===================================================== */}
                 {type === "department" ? (
-                  <ScrollView style={{ marginTop: 14 }}>
-                    {suggestions.map((dept, i) => (
-                      <TouchableOpacity
-                        key={i}
-                        onPress={() => {
-                          addItem(dept); // sets [dept]
-                          closeSheet();
-                        }}
-                        style={{
-                          paddingVertical: 14,
-                          borderBottomWidth: 1,
-                          borderBottomColor: "#efefef",
-                        }}
-                      >
-                        <Text style={{ fontSize: 16 }}>{dept}</Text>
-                      </TouchableOpacity>
-                    ))}
-
-                    {suggestions.length === 0 && (
+                  <ScrollView
+                    style={{ marginTop: 14 }}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {(suggestions ?? []).length > 0 ? (
+                      suggestions.map((dept) => (
+                        <TouchableOpacity
+                          key={dept}
+                          onPress={() => {
+                            setInput(dept);   // ✅ sync input
+                            addItem(dept);    // ✅ update department
+                            closeSheet();     // ✅ close sheet
+                          }}
+                          style={{
+                            paddingVertical: 14,
+                            borderBottomWidth: 1,
+                            borderBottomColor: "#efefef",
+                          }}
+                        >
+                          <Text style={{ fontSize: 16 }}>{dept}</Text>
+                        </TouchableOpacity>
+                      ))
+                    ) : (
                       <Text
                         style={{
                           textAlign: "center",
                           color: "#888",
-                          marginTop: 12,
+                          marginTop: 20,
                         }}
                       >
                         No departments found
@@ -131,7 +134,7 @@ export function ProfileBottomSheet({
                   </ScrollView>
                 ) : (
                   <>
-                    {/* INPUT (for interest/email only) */}
+                    {/* INPUT (interest / email) */}
                     <TextInput
                       placeholder={
                         type === "email"
@@ -153,12 +156,15 @@ export function ProfileBottomSheet({
 
                     {/* SUGGESTIONS */}
                     <ScrollView
-                      style={{ marginTop: 12, maxHeight: screenHeight * 0.35 }}
+                      style={{
+                        marginTop: 12,
+                        maxHeight: screenHeight * 0.35,
+                      }}
                       keyboardShouldPersistTaps="handled"
                     >
-                      {suggestions.map((s, i) => (
+                      {suggestions.map((s) => (
                         <TouchableOpacity
-                          key={i}
+                          key={s}
                           onPress={() => addItem(s)}
                           style={{
                             paddingVertical: 12,
