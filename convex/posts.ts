@@ -418,6 +418,9 @@ export const editPost = mutation({
     location: v.optional(v.string()),
     eventDate: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+
+    // ✅ ADD THIS
+    storageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const user = await getAuthenticatedUser(ctx);
@@ -426,19 +429,34 @@ export const editPost = mutation({
     if (!post) throw new Error("Post not found");
     if (post.userId !== user._id) throw new Error("Unauthorized");
 
+    // 🔥 If image changed, delete old one
+    if (args.storageId && post.storageId && args.storageId !== post.storageId) {
+      try {
+        await ctx.storage.delete(post.storageId);
+      } catch {}
+    }
+
+    // 🔥 Get new image URL if storageId updated
+    const imageUrl = args.storageId
+      ? await ctx.storage.getUrl(args.storageId)
+      : post.imageUrl;
+
     await ctx.db.patch(args.postId, {
       title: args.title ?? post.title,
       caption: args.caption ?? post.caption,
       category: args.category ?? post.category,
       location: args.location ?? post.location,
       eventDate: args.eventDate ?? post.eventDate,
-      tags: args.tags ?? post.tags, // keep tags updated
+      tags: args.tags ?? post.tags,
+
+      // ✅ update image if changed
+      imageUrl: imageUrl ?? undefined,
+      storageId: args.storageId ?? post.storageId,
     });
 
     return true;
   },
 });
-
 export const getLikedPosts = query({
   handler: async (ctx) => {
     const user = await getAuthenticatedUser(ctx);

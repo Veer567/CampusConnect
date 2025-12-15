@@ -1,5 +1,4 @@
-// /app/(settings)/edit-profile.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -25,216 +24,159 @@ export default function EditProfileScreen() {
   const { user } = useUser();
   const toast = useToast();
 
-  // Fetch Convex user profile
-  const dbUser = useQuery(api.users.getUserByClerkId, {
-    clerkId: user?.id ?? "",
-  });
+  const dbUser = useQuery(
+    api.users.getUserByClerkId,
+    user ? { clerkId: user.id } : "skip"
+  );
 
   const updateProfile = useMutation(api.users.updateUserProfile);
-  const uploadUrl = useMutation(api.users.updateProfilePicture);
+  const updateProfilePicture = useMutation(api.users.updateProfilePicture);
+  const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
 
-  const [fullname, setFullname] = useState(user?.fullName || "");
-  const [bio, setBio] = useState(dbUser?.bio || "");
-  const [year, setYear] = useState(dbUser?.year || "");
-  const [departments, setDepartments] = useState(
-    (dbUser?.departments || []).join(", ")
-  );
-  const [interests, setInterests] = useState(
-    (dbUser?.interests || []).join(", ")
-  );
+  const [fullname, setFullname] = useState("");
+  const [year, setYear] = useState("");
+  const [departments, setDepartments] = useState("");
+  const [interests, setInterests] = useState("");
+  const [imageUri, setImageUri] = useState<string | undefined>();
 
-  const [imageUri, setImageUri] = useState(dbUser?.image ?? user?.imageUrl);
+  useEffect(() => {
+    if (!dbUser) return;
+    setFullname(dbUser.fullname ?? "");
+    setYear(dbUser.year ?? "");
+    setDepartments((dbUser.departments ?? []).join(", "));
+    setInterests((dbUser.interests ?? []).join(", "));
+    setImageUri(dbUser.image ?? user?.imageUrl ?? undefined);
+  }, [dbUser]);
 
-  /* ------------------ Pick Profile Image ------------------ */
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
     });
-
-    if (res.canceled) return;
-
-    const asset = res.assets[0];
-    setImageUri(asset.uri);
+    if (!res.canceled) setImageUri(res.assets[0].uri);
   };
 
-  /* ---------------------- Save Profile --------------------- */
+  const uploadImageToConvex = async (uri: string) => {
+    const uploadUrl = await generateUploadUrl();
+    const blob = await (await fetch(uri)).blob();
+
+    const res = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": blob.type },
+      body: blob,
+    });
+
+    const { storageId } = await res.json();
+    return storageId;
+  };
+
   const handleSave = async () => {
-    if (!dbUser?._id) {
-      toast.show({ type: "error", message: "User not loaded." });
-      return;
-    }
+    if (!dbUser?._id) return;
 
     try {
-      // Upload photo
       if (imageUri && imageUri !== dbUser.image) {
-        const file = await fetch(imageUri);
-        const blob = await file.blob();
-
-        const storageId = await updateProfilePictureToConvex(blob);
-        await uploadUrl({ storageId });
+        const storageId = await uploadImageToConvex(imageUri);
+        await updateProfilePicture({ storageId });
       }
 
       await updateProfile({
         id: dbUser._id,
         fullname,
-        bio,
         year,
         departments: departments.split(",").map((s) => s.trim()),
         interests: interests.split(",").map((s) => s.trim()),
       });
 
-      toast.show({ type: "success", message: "Profile updated!" });
+      toast.show({ type: "success", message: "Profile updated" });
       router.back();
-    } catch (err) {
-      console.log(err);
-      toast.show({ type: "error", message: "Update failed. Try again." });
+    } catch {
+      toast.show({ type: "error", message: "Update failed" });
     }
-  };
-
-  /* Upload image to Convex storage */
-  const updateProfilePictureToConvex = async (blob: Blob) => {
-    const uploadURL = await api.users.getUserProfile();
-    const res = await fetch(uploadURL, {
-      method: "POST",
-      body: blob,
-    });
-    const { storageId } = await res.json();
-    return storageId;
   };
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={26} color="#1A1A1A" />
+        <Pressable onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={26} />
         </Pressable>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
-
+        <Text style={styles.title}>Edit Profile</Text>
         <Pressable onPress={handleSave}>
-          <Text style={styles.saveBtn}>Save</Text>
+          <Text style={styles.save}>Save</Text>
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16 }}>
-        {/* Profile Photo */}
-        <Pressable style={styles.avatarContainer} onPress={pickImage}>
+        <Pressable onPress={pickImage} style={styles.avatarWrap}>
           <Image
             source={{ uri: imageUri || "https://i.pravatar.cc/300" }}
             style={styles.avatar}
           />
-          <Ionicons
-            name="camera-outline"
-            size={24}
-            color="#fff"
-            style={styles.cameraIcon}
-          />
+          <Ionicons name="camera" size={22} color="#fff" style={styles.cam} />
         </Pressable>
 
-        {/* FORM */}
-        <View style={styles.form}>
-          <Input label="Full Name" value={fullname} onChange={setFullname} />
-          <Input label="Bio" value={bio} onChange={setBio} multiline />
-          <Input label="Year" value={year} onChange={setYear} />
-          <Input
-            label="Departments (comma separated)"
-            value={departments}
-            onChange={setDepartments}
-          />
-          <Input
-            label="Interests (comma separated)"
-            value={interests}
-            onChange={setInterests}
-          />
-        </View>
+        <Input label="Full Name" value={fullname} onChange={setFullname} />
+        <Input label="Year" value={year} onChange={setYear} />
+        <Input
+          label="Departments"
+          value={departments}
+          onChange={setDepartments}
+        />
+        <Input
+          label="Interests"
+          value={interests}
+          onChange={setInterests}
+        />
       </ScrollView>
     </View>
   );
 }
 
-/* ------------------------ INPUT COMPONENT ------------------------ */
 const Input = ({
   label,
   value,
   onChange,
-  multiline,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  multiline?: boolean;
 }) => (
   <View style={{ marginBottom: 16 }}>
     <Text style={styles.label}>{label}</Text>
     <TextInput
-      style={[styles.input, multiline && { height: 90 }]}
       value={value}
       onChangeText={onChange}
-      multiline={multiline}
+      style={styles.input}
     />
   </View>
 );
 
-/* ----------------------------- STYLES ----------------------------- */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    paddingTop: 20,
     backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderColor: "#eee",
   },
-
-  backBtn: { marginRight: 12 },
-
-  headerTitle: { flex: 1, fontSize: 22, fontWeight: "700", color: "#111" },
-
-  saveBtn: {
-    color: COLORS.blue,
-    fontWeight: "700",
-    fontSize: 16,
-  },
-
-  avatarContainer: {
-    alignSelf: "center",
-    marginBottom: 24,
-  },
-
-  avatar: {
-    width: 110,
-    height: 110,
-    borderRadius: 110,
-  },
-
-  cameraIcon: {
+  title: { flex: 1, textAlign: "center", fontSize: 20, fontWeight: "700" },
+  save: { color: COLORS.blue, fontWeight: "700" },
+  avatarWrap: { alignSelf: "center", marginBottom: 24 },
+  avatar: { width: 110, height: 110, borderRadius: 55 },
+  cam: {
     position: "absolute",
-    bottom: 5,
-    right: 5,
+    bottom: 4,
+    right: 4,
     backgroundColor: COLORS.primary,
     padding: 6,
     borderRadius: 20,
   },
-
-  form: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 16,
-    elevation: 3,
-  },
-
-  label: { color: "#555", marginBottom: 6 },
-
+  label: { marginBottom: 6, color: "#555" },
   input: {
+    backgroundColor: "#f7f7f7",
+    borderRadius: 10,
+    padding: 12,
     borderWidth: 1,
     borderColor: "#ddd",
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: "#f7f7f7",
-    fontSize: 15,
   },
 });

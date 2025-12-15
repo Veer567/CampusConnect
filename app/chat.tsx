@@ -105,7 +105,8 @@ export default function ChatList() {
               </View>
 
               <View style={styles.middle}>
-                <Text style={styles.name}>{other?.fullname || "Unknown"}</Text>
+                <Text style={styles.name}>{other?.fullname || other?.username || "Unknown"}</Text>
+               
                 <Text numberOfLines={1} style={styles.lastMsg}>
                   {c.lastMessage || "Say hi 👋"}
                 </Text>
@@ -227,6 +228,11 @@ const styles = StyleSheet.create({
     color: "white",
     textAlign: "center",
   },
+  username: {
+    fontSize: 13,
+    color: "#555",
+    marginTop: 2,
+  },
 });
 
 /* ------------------------------------------
@@ -273,4 +279,6 @@ const chatSkeleton = StyleSheet.create({
     borderRadius: 6,
   },
   time: { width: 40, height: 14, borderRadius: 6, backgroundColor: "#e3e3e3" },
+
+
 });

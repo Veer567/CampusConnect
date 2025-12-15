@@ -46,6 +46,7 @@ export default defineSchema({
     eventDate: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
     createdAt: v.optional(v.number()),
+    
   }).index("by_user", ["userId"]),
 
   /*───────────────────────────────

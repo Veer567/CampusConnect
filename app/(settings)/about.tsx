@@ -9,9 +9,11 @@ import {
   Text,
   View,
 } from "react-native";
+import useBackToSettingsRoot from "@/hooks/useBackToSettingsRoot";
 
 export default function About() {
   const router = useRouter();
+  useBackToSettingsRoot();
 
   const openLink = async (url: string) => {
     try {

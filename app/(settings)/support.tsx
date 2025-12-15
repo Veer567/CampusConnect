@@ -8,12 +8,24 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Pressable,
 } from "react-native";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 import { useToast } from "@/components/Toast/ToastProvider";
+
+/* ---------------------- EMAIL VALIDATION ---------------------- */
+const UNIVERSITY_DOMAIN = "@marwadiuniversity.ac.in";
+
+const isValidEmail = (email: string) => {
+  const basicEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return (
+    basicEmailRegex.test(email) &&
+    email.toLowerCase().endsWith(UNIVERSITY_DOMAIN)
+  );
+};
 
 export default function Support() {
   const router = useRouter();
@@ -27,7 +39,10 @@ export default function Support() {
 
   /* ---------------------- SUBMIT SUPPORT MESSAGE ---------------------- */
   const submit = async () => {
-    if (!email.trim() || !message.trim()) {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedMessage = message.trim();
+
+    if (!trimmedEmail || !trimmedMessage) {
       return showAlert({
         title: "Missing Information",
         message: "Please fill out both fields before submitting.",
@@ -35,31 +50,53 @@ export default function Support() {
       });
     }
 
-    await send({ email, message });
+    if (!isValidEmail(trimmedEmail)) {
+      return showAlert({
+        title: "Invalid Email",
+        message: `Please use your official university email ending with ${UNIVERSITY_DOMAIN}`,
+        confirmText: "OK",
+      });
+    }
 
-    showAlert({
-      title: "Message Sent",
-      message: "Your issue has been successfully submitted to support.",
-      confirmText: "OK",
-      onConfirm: () => router.back(),
-    });
+    try {
+      await send({ email: trimmedEmail, message: trimmedMessage });
+
+      showAlert({
+        title: "Message Sent",
+        message: "Your issue has been successfully submitted to support.",
+        confirmText: "OK",
+        onConfirm: () => router.back(),
+      });
+    } catch {
+      toast.show({
+        type: "error",
+        message: "Failed to send message. Please try again.",
+      });
+    }
   };
 
   return (
     <>
-      <ScrollView style={styles.container}>
-        <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+      <ScrollView
+        style={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={26} />
-        </TouchableOpacity>
+        </Pressable>
 
         <Text style={styles.title}>Contact Support</Text>
 
-        <Text style={styles.label}>Email</Text>
+        <Text style={styles.label}>University Email</Text>
         <TextInput
           style={styles.input}
-          placeholder="example@gmail.com"
+          placeholder={`yourname${UNIVERSITY_DOMAIN}`}
           value={email}
           onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
         />
 
         <Text style={styles.label}>Message</Text>
@@ -87,8 +124,6 @@ export default function Support() {
 const styles = StyleSheet.create({
   container: { padding: 20, backgroundColor: "#fff", flex: 1 },
 
-  back: { paddingBottom: 10 },
-
   title: { fontSize: 26, fontWeight: "700", marginBottom: 25 },
 
   label: { fontSize: 15, marginTop: 10 },
@@ -115,5 +150,15 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+  },
+
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f1f1f1",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
   },
 });

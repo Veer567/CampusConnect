@@ -62,6 +62,7 @@ export default function OtherUserProfile() {
           fullname={user.fullname}
           year={user.year || ""}
           editing={false}
+          username={user.username}
           isOwner={false}
           setFullname={() => {}}
           setYear={() => {}}

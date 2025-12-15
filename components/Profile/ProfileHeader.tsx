@@ -20,15 +20,22 @@ const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
 
+/* ---------------- PROPS ---------------- */
+
 interface ProfileHeaderProps {
   imageUrl?: string;
   imageCacheBuster: number;
-  fullname: string;
+
+  fullname?: string;     // editable, optional
+  username: string;      // ✅ ALWAYS present (default display)
+
   year: string;
   editing: boolean;
+
   setFullname: (v: string) => void;
   setYear: (v: string) => void;
   openImageCropper: () => void;
+
   isOwner: boolean;
   posts: number;
   followers: number;
@@ -36,11 +43,14 @@ interface ProfileHeaderProps {
   userId: string;
 }
 
+/* ---------------- COMPONENT ---------------- */
+
 export function ProfileHeader(props: ProfileHeaderProps) {
   const {
     imageUrl,
     imageCacheBuster,
     fullname,
+    username,
     year,
     editing,
     setFullname,
@@ -56,9 +66,8 @@ export function ProfileHeader(props: ProfileHeaderProps) {
   const router = useRouter();
   const imageSize = wp(32);
 
-  /* -----------------------------------
-     ⭐ GEAR ROTATION ANIMATION
-  ----------------------------------- */
+  /* ---------------- SETTINGS ICON ANIMATION ---------------- */
+
   const rotation = useRef(new Animated.Value(0)).current;
 
   const animateGear = () => {
@@ -83,11 +92,13 @@ export function ProfileHeader(props: ProfileHeaderProps) {
     outputRange: ["0deg", "180deg"],
   });
 
+  /* ---------------- RENDER ---------------- */
+
   return (
     <>
       <StatusBar style="dark" />
 
-      {/* SETTINGS BUTTON (FLOATING) */}
+      {/* SETTINGS BUTTON */}
       {isOwner && (
         <Animated.View
           style={[
@@ -100,9 +111,8 @@ export function ProfileHeader(props: ProfileHeaderProps) {
               animateGear();
               setTimeout(() => {
                 router.push("/(settings)/SettingsDrawer");
-              }, 200); // delay in ms
+              }, 200);
             }}
-         
           >
             <Ionicons
               name="settings-outline"
@@ -118,7 +128,6 @@ export function ProfileHeader(props: ProfileHeaderProps) {
         <Pressable
           onPress={openImageCropper}
           disabled={!isOwner}
-         
         >
           <View style={{ position: "relative" }}>
             <Image
@@ -145,16 +154,19 @@ export function ProfileHeader(props: ProfileHeaderProps) {
           </View>
         </Pressable>
 
-        {/* NAME */}
+        {/* NAME (USERNAME fallback) */}
         {editing ? (
           <TextInput
             value={fullname}
             onChangeText={setFullname}
             style={styles.nameInput}
             placeholder="Full Name"
+            placeholderTextColor={COLORS.textSecondary}
           />
         ) : (
-          <Text style={styles.nameText}>{fullname || "No Name"}</Text>
+          <Text style={styles.nameText}>
+            {fullname?.trim() ? fullname : username}
+          </Text>
         )}
 
         {/* YEAR */}
@@ -167,7 +179,9 @@ export function ProfileHeader(props: ProfileHeaderProps) {
           />
         ) : (
           <View style={styles.yearBadge}>
-            <Text style={styles.yearBadgeText}>Year: {year || "—"}</Text>
+            <Text style={styles.yearBadgeText}>
+              Year: {year || "—"}
+            </Text>
           </View>
         )}
 
@@ -211,7 +225,8 @@ export function ProfileHeader(props: ProfileHeaderProps) {
   );
 }
 
-/* ===== STAT COMPONENT ===== */
+/* ---------------- STAT COMPONENT ---------------- */
+
 function Stat({
   label,
   value,
@@ -229,14 +244,14 @@ function Stat({
   );
 }
 
-/* ===== STYLES ===== */
+/* ---------------- STYLES ---------------- */
+
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     paddingHorizontal: wp(4),
   },
 
-  /* Floating Settings Button */
   settingsFloatingBtn: {
     position: "absolute",
     top: hp(1.2),
@@ -319,7 +334,6 @@ const styles = StyleSheet.create({
     gap: wp(12),
     marginTop: hp(2.2),
     marginLeft: -wp(3.5),
-    
   },
 
   statValue: {

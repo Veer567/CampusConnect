@@ -63,18 +63,7 @@ export default function TopTabs({
                 position: "relative",
               }}
             >
-              {/* 🔵 Animated Indicator */}
-              <Animated.View
-                style={{
-                  position: "absolute",
-                  height: 32,
-                  width: tabWidth - wp(10),
-                  backgroundColor: "rgba(255,255,255,0.25)",
-                  borderRadius: 10,
-                  transform: [{ translateX }],
-                  left: wp(5),
-                }}
-              />
+    
 
               {/* TAB LABELS */}
               {state.routes.map((route, index) => {

@@ -9,6 +9,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  InteractionManager,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -23,6 +24,37 @@ import {
 const { width } = Dimensions.get("window");
 const BUBBLE_MAX_WIDTH = width * 0.78;
 
+/* ---------------- Utils ---------------- */
+
+const isSameDay = (a: number, b: number) => {
+  const d1 = new Date(a);
+  const d2 = new Date(b);
+  return (
+    d1.getDate() === d2.getDate() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getFullYear() === d2.getFullYear()
+  );
+};
+
+const getDateLabel = (ts: number) => {
+  const now = new Date();
+  const date = new Date(ts);
+
+  if (isSameDay(ts, now.getTime())) return "Today";
+
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameDay(ts, yesterday.getTime())) return "Yesterday";
+
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+/* ---------------- Screen ---------------- */
+
 export default function ChatScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -31,8 +63,8 @@ export default function ChatScreen() {
   const meId = params.currentUserId as Id<"users">;
   const otherId = params.otherUserId as Id<"users">;
 
-  // Queries
-  const me = useQuery(api.users.getUserProfile, convId ? { id: meId } : "skip");
+  /* ---------------- Queries ---------------- */
+
   const other = useQuery(
     api.users.getUserProfile,
     convId ? { id: otherId } : "skip"
@@ -43,9 +75,9 @@ export default function ChatScreen() {
     otherId ? { userId: otherId } : "skip"
   );
 
-  const page = useQuery(
-    api.chat.getMessagesPage,
-    convId ? { conversationId: convId, pageSize: 200 } : "skip"
+  const messages = useQuery(
+    api.chat.getMessagesLive,
+    convId ? { conversationId: convId } : "skip"
   );
 
   const typingUsers = useQuery(
@@ -53,7 +85,8 @@ export default function ChatScreen() {
     convId ? { conversationId: convId } : "skip"
   );
 
-  // Mutations
+  /* ---------------- Mutations ---------------- */
+
   const sendMessage = useMutation(api.chat.sendMessage);
   const startTyping = useMutation(api.chat.startTyping);
   const stopTyping = useMutation(api.chat.stopTyping);
@@ -61,12 +94,13 @@ export default function ChatScreen() {
   const deleteMessageMut = useMutation(api.chat.deleteMessage);
   const editMessageMut = useMutation(api.chat.editMessage);
 
-  // Local UI state
+  /* ---------------- State ---------------- */
+
   const flatRef = useRef<FlatList>(null);
+
   const [text, setText] = useState("");
-  const [messages, setMessages] = useState<any[]>([]);
-  const [isMenuVisible, setMenuVisible] = useState(false);
   const [menuForMessage, setMenuForMessage] = useState<any | null>(null);
+  const [isMenuVisible, setMenuVisible] = useState(false);
 
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [editingMessage, setEditingMessage] = useState<any | null>(null);
@@ -75,342 +109,273 @@ export default function ChatScreen() {
     (t: any) => String(t.userId) === String(otherId)
   );
 
-  // SMART SCROLL
-  const [isAtBottom, setIsAtBottom] = useState(true);
-  const [unreadNewMessages, setUnreadNewMessages] = useState(0);
+  /* ---------------- Keyboard-safe scroll ---------------- */
 
-  const handleScroll = (event: any) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-
-    const paddingToBottom = 20;
-    const bottom =
-      contentOffset.y + layoutMeasurement.height >=
-      contentSize.height - paddingToBottom;
-
-    setIsAtBottom(bottom);
-
-    if (bottom) setUnreadNewMessages(0);
-  };
-
-  const scrollToBottom = () => {
-    if (!isAtBottom) return;
-
-    requestAnimationFrame(() => {
-      flatRef.current?.scrollToEnd({ animated: true });
+  const scrollToBottom = (animated = true) => {
+    InteractionManager.runAfterInteractions(() => {
+      flatRef.current?.scrollToOffset({ offset: 0, animated });
     });
-
-    setTimeout(() => {
-      flatRef.current?.scrollToEnd({ animated: true });
-    }, 80);
   };
 
-  // Load messages
+  /* ---------------- Effects ---------------- */
+
   useEffect(() => {
-    if (!page?.messages) return;
+    if (!messages?.length || !convId) return;
 
-    const sorted = [...page.messages].sort((a, b) => a.createdAt - b.createdAt);
-    setMessages(sorted);
-
-    if (isAtBottom) scrollToBottom();
-    else setUnreadNewMessages((c) => c + 1);
-  }, [page]);
-
-  // Mark read
-  useEffect(() => {
-    if (!messages.length || !convId) return;
     markRead({
       conversationId: convId,
-      upTo: messages[messages.length - 1].createdAt,
+      upTo: messages[0].createdAt,
     }).catch(() => {});
+
+    scrollToBottom(false);
   }, [messages]);
 
-  // Typing indicator
   useEffect(() => {
     if (!convId) return;
 
     if (text.length > 0) startTyping({ conversationId: convId });
 
-    const t = setTimeout(() => {
-      stopTyping({ conversationId: convId });
-    }, 1000);
-
+    const t = setTimeout(() => stopTyping({ conversationId: convId }), 800);
     return () => clearTimeout(t);
   }, [text]);
 
-  // Send message
+  /* ---------------- Send ---------------- */
+
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed || !convId) return;
 
-    const localMsg = {
-      _id: "local-" + Date.now(),
-      text: trimmed,
-      senderId: meId,
-      createdAt: Date.now(),
-      readBy: [meId],
-    };
-
-    setMessages((prev) => [...prev, localMsg]);
     setText("");
-
     scrollToBottom();
 
-    try {
-      await sendMessage({ conversationId: convId, text: trimmed });
-    } catch (err) {
-      console.error(err);
-    }
+    await sendMessage({
+      conversationId: convId,
+      text: trimmed,
+    });
   };
 
-  // Editing
+  /* ---------------- Edit / Delete ---------------- */
+
   const startEditFlow = () => {
     if (!menuForMessage) return;
     setIsEditingMode(true);
     setEditingMessage(menuForMessage);
     setText(menuForMessage.text);
     setMenuVisible(false);
-    scrollToBottom();
-  };
-
-  const cancelEdit = () => {
-    setIsEditingMode(false);
-    setEditingMessage(null);
-    setText("");
   };
 
   const submitEdit = async () => {
     if (!editingMessage) return;
 
     const newText = text.trim();
-    if (!newText) return cancelEdit();
-
-    setMessages((prev) =>
-      prev.map((m) =>
-        String(m._id) === String(editingMessage._id)
-          ? { ...m, text: newText }
-          : m
-      )
-    );
+    if (!newText) return;
 
     await editMessageMut({
       messageId: editingMessage._id,
       text: newText,
     });
 
-    cancelEdit();
+    setIsEditingMode(false);
+    setEditingMessage(null);
+    setText("");
   };
 
-  // Delete
   const handleDeleteMessage = async () => {
-    const id = menuForMessage._id;
-    setMessages((prev) => prev.filter((m) => m._id !== id));
+    if (!menuForMessage) return;
+    await deleteMessageMut({ messageId: menuForMessage._id });
     setMenuVisible(false);
-    deleteMessageMut({ messageId: id });
   };
 
-  const getTickColor = (msg: any) => {
-    const readBy = msg.readBy || [];
-    if (readBy.length <= 1) return "#080707ff"; // sent
-    if (!readBy.map(String).includes(String(otherId))) return "#0a0909ff"; // delivered
-    return "#FFFFFF"; // read (white)
-  };
+  /* ---------------- Render Message ---------------- */
 
-  // Render message
-  const renderItem = ({ item }: { item: any }) => {
+  const renderItem = ({ item, index }: any) => {
     const mine = String(item.senderId) === String(meId);
+    const prev = messages?.[index + 1];
+    const showDate = !prev || !isSameDay(prev.createdAt, item.createdAt);
 
     return (
-      <Pressable
-        onLongPress={() => {
-          if (mine) {
-            setMenuForMessage(item);
-            setMenuVisible(true);
-          }
-        }}
-        delayLongPress={200}
-        style={[
-          styles.msgRow,
-          { justifyContent: mine ? "flex-end" : "flex-start" },
-        ]}
-      >
-        <View
+      <>
+        {showDate && (
+          <View style={styles.dateSeparator}>
+            <Text style={styles.dateText}>{getDateLabel(item.createdAt)}</Text>
+          </View>
+        )}
+
+        <Pressable
+          onLongPress={() => {
+            if (mine) {
+              setMenuForMessage(item);
+              setMenuVisible(true);
+            }
+          }}
           style={[
-            styles.bubble,
-            {
-              backgroundColor: mine ? COLORS.primary : "#EEE",
-              maxWidth: BUBBLE_MAX_WIDTH,
-            },
+            styles.msgRow,
+            { justifyContent: mine ? "flex-end" : "flex-start" },
           ]}
         >
-          <Text style={{ color: mine ? "#fff" : "#000" }}>{item.text}</Text>
+          <View
+            style={[
+              styles.bubble,
+              {
+                backgroundColor: mine ? COLORS.primary : "#EEE",
+                maxWidth: BUBBLE_MAX_WIDTH,
+              },
+            ]}
+          >
+            {item.imageUrl && (
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={styles.image}
+                onLoadEnd={() => scrollToBottom(false)} // 🔥 image height fix
+              />
+            )}
 
-          <View style={styles.timeRow}>
+            {item.text && (
+              <Text style={{ color: mine ? "#fff" : "#000" }}>{item.text}</Text>
+            )}
+
             <Text style={styles.time}>
               {new Date(item.createdAt).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
             </Text>
-
-            {mine && (
-              <Ionicons
-                name="checkmark-done"
-                size={16}
-                color={getTickColor(item)}
-                style={{ marginLeft: 4 }}
-              />
-            )}
           </View>
-        </View>
-      </Pressable>
+        </Pressable>
+      </>
     );
   };
 
+  /* ---------------- UI ---------------- */
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#fff" }}
+      style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 6 }}>
-          <Ionicons name="arrow-back" size={28} />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={26} />
         </TouchableOpacity>
 
-        <Image
-          source={{
-            uri:
-              other?.image ||
-              "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-          }}
-          style={styles.avatar}
-        />
+        <TouchableOpacity
+          onPress={() =>
+            router.push({
+              pathname: "/other-profile",
+              params: { userId: otherId },
+            })
+          }
+        >
+          <Image
+            source={{
+              uri:
+                other?.image ||
+                "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+            }}
+            style={styles.avatar}
+          />
+        </TouchableOpacity>
 
-        <View style={{ marginLeft: 12 }}>
-          <Text style={styles.headerName}>{other?.fullname ?? "Chat"}</Text>
-
+        <View style={{ marginLeft: 10 }}>
+          <Text style={styles.headerName}>
+            {other?.fullname || other?.username}
+          </Text>
           <Text style={styles.typingText}>
             {isOtherTyping
               ? "typing…"
-              : presence === undefined
-                ? "loading…"
-                : presence.online
-                  ? "online"
-                  : presence.lastSeen
-                    ? `last seen ${new Date(
-                        presence.lastSeen
-                      ).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}`
-                    : "offline"}
+              : presence?.online
+                ? "online"
+                : "offline"}
           </Text>
         </View>
       </View>
 
-      {/* Floating NEW MESSAGES Indicator */}
-      {unreadNewMessages > 0 && !isAtBottom && (
-        <TouchableOpacity
-          style={styles.newMsgButton}
-          onPress={() => {
-            setIsAtBottom(true);
-            scrollToBottom();
-          }}
-        >
-          <Ionicons name="arrow-down" size={20} color="#fff" />
-          <Text style={{ color: "#fff", marginLeft: 6 }}>
-            {unreadNewMessages} new messages
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Messages */}
+      {/* Messages (INVERTED) */}
       <FlatList
         ref={flatRef}
         data={messages}
+        inverted
+        keyExtractor={(i) => String(i._id)}
         renderItem={renderItem}
-        keyExtractor={(item) => String(item._id)}
-        onScroll={handleScroll}
-        scrollEventThrottle={50}
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
+        showsVerticalScrollIndicator={false}
       />
 
-      {/* Editing Banner */}
+      {/* Edit Banner */}
       {isEditingMode && (
         <View style={styles.editBanner}>
-          <Text style={styles.editBannerTitle}>Editing message</Text>
-          <Text numberOfLines={1} style={styles.editBannerPreview}>
-            {editingMessage?.text}
-          </Text>
-
-          <Pressable onPress={cancelEdit}>
-            <Ionicons name="close" size={20} color="#555" />
+          <Text>Editing message</Text>
+          <Pressable onPress={() => setIsEditingMode(false)}>
+            <Ionicons name="close" size={18} />
           </Pressable>
         </View>
       )}
 
-      {/* Input Bar */}
+      {/* Input */}
       <View style={styles.inputBar}>
         <TextInput
           placeholder="Message..."
-          placeholderTextColor={COLORS.textSecondary}
           value={text}
           onChangeText={setText}
           style={styles.input}
         />
-
-        <TouchableOpacity
-          onPress={isEditingMode ? submitEdit : handleSend}
-          disabled={!text.trim()}
-        >
+        <TouchableOpacity onPress={isEditingMode ? submitEdit : handleSend}>
           <Ionicons
             name={isEditingMode ? "checkmark" : "send"}
-            size={28}
-            color={text.trim() ? COLORS.primary : "#bbb"}
+            size={26}
+            color={COLORS.primary}
           />
         </TouchableOpacity>
       </View>
 
-      {/* Context Menu */}
-      <Modal
-        visible={isMenuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuVisible(false)}
-      >
+      {/* Menu */}
+      {/* Action Sheet Modal */}
+      <Modal visible={isMenuVisible} transparent animationType="fade">
         <Pressable
-          style={contextStyles.overlay}
+          style={sheetStyles.backdrop}
           onPress={() => setMenuVisible(false)}
         >
-          <View style={contextStyles.box}>
-            <Text style={contextStyles.title}>Message options</Text>
+          <View style={sheetStyles.sheet}>
+            {/* Handle */}
+            <View style={sheetStyles.handle} />
 
-            <Pressable style={contextStyles.row} onPress={startEditFlow}>
-              <Ionicons
-                name="create-outline"
-                size={20}
-                color={COLORS.primary}
-              />
-              <Text style={contextStyles.rowText}>Edit</Text>
+            {/* Edit */}
+            <Pressable
+              style={({ pressed }) => [
+                sheetStyles.actionRow,
+                pressed && sheetStyles.pressed,
+              ]}
+              onPress={startEditFlow}
+            >
+              <Ionicons name="create-outline" size={22} color="#111" />
+              <Text style={sheetStyles.actionText}>Edit Message</Text>
             </Pressable>
 
-            <Pressable style={contextStyles.row} onPress={handleDeleteMessage}>
-              <Ionicons name="trash-outline" size={20} color="red" />
-              <Text style={[contextStyles.rowText, { color: "red" }]}>
-                Delete
+            {/* Divider */}
+            <View style={sheetStyles.divider} />
+
+            {/* Delete */}
+            <Pressable
+              style={({ pressed }) => [
+                sheetStyles.actionRow,
+                pressed && sheetStyles.pressed,
+              ]}
+              onPress={handleDeleteMessage}
+            >
+              <Ionicons name="trash-outline" size={22} color="#ff3b30" />
+              <Text style={[sheetStyles.actionText, { color: "#ff3b30" }]}>
+                Delete Message
               </Text>
             </Pressable>
 
+            {/* Cancel */}
             <Pressable
-              style={[
-                contextStyles.row,
-                { justifyContent: "center", marginTop: 6 },
-              ]}
+              style={sheetStyles.cancel}
               onPress={() => setMenuVisible(false)}
             >
-              <Text style={[contextStyles.rowText, { fontWeight: "700" }]}>
-                Cancel
-              </Text>
+              <Text style={sheetStyles.cancelText}>Cancel</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -419,22 +384,19 @@ export default function ChatScreen() {
   );
 }
 
-/* --------------------------
-   Styles
---------------------------- */
+/* ---------------- Styles ---------------- */
 
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    padding: 12,
     borderBottomWidth: 1,
     borderColor: "#eee",
   },
-  avatar: { width: 46, height: 46, borderRadius: 23, marginLeft: 8 },
-  headerName: { fontSize: 17, fontWeight: "700" },
-  typingText: { fontSize: 13, color: COLORS.primary, marginTop: 2 },
+  avatar: { width: 44, height: 44, borderRadius: 22, marginLeft: 10 },
+  headerName: { fontWeight: "700", fontSize: 16 },
+  typingText: { fontSize: 12, color: COLORS.primary },
 
   msgRow: { flexDirection: "row", padding: 8 },
   bubble: { padding: 12, borderRadius: 16 },
@@ -444,20 +406,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 6,
   },
-  time: {
-    fontSize: 10,
-    opacity: 0.7,
-    textAlign: "right",
-  },
+  time: { fontSize: 10, opacity: 0.7 },
 
   inputBar: {
     flexDirection: "row",
     padding: 10,
-    marginBottom: 10,
     borderTopWidth: 1,
     borderColor: "#ddd",
     alignItems: "center",
-    backgroundColor: "#fff",
   },
   input: {
     flex: 1,
@@ -478,13 +434,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
-    zIndex: 50,
-    elevation: 5,
+  },
+
+  dateSeparator: {
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  dateText: {
+    backgroundColor: "#ddd",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 12,
   },
 
   editBanner: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    padding: 10,
     backgroundColor: "#f2f2f2",
     borderTopWidth: 1,
     borderColor: "#ddd",
@@ -492,17 +457,38 @@ const styles = StyleSheet.create({
   editBannerTitle: {
     fontWeight: "700",
     fontSize: 13,
-    marginBottom: 2,
     color: COLORS.primary,
   },
   editBannerPreview: {
     fontSize: 13,
     color: "#555",
-    marginBottom: 6,
+  },
+  image: {
+    width: BUBBLE_MAX_WIDTH - 24,
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  menu: {
+    width: 200,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
 
-/* Context menu */
 const contextStyles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -515,23 +501,72 @@ const contextStyles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 15,
-    elevation: 15,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 10,
   },
   row: {
+    paddingVertical: 12,
+  },
+
+  
+});
+const sheetStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-end",
+  },
+
+  sheet: {
+    backgroundColor: "#fff",
+    paddingTop: 12,
+    paddingBottom: 20,
+    paddingHorizontal: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#ccc",
+    alignSelf: "center",
+    marginBottom: 14,
+  },
+
+  actionRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 14,
-    paddingHorizontal: 8,
-    gap: 12,
   },
-  rowText: {
+
+  actionText: {
     fontSize: 16,
-    color: COLORS.text,
+    marginLeft: 14,
+    fontWeight: "500",
+    color: "#111",
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#eee",
+  },
+
+  pressed: {
+    backgroundColor: "#f2f2f2",
+    borderRadius: 10,
+  },
+
+  cancel: {
+    marginTop: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderRadius: 14,
+    backgroundColor: "#f5f5f5",
+  },
+
+  cancelText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
   },
 });

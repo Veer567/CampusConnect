@@ -1,7 +1,6 @@
 // SignupScreen.tsx
 import React, { useRef, useState } from "react";
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   ScrollView,
@@ -10,7 +9,6 @@ import {
   TouchableOpacity,
   View,
   Pressable,
-
   Platform,
   ActivityIndicator,
   StyleSheet,
@@ -22,20 +20,21 @@ import { useRouter } from "expo-router";
 import { COLORS } from "@/constants/themes";
 import { styles as authStyles } from "@/styles/auth.styles";
 import { SafeAreaView } from "react-native-safe-area-context";
+import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 
 export default function SignupScreen() {
   const { isLoaded, signUp, setActive } = useSignUp();
   const router = useRouter();
+  const showAlert = useAlert((s) => s.show);
   const { width } = useWindowDimensions();
 
-  // Form state
+  /* ---------------- FORM STATE ---------------- */
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [code, setCode] = useState("");
   const [isCodeSent, setIsCodeSent] = useState(false);
 
-  // UI states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,31 +44,37 @@ export default function SignupScreen() {
   const confirmPassRef = useRef<TextInput | null>(null);
   const codeRef = useRef<TextInput | null>(null);
 
-  // Allow only Marwadi emails
+  /* ---------------- EMAIL RULE ---------------- */
   const isAllowedEmail = (e: string) =>
     e.trim().toLowerCase().endsWith("@marwadiuniversity.ac.in");
 
-  // SIGN UP
+  /* ---------------- SIGN UP ---------------- */
   const handleSignUp = async () => {
     if (!isLoaded || !signUp) return;
 
     const normalized = email.trim().toLowerCase();
 
     if (!isAllowedEmail(normalized)) {
-      Alert.alert(
-        "Access Denied",
-        "Only @marwadiuniversity.ac.in emails are allowed."
-      );
+      showAlert({
+        title: "Access Denied",
+        message: "Only @marwadiuniversity.ac.in emails are allowed.",
+      });
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Password Mismatch", "Passwords do not match.");
+      showAlert({
+        title: "Password Mismatch",
+        message: "Passwords do not match.",
+      });
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert("Weak Password", "Password must be at least 6 characters.");
+      showAlert({
+        title: "Weak Password",
+        message: "Password must be at least 6 characters.",
+      });
       return;
     }
 
@@ -84,25 +89,34 @@ export default function SignupScreen() {
       await signUp.prepareEmailAddressVerification();
       setIsCodeSent(true);
 
-      setTimeout(() => codeRef.current?.focus(), 400);
-
-      Alert.alert(
-        "Email Verification",
-        "A verification code has been sent to your inbox."
-      );
+      showAlert({
+        title: "Email Verification",
+        message: "A verification code has been sent to your inbox.",
+        confirmText: "OK",
+        onConfirm: () => {
+          setTimeout(() => codeRef.current?.focus(), 300);
+        },
+      });
     } catch (err: any) {
-      const msg =
-        err?.errors?.[0]?.message || err.message || "Something went wrong";
-      Alert.alert("Sign-up failed", msg);
+      showAlert({
+        title: "Sign-up Failed",
+        message:
+          err?.errors?.[0]?.message ||
+          err?.message ||
+          "Something went wrong.",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // VERIFY
+  /* ---------------- VERIFY CODE ---------------- */
   const handleVerifyCode = async () => {
     if (!signUp || !code.trim()) {
-      Alert.alert("Missing Code", "Please enter the 6-digit code.");
+      showAlert({
+        title: "Missing Code",
+        message: "Please enter the 6-digit verification code.",
+      });
       return;
     }
 
@@ -117,12 +131,19 @@ export default function SignupScreen() {
         await setActive({ session: result.createdSessionId });
         router.replace("/(tabs)");
       } else {
-        Alert.alert("Verification failed", "Invalid verification code.");
+        showAlert({
+          title: "Verification Failed",
+          message: "Invalid verification code.",
+        });
       }
     } catch (err: any) {
-      const msg =
-        err?.errors?.[0]?.message || err.message || "Invalid or expired code.";
-      Alert.alert("Verification failed", msg);
+      showAlert({
+        title: "Verification Failed",
+        message:
+          err?.errors?.[0]?.message ||
+          err?.message ||
+          "Invalid or expired code.",
+      });
     } finally {
       setVerificationLoading(false);
     }
@@ -130,12 +151,12 @@ export default function SignupScreen() {
 
   const horizontalPadding = width > 420 ? 40 : 24;
 
+  /* ---------------- UI ---------------- */
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
@@ -165,38 +186,32 @@ export default function SignupScreen() {
               <>
                 <Text style={localStyles.title}>Create Account</Text>
 
-                {/* Email */}
                 <Text style={localStyles.label}>Email</Text>
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  autoComplete="email"
                   placeholder="Enter your Marwadi email"
-                  placeholderTextColor="#999"
                   style={localStyles.input}
-                  returnKeyType="next"
                   onSubmitEditing={() => passRef.current?.focus()}
                 />
 
-                {/* Password */}
                 <Text style={localStyles.label}>Password</Text>
                 <View style={localStyles.passwordRow}>
                   <TextInput
                     ref={passRef}
                     value={password}
+                    placeholder="Enter password"
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
-                    placeholder="Enter password"
-                    placeholderTextColor="#aaa"
                     style={localStyles.passwordInput}
-                    returnKeyType="next"
-                    onSubmitEditing={() => confirmPassRef.current?.focus()}
+                    onSubmitEditing={() =>
+                      confirmPassRef.current?.focus()
+                    }
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword((p) => !p)}
-                    hitSlop={10}
                   >
                     <Ionicons
                       name={showPassword ? "eye-off" : "eye"}
@@ -206,23 +221,21 @@ export default function SignupScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Confirm Password */}
                 <Text style={localStyles.label}>Confirm Password</Text>
                 <View style={localStyles.passwordRow}>
                   <TextInput
                     ref={confirmPassRef}
+                    placeholder="Confirm Password"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showConfirmPassword}
-                    placeholder="Re-enter password"
-                    placeholderTextColor="#aaa"
                     style={localStyles.passwordInput}
-                    returnKeyType="done"
                     onSubmitEditing={handleSignUp}
                   />
                   <TouchableOpacity
-                    onPress={() => setShowConfirmPassword((p) => !p)}
-                    hitSlop={10}
+                    onPress={() =>
+                      setShowConfirmPassword((p) => !p)
+                    }
                   >
                     <Ionicons
                       name={showConfirmPassword ? "eye-off" : "eye"}
@@ -232,19 +245,20 @@ export default function SignupScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Sign Up Button */}
                 <Pressable
                   onPress={handleSignUp}
+                  disabled={loading}
                   style={[
                     localStyles.button,
                     loading && localStyles.buttonDisabled,
                   ]}
-                  disabled={loading}
                 >
                   {loading ? (
-                    <ActivityIndicator color="white" />
+                    <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={localStyles.buttonText}>Sign Up</Text>
+                    <Text style={localStyles.buttonText}>
+                      Sign Up
+                    </Text>
                   )}
                 </Pressable>
               </>
@@ -260,24 +274,22 @@ export default function SignupScreen() {
                   value={code}
                   onChangeText={setCode}
                   keyboardType="number-pad"
-                  placeholder="Enter code"
-                  placeholderTextColor="#aaa"
                   maxLength={6}
                   style={localStyles.codeInput}
-                  returnKeyType="done"
                   onSubmitEditing={handleVerifyCode}
                 />
 
                 <Pressable
                   onPress={handleVerifyCode}
+                  disabled={verificationLoading}
                   style={[
                     localStyles.button,
-                    verificationLoading && localStyles.buttonDisabled,
+                    verificationLoading &&
+                      localStyles.buttonDisabled,
                   ]}
-                  disabled={verificationLoading}
                 >
                   {verificationLoading ? (
-                    <ActivityIndicator color="white" />
+                    <ActivityIndicator color="#fff" />
                   ) : (
                     <Text style={localStyles.buttonText}>
                       Verify & Continue
@@ -289,9 +301,14 @@ export default function SignupScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ⭐ GLOBAL ALERT */}
+      <GlobalAlert />
     </SafeAreaView>
   );
 }
+
+/* ---------------- STYLES ---------------- */
 
 const localStyles = StyleSheet.create({
   card: {
@@ -299,10 +316,6 @@ const localStyles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     elevation: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 8,
   },
   title: { fontSize: 20, fontWeight: "700", marginBottom: 20 },
   label: { fontSize: 14, color: COLORS.grey },

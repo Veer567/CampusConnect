@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 
+import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 import {
   differenceInCalendarWeeks,
   formatDistanceToNow,
@@ -16,7 +17,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
-  Alert,
   Animated,
   Dimensions,
   FlatList,
@@ -133,6 +133,7 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
   const clearAll = useMutation(api.notifications.clearAllNotifications);
+  const showAlert = useAlert((s) => s.show);
 
   // Convex data
   const me = useQuery(
@@ -274,7 +275,10 @@ export default function NotificationsScreen() {
           otherUserId: senderId as any,
         });
         if (!conv || !conv._id) {
-          Alert.alert("Error", "Could not open conversation");
+          showAlert({
+            title: "Error",
+            message: "Could not start conversation",
+          });       
           return;
         }
         finalConvId = String(conv._id);
@@ -289,7 +293,10 @@ export default function NotificationsScreen() {
       });
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Could not open conversation");
+      showAlert({
+        title: "Error",
+        message: "Could not open conversation",
+      });
     }
   };
 
@@ -353,7 +360,10 @@ export default function NotificationsScreen() {
     try {
       await deleteNotif({ id: id as any });
     } catch {
-      Alert.alert("Error", "Could not delete notification");
+      showAlert({
+        title: "Error",
+        message: "Could not delete notification. Please try again.",
+      });
     }
   };
 
@@ -451,27 +461,24 @@ export default function NotificationsScreen() {
           title="Notifications"
           rightIcon="trash-outline"
           onRightPress={async () => {
-            Alert.alert(
-              "Clear All Notifications",
-              "Are you sure you want to clear all notifications? This action cannot be undone.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Clear All",
-                  style: "destructive",
-                  onPress: async () => {
-                    try {
-                      await clearAll();
-                    } catch (e) {
-                      Alert.alert(
-                        "Error",
-                        "Could not clear notifications. Please try again."
-                      );
-                    }
-                  },
-                },
-              ]
-            );
+            showAlert({
+              title: "Clear All Notifications",
+              message: "Are you sure you want to clear all notifications?",
+              cancelText: "Cancel",
+              confirmText: "Clear All",
+              onConfirm: async () => {
+                try {
+                  await clearAll();
+                } catch (e) {
+                  console.error("Failed to clear notifications:", e);
+                  showAlert({
+                    title: "Error",
+                    message:
+                      "Could not clear notifications. Please try again later.",
+                  });
+                }
+              },
+            });
           }}
         />
 
@@ -509,6 +516,7 @@ export default function NotificationsScreen() {
           />
         )}
       </SafeAreaView>
+      <GlobalAlert />
     </LinearGradient>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import useBackToSettingsRoot from "@/hooks/useBackToSettingsRoot";
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -45,9 +46,9 @@ export default function Report() {
   return (
     <>
       <ScrollView style={styles.container}>
-        <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={26} />
-        </TouchableOpacity>
+        </Pressable>
 
         <Text style={styles.title}>Report a Problem</Text>
 
@@ -100,5 +101,14 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 16,
+  },
+    backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f1f1f1",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
   },
 });

@@ -1,40 +1,166 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
-import useBackToSettingsRoot from "@/hooks/useBackToSettingsRoot";
+import { Platform, ScrollView, StyleSheet, Text } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Pressable } from "react-native";
 
 export default function FAQ() {
   const router = useRouter();
-  
+
   return (
-    <ScrollView style={styles.container}>
-      <TouchableOpacity style={styles.back} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={26} />
-      </TouchableOpacity>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#fff",
+        marginTop: Platform.OS === "android" ? -36 : 0,
+      }}
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={28} color="#222" />
+        </Pressable>
 
-      <Text style={styles.title}>Frequently Asked Questions</Text>
+        <Text style={styles.title}>Frequently Asked Questions</Text>
 
-      <Text style={styles.q}>1. How do I update my profile?</Text>
-      <Text style={styles.a}>Open Profile → Edit Profile → Save.</Text>
+        {/* PROFILE */}
+        <Text style={styles.q}>1. How do I update my profile?</Text>
+        <Text style={styles.a}>Open Profile → Edit Profile → Save.</Text>
 
-      <Text style={styles.q}>2. How do I reset my password?</Text>
-      <Text style={styles.a}>
-        Use the ‘Forgot Password’ option when logging in.
-      </Text>
+        <Text style={styles.q}>2. Why is my name not visible on posts?</Text>
+        <Text style={styles.a}>
+          Your username is shown by default. You can add or update your full
+          name from Edit Profile anytime.
+        </Text>
 
-      <Text style={styles.q}>3. How do I report a user?</Text>
-      <Text style={styles.a}>Go to Settings → Report a Problem.</Text>
+        {/* ACCOUNT */}
+        <Text style={styles.q}>3. How do I reset my password?</Text>
+        <Text style={styles.a}>
+          Go to Settings → Account → Change Password to reset it.
+        </Text>
 
-      <Text style={styles.q}>4. How do I delete my account?</Text>
-      <Text style={styles.a}>Settings → Delete Account.</Text>
-    </ScrollView>
+        <Text style={styles.q}>4. Can I change my email address?</Text>
+        <Text style={styles.a}>
+          Currently, email changes must be done through account verification.
+          Please contact support if needed.
+        </Text>
+
+        {/* POSTS */}
+        <Text style={styles.q}>5. How do I create a post?</Text>
+        <Text style={styles.a}>
+          Tap the “+” button on the home screen, add details, and publish.
+        </Text>
+
+        <Text style={styles.q}>6. Can I edit or delete my post?</Text>
+        <Text style={styles.a}>
+          Yes. Open your post → tap the three dots → Edit or Delete.
+        </Text>
+
+        <Text style={styles.q}>7. Why can’t I like my own post?</Text>
+        <Text style={styles.a}>
+          To keep interactions meaningful, liking your own posts is disabled.
+        </Text>
+
+        {/* CHAT */}
+        <Text style={styles.q}>8. How do I send a message to someone?</Text>
+        <Text style={styles.a}>
+          Open their profile and tap the “Message” button to start a chat.
+        </Text>
+
+        <Text style={styles.q}>9. What does “online” or “typing…” mean?</Text>
+        <Text style={styles.a}>
+          “Online” shows active users. “Typing…” appears when the other person
+          is currently typing a message.
+        </Text>
+
+        <Text style={styles.q}>10. Can I delete or edit a message?</Text>
+        <Text style={styles.a}>
+          Yes. Long-press your message to edit or delete it.
+        </Text>
+
+        {/* NOTIFICATIONS */}
+        <Text style={styles.q}>11. Why am I getting notifications?</Text>
+        <Text style={styles.a}>
+          Notifications are sent for likes, comments, follows, and messages.
+        </Text>
+
+        <Text style={styles.q}>12. How do I clear notifications?</Text>
+        <Text style={styles.a}>
+          Open Notifications → tap the trash icon → confirm.
+        </Text>
+
+        {/* SAFETY */}
+        <Text style={styles.q}>13. How do I report a user?</Text>
+        <Text style={styles.a}>
+          Go to Settings → Report a Problem and provide details.
+        </Text>
+
+        <Text style={styles.q}>14. How do I block someone?</Text>
+        <Text style={styles.a}>
+          Blocking is currently under development and will be available soon.
+        </Text>
+
+        {/* ACCOUNT */}
+        <Text style={styles.q}>15. How do I delete my account?</Text>
+        <Text style={styles.a}>
+          Go to Settings → Delete Account. This action is permanent.
+        </Text>
+
+        <Text style={styles.q}>16. Is my data secure?</Text>
+        <Text style={styles.a}>
+          Yes. We follow industry-standard security practices to protect your
+          data.
+        </Text>
+
+        {/* SUPPORT */}
+        <Text style={styles.q}>17. How can I contact support?</Text>
+        <Text style={styles.a}>
+          Use Settings → Help & Support to reach our team.
+        </Text>
+
+        <Text style={styles.q}>
+          18. The app isn’t working properly. What should I do?
+        </Text>
+        <Text style={styles.a}>
+          Try restarting the app or updating to the latest version. If the issue
+          persists, contact support.
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: "#fff", flex: 1 },
-  back: { paddingBottom: 10 },
-  title: { fontSize: 26, fontWeight: "700", marginTop: 10 },
-  q: { marginTop: 25, fontSize: 18, fontWeight: "600" },
-  a: { marginTop: 6, fontSize: 15, color: "#555" },
+  content: {
+    padding: 20,
+    paddingBottom: 40, // ✅ THIS FIXES CUT-OFF CONTENT
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f1f1f1",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
+    marginTop: 10,
+  },
+  q: {
+    marginTop: 25,
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  a: {
+    marginTop: 6,
+    fontSize: 15,
+    color: "#555",
+    lineHeight: 22,
+  },
 });
