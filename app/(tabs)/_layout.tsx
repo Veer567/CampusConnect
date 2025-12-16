@@ -4,8 +4,10 @@ import { Ionicons } from "@expo/vector-icons";
 import Fontisto from "@expo/vector-icons/Fontisto";
 import { COLORS } from "@/constants/themes";
 import GlobalAlert from "@/components/GlobalAlert";
+import usePushNotifications from "@/hooks/usePushNotifications";
 
 export default function TabLayout() {
+   usePushNotifications();
   return (
     <>
       {/* Global Alert visible above all tabs */}

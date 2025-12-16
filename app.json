@@ -20,6 +20,9 @@
       "package": "com.vir567.Spotlight",
       "versionCode": 1,
 
+      "useNextNotificationsApi": true,
+      "permissions": ["NOTIFICATIONS"],
+
       "adaptiveIcon": {
         "foregroundImage": "./assets/splash/image2.png",
         "backgroundColor": "#ffffff"
@@ -37,6 +40,16 @@
 
     "plugins": [
       "expo-router",
+
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification.png",
+          "color": "#ffffff",
+          "sounds": ["default"]
+        }
+      ],
+
       [
         "expo-splash-screen",
         {
@@ -46,6 +59,7 @@
           "backgroundColor": "#ffffff"
         }
       ],
+
       "expo-secure-store",
       "expo-font",
       "expo-web-browser"
