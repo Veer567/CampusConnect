@@ -1,4 +1,9 @@
 // app/(your-path)/EditPostScreen.tsx
+import { COLORS } from "@/constants/themes";
+import { api } from "@/convex/_generated/api";
+import { styles } from "@/styles/create.styles";
+import { useMutation, useQuery } from "convex/react";
+import { router, useLocalSearchParams } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -12,28 +17,24 @@ import {
   Dimensions,
   Easing,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Modal,
 } from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { COLORS } from "@/constants/themes";
-import { styles } from "@/styles/create.styles";
 
-import * as ImagePicker from "expo-image-picker";
+import AppHeader from "@/components/AppHeader";
+import { useToast } from "@/components/Toast/ToastProvider";
+import { Id } from "@/convex/_generated/dataModel";
+import { Ionicons } from "@expo/vector-icons";
+import dayjs from "dayjs";
 import * as FileSystem from "expo-file-system/legacy";
 import { Image } from "expo-image";
-import AppHeader from "@/components/AppHeader";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import {useToast} from "@/components/Toast/ToastProvider";
-import dayjs from "dayjs";
 import DateTimePicker from "react-native-ui-datepicker";
 
 const { height } = Dimensions.get("window");
@@ -234,7 +235,9 @@ export default function EditPostScreen() {
         location,
         eventDate,
         tags,
-        ...(finalStorageId ? { storageId: finalStorageId } : {}),
+        ...(finalStorageId
+        ? { storageId: finalStorageId as Id<"_storage"> }
+          : {}),
       });
 
       toast.show({ title: "Success", message: "Post updated!" }, "success");
@@ -282,7 +285,11 @@ export default function EditPostScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <AppHeader title="Edit Post" showBackButton onBackPress={() => router.back()} />
+        <AppHeader
+          title="Edit Post"
+          showBackButton
+          onBackPress={() => router.back()}
+        />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -307,7 +314,10 @@ export default function EditPostScreen() {
                 return (
                   <Animated.View
                     key={cat.id}
-                    style={{ transform: [{ scale: categoryScales[i] }], marginRight: 8 }}
+                    style={{
+                      transform: [{ scale: categoryScales[i] }],
+                      marginRight: 8,
+                    }}
                   >
                     <TouchableOpacity
                       onPress={() => setSelectedCategory(cat)}
@@ -320,7 +330,9 @@ export default function EditPostScreen() {
                       <Text style={styles.categoryIcon}>{cat.icon}</Text>
                       <Text
                         style={
-                          active ? styles.categoryTextActive : styles.categoryText
+                          active
+                            ? styles.categoryTextActive
+                            : styles.categoryText
                         }
                       >
                         {cat.name}
@@ -406,7 +418,11 @@ export default function EditPostScreen() {
                 />
 
                 <TouchableOpacity onPress={handleAddTag}>
-                  <Ionicons name="add-circle" size={22} color={COLORS.primary} />
+                  <Ionicons
+                    name="add-circle"
+                    size={22}
+                    color={COLORS.primary}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -464,7 +480,9 @@ export default function EditPostScreen() {
                     size={48}
                     color={COLORS.textSecondary}
                   />
-                  <Text style={styles.placeholderText}>Tap to select image</Text>
+                  <Text style={styles.placeholderText}>
+                    Tap to select image
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
