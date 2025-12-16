@@ -31,6 +31,9 @@ CampusConnect ensures **secure authentication through official Marwadi Universit
 - 👤 **Profile Customization** – Edit and personalize profiles using animated modals  
 - 🖼 **Media Uploads** – Upload and share images directly from your device  
 - 📚 **Student-Centric Feed** – Stay connected with all campus-related activities  
+- 📊 **Analytics Dashboard** – Track post performance, engagement, and reach  
+- 🔒 **Feedback System** – Share and receive feedback to foster improvement  
+- 🔐 **Enhanced Security Features** – Multi-factor authentication for a safer experience
 
 ---
 
@@ -45,12 +48,13 @@ CampusConnect ensures **secure authentication through official Marwadi Universit
 | **UI Framework** | React Native Components + Custom Styling |
 | **Storage** | Cloud & Local Caching |
 | **Notifications** | In-App Notification System |
+| **Analytics** | Custom Data Visualization |
 
 ---
 
 ## 📱 App Structure
 
-🧭 **7 Core Screens**
+🧭 **9 Core Screens**
 
 - Auth Screen  
 - Home Screen  
@@ -59,6 +63,8 @@ CampusConnect ensures **secure authentication through official Marwadi Universit
 - Notifications Screen  
 - Profile Screen  
 - User Profile Screen  
+- Analytics Dashboard Screen  
+- Feedback Screen
 
 ---
 
@@ -68,6 +74,7 @@ CampusConnect ensures **secure authentication through official Marwadi Universit
 - ⚡ **Performance Optimization & Smooth Navigation**  
 - 🔄 **Webhooks Integration for Real-Time Updates**  
 - 💻 **Cross-Platform Development** — No Mac required  
+- 🌐 **Offline Mode Support** — Access content even without internet
 
 ---
 
@@ -90,4 +97,3 @@ aligning seamlessly with **Marwadi University’s digital transformation** and c
 ---
 
 > _Empowering Marwadi University students to connect, collaborate, and grow together — one post at a time._
-
