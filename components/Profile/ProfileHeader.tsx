@@ -192,7 +192,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
             value={followers}
             onPress={() =>
               router.push({
-                pathname: "/profile/followers",
+                pathname: "/followers",
                 params: { userId, from: "profile" },
               })
             }
@@ -203,7 +203,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
             value={following}
             onPress={() =>
               router.push({
-                pathname: "/profile/following",
+                pathname: "/following",
                 params: { userId, from: "profile" },
               })
             }
@@ -214,7 +214,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
             value={posts}
             onPress={() =>
               router.push({
-                pathname: "/profile/user-posts",
+                pathname: "/user-posts",
                 params: { userId, from: "profile" },
               })
             }

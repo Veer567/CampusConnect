@@ -1,4 +1,5 @@
 import { Loader } from "@/components/Loader";
+import { useToast } from "@/components/Toast/ToastProvider";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import dayjs from "dayjs";
@@ -36,6 +37,7 @@ const hp = (p: number) => (height * p) / 100;
 export default function EditMarketplace() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { show } = useToast();
 
   const post = useQuery(
     api.marketplace.getMarketplacePostById,
@@ -46,7 +48,7 @@ export default function EditMarketplace() {
   const deletePost = useMutation(api.marketplace.deleteMarketplacePost);
 
   /* ---------------------------
-     Local form states
+     Local state
 ----------------------------*/
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -77,24 +79,21 @@ export default function EditMarketplace() {
   const postType = post?.type ?? "project";
 
   /* ---------------------------
-     Animated Date Picker
+     Date picker animation
 ----------------------------*/
   const [showPicker, setShowPicker] = useState(false);
   const [pickerField, setPickerField] = useState<"event" | "join" | null>(null);
   const [pickerDate, setPickerDate] = useState(new Date());
   const slideAnim = useRef(new Animated.Value(0)).current;
 
-  const openPicker = (field: "event" | "join", currentValue?: string) => {
+  const openPicker = (field: "event" | "join", value?: string) => {
     setPickerField(field);
-
-    if (currentValue) {
-      const d = dayjs(currentValue, "DD/MM/YYYY");
+    if (value) {
+      const d = dayjs(value, "DD/MM/YYYY");
       if (d.isValid()) setPickerDate(d.toDate());
     }
-
     setShowPicker(true);
     slideAnim.setValue(0);
-
     Animated.timing(slideAnim, {
       toValue: 1,
       duration: 250,
@@ -112,7 +111,7 @@ export default function EditMarketplace() {
   };
 
   /* ---------------------------
-     Android back override
+     Android back
 ----------------------------*/
   useEffect(() => {
     const backAction = () => {
@@ -124,14 +123,11 @@ export default function EditMarketplace() {
   }, [postType]);
 
   /* ---------------------------
-     Image Picker
+     Image picker
 ----------------------------*/
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert("Permission required", "Please allow gallery access.");
-      return;
-    }
+    if (!perm.granted) return;
 
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
@@ -154,12 +150,17 @@ export default function EditMarketplace() {
 ----------------------------*/
   const submit = useCallback(async () => {
     if (!title.trim() || !description.trim()) {
-      Alert.alert("Missing fields", "Please fill title & description.");
+      show(
+        {
+          title: "Missing Information",
+          message: "Title and description are required",
+        },
+        "info"
+      );
       return;
     }
 
     setLoading(true);
-
     try {
       await updatePost({
         id: id as any,
@@ -176,11 +177,15 @@ export default function EditMarketplace() {
         location: location.trim() || "Remote",
       });
 
+      show(
+        { title: "Updated", message: "Post updated successfully" },
+        "success"
+      );
+
       router.replace(`/marketplace?tab=${postType}`);
     } catch {
-      Alert.alert("Failed", "Could not update post.");
+      show({ title: "Update Failed", message: "Please try again" }, "error");
     }
-
     setLoading(false);
   }, [title, description, tags, lookingFor, eventDate, lastDateToJoin, image]);
 
@@ -194,18 +199,31 @@ export default function EditMarketplace() {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          await deletePost({ id: id as any });
-          router.replace(`/marketplace?tab=${postType}`);
+          try {
+            await deletePost({ id: id as any });
+
+            show(
+              { title: "Deleted", message: "Post deleted successfully" },
+              "success"
+            );
+
+            router.replace(`/marketplace?tab=${postType}`);
+          } catch {
+            show(
+              { title: "Delete Failed", message: "Try again later" },
+              "error"
+            );
+          }
         },
       },
     ]);
   };
 
+  if (!post) return <Loader />;
+
   /* ---------------------------
      UI
 ----------------------------*/
-  if (!post) return <Loader />;
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <TouchableOpacity
@@ -218,7 +236,6 @@ export default function EditMarketplace() {
 
       <Text style={styles.header}>Edit {postType.toUpperCase()}</Text>
 
-      {/* Image */}
       <Text style={styles.label}>Cover Image</Text>
       <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
         {!image ? (
@@ -231,7 +248,6 @@ export default function EditMarketplace() {
         )}
       </TouchableOpacity>
 
-      {/* Inputs */}
       <Input label="Title" value={title} onChange={setTitle} />
       <Input
         label="Description"
@@ -242,27 +258,22 @@ export default function EditMarketplace() {
       <Input label="Skills / Tags" value={tags} onChange={setTags} />
       <Input label="Looking For" value={lookingFor} onChange={setLookingFor} />
 
-      {/* Event Date (only hackathon) */}
       {postType === "hackathon" && (
         <DateInput
           label="Event Date"
           value={eventDate}
           onPress={() => openPicker("event", eventDate)}
-          onChange={setEventDate}
         />
       )}
 
-      {/* Last Date to Join (all types) */}
       <DateInput
         label="Last Date to Join"
         value={lastDateToJoin}
         onPress={() => openPicker("join", lastDateToJoin)}
-        onChange={setLastDateToJoin}
       />
 
       <Input label="Location" value={location} onChange={setLocation} />
 
-      {/* Save */}
       <TouchableOpacity
         disabled={loading}
         style={[styles.submitBtn, loading && { opacity: 0.6 }]}
@@ -278,75 +289,45 @@ export default function EditMarketplace() {
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* Delete */}
       <TouchableOpacity style={styles.deleteBtn} onPress={deleteConfirm}>
         <Text style={styles.deleteText}>Delete Post</Text>
       </TouchableOpacity>
 
-      {/* ----------------------- DATE PICKER MODAL ------------------------- */}
+      {/* DATE PICKER */}
       <Modal visible={showPicker} transparent animationType="fade">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.4)",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
+        <View style={styles.modalOverlay}>
           <Animated.View
-            style={{
-              width: "90%",
-              backgroundColor: "#fff",
-              borderRadius: 16,
-              padding: 15,
-              transform: [
-                {
-                  translateY: slideAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [200, 0],
-                  }),
-                },
-              ],
-              opacity: slideAnim,
-            }}
+            style={[
+              styles.modalBox,
+              {
+                transform: [
+                  {
+                    translateY: slideAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [200, 0],
+                    }),
+                  },
+                ],
+                opacity: slideAnim,
+              },
+            ]}
           >
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: "600",
-                marginBottom: 10,
-                textAlign: "center",
-              }}
-            >
-              Select Date
-            </Text>
+            <Text style={styles.modalTitle}>Select Date</Text>
 
             <DateTimePicker
               mode="single"
               date={pickerDate}
-              onChange={(params) => {
-                if (!params.date) return;
-                const d =
-                  params.date instanceof Date
-                    ? params.date
-                    : dayjs(params.date).toDate();
-
-                const formatted = dayjs(d).format("DD/MM/YYYY");
-
-                if (pickerField === "event") setEventDate(formatted);
-                if (pickerField === "join") setLastDateToJoin(formatted);
-
+              onChange={(p) => {
+                if (!p.date) return;
+                const d = dayjs(p.date).format("DD/MM/YYYY");
+                if (pickerField === "event") setEventDate(d);
+                if (pickerField === "join") setLastDateToJoin(d);
                 closePicker();
               }}
             />
 
-            <TouchableOpacity
-              onPress={closePicker}
-              style={{ padding: 12, alignItems: "center" }}
-            >
-              <Text style={{ color: COLORS.primary, fontSize: 16 }}>
-                Cancel
-              </Text>
+            <TouchableOpacity onPress={closePicker} style={styles.modalCancel}>
+              <Text style={{ color: COLORS.primary }}>Cancel</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -356,7 +337,7 @@ export default function EditMarketplace() {
 }
 
 /* ---------------------------
-   Date Input with Icon
+   Small components
 ----------------------------*/
 function DateInput({ label, value, onPress }: any) {
   return (
@@ -366,23 +347,19 @@ function DateInput({ label, value, onPress }: any) {
         <TextInput
           value={value}
           placeholder="DD/MM/YYYY"
-          style={styles.dateInput}
           editable={false}
+          style={styles.dateInput}
         />
         <Ionicons
           name="calendar-outline"
           size={22}
           color={COLORS.textSecondary}
-          style={styles.calendarIcon}
         />
       </TouchableOpacity>
     </>
   );
 }
 
-/* ---------------------------
-   Text Input Component
-----------------------------*/
 function Input({ label, value, onChange, multiline = false }: any) {
   return (
     <>
@@ -390,7 +367,6 @@ function Input({ label, value, onChange, multiline = false }: any) {
       <TextInput
         value={value}
         onChangeText={onChange}
-        placeholderTextColor={COLORS.textSecondary}
         multiline={multiline}
         style={[styles.input, multiline && styles.multilineInput]}
       />
@@ -407,16 +383,8 @@ const styles = StyleSheet.create({
     paddingBottom: hp(10),
     backgroundColor: COLORS.background,
   },
-  backRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: hp(1),
-  },
-  backText: {
-    fontSize: wp(4),
-    marginLeft: wp(2),
-    color: COLORS.text,
-  },
+  backRow: { flexDirection: "row", alignItems: "center", marginBottom: hp(1) },
+  backText: { fontSize: wp(4), marginLeft: wp(2), color: COLORS.text },
   header: {
     fontSize: wp(7),
     fontWeight: "800",
@@ -427,7 +395,6 @@ const styles = StyleSheet.create({
     fontSize: wp(3.7),
     fontWeight: "700",
     marginTop: hp(1),
-    marginBottom: hp(0.5),
     color: COLORS.text,
   },
   uploadBox: {
@@ -437,33 +404,18 @@ const styles = StyleSheet.create({
     borderRadius: wp(3),
     padding: hp(2),
     alignItems: "center",
-    backgroundColor: COLORS.surface,
   },
   uploadText: { fontWeight: "700", color: COLORS.text },
   uploadSub: { color: COLORS.textSecondary, marginTop: 4 },
-
-  previewImage: {
-    width: "100%",
-    height: hp(25),
-    borderRadius: wp(3),
-  },
-
-  /* Text Inputs */
+  previewImage: { width: "100%", height: hp(25), borderRadius: wp(3) },
   input: {
     backgroundColor: "#fff",
     padding: wp(4),
     borderRadius: wp(3),
-    fontSize: wp(4),
     borderWidth: 1,
     borderColor: COLORS.border,
-    elevation: 1,
   },
-  multilineInput: {
-    minHeight: hp(15),
-    textAlignVertical: "top",
-  },
-
-  /* Date Input */
+  multilineInput: { minHeight: hp(15), textAlignVertical: "top" },
   dateInputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -471,33 +423,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: wp(3),
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(1.5),
+    padding: wp(3),
   },
-  dateInput: {
-    flex: 1,
-    fontSize: wp(4),
-    color: COLORS.text,
-  },
-  calendarIcon: {
-    marginLeft: wp(2),
-  },
-
-  /* Buttons */
-  submitBtn: {
-    marginTop: hp(3),
-    borderRadius: wp(3),
-    overflow: "hidden",
-  },
-  submitGradient: {
-    padding: hp(2),
-    alignItems: "center",
-  },
-  submitText: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: wp(4.5),
-  },
+  dateInput: { flex: 1 },
+  submitBtn: { marginTop: hp(3), borderRadius: wp(3), overflow: "hidden" },
+  submitGradient: { padding: hp(2), alignItems: "center" },
+  submitText: { color: "#fff", fontWeight: "800", fontSize: wp(4.5) },
   deleteBtn: {
     marginTop: hp(3),
     padding: hp(1.8),
@@ -505,9 +436,24 @@ const styles = StyleSheet.create({
     borderRadius: wp(3),
     alignItems: "center",
   },
-  deleteText: {
-    color: "red",
-    fontWeight: "700",
-    fontSize: wp(4),
+  deleteText: { color: "red", fontWeight: "700", fontSize: wp(4) },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
   },
+  modalBox: {
+    width: "90%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 15,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  modalCancel: { padding: 12, alignItems: "center" },
 });

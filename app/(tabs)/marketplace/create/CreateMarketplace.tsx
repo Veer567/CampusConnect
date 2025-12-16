@@ -220,7 +220,7 @@ export default function CreateMarketplace() {
       );
     }
 
-    // Location
+   
     if (!location.trim()) {
       return toast.show(
         { title: "Location Missing", message: "Please enter the location." },

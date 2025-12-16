@@ -1,6 +1,4 @@
-// ==========================================================
-// LOST & FOUND SCREEN — Updated with GlobalAlert + Toast
-// ==========================================================
+// app/lost-found/index.tsx
 
 import { api } from "@/convex/_generated/api";
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";

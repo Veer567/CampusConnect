@@ -502,8 +502,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  categoryEmoji: { fontSize: wp(3.2), marginRight: wp(1.2) },
-  categoryText: { fontSize: wp(3.2), color: "#fff", fontWeight: "600" },
+  categoryEmoji: { fontSize: wp(1.5), marginRight: wp(1.2) },
+  categoryText: { fontSize: wp(2.5), color: "#fff", fontWeight: "600" },
 
   title: {
     fontSize: wp(4.5),

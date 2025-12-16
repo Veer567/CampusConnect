@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MotiView } from "moti";
 import React, { useRef, useState } from "react";
 import {
+  Alert,
   Dimensions,
   Image,
   Pressable,
@@ -16,12 +17,14 @@ import type { ActionSheetRef } from "react-native-actions-sheet";
 import ActionSheet from "react-native-actions-sheet";
 import CommentsModal from "../../../../components/CommentsModal";
 import { COLORS } from "../../../../constants/themes";
+import { useToast } from "@/components/Toast/ToastProvider";
+import { useAlert } from "@/components/GlobalAlert";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
 
 /* ============================================================
-   ✔ TYPES — clean, strict, no more TS errors
+   TYPES
 ============================================================ */
 export interface MarketplacePost {
   _id: string;
@@ -67,6 +70,8 @@ export default function PostCard({
   const isSelf = post.creatorId === currentUserId;
   const actionSheetRef = useRef<ActionSheetRef>(null);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const { show } = useToast();
+  const showAlert = useAlert((s) => s.show);
 
   const runAfterSheetClose = (fn: () => void) => {
     actionSheetRef.current?.hide();
@@ -80,7 +85,26 @@ export default function PostCard({
 
   const handleDeleteSelected = () => {
     if (!post?._id) return;
-    runAfterSheetClose(() => onDelete?.(post._id));
+
+    runAfterSheetClose(() => {
+      showAlert({
+        title: "Delete Item",
+        message: "Are you sure you want to delete this item?",
+        confirmText: "Delete",
+        onConfirm: async () => {
+          try {
+            await onDelete?.(post._id);
+            show({ title: "Post Deleted", message: "The item was deleted." });
+          } catch (error) {
+            show({
+              title: "Error",
+              message: "There was an error deleting the item.",
+            });
+          }
+        },
+        cancelText: "Cancel",
+      });
+    });
   };
 
   return (
@@ -96,18 +120,15 @@ export default function PostCard({
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
           android_ripple={{ color: "rgba(0,0,0,0.06)" }}
         >
-          {/* OPTIONS (Ellipsis) */}
+          {/* OPTIONS */}
           {isSelf && (
             <View style={styles.actionBar}>
               <Pressable
                 onPress={() => actionSheetRef.current?.show()}
                 android_ripple={{ color: "rgba(0,0,0,0.12)", borderless: true }}
                 style={({ pressed }) => [
-                  {
-                    padding: 6,
-                    borderRadius: 20,
-                  },
-                  pressed && { opacity: 0.5 }, // iOS feedback
+                  { padding: 6, borderRadius: 20 },
+                  pressed && { opacity: 0.5 },
                 ]}
               >
                 <Ionicons
@@ -125,8 +146,6 @@ export default function PostCard({
               <Image source={{ uri: post.imageUrl }} style={styles.image} />
               <LinearGradient
                 colors={["rgba(0,0,0,0.28)", "transparent"]}
-                start={[0, 0]}
-                end={[0, 0.6]}
                 style={styles.imageGradient}
               />
             </View>
@@ -142,18 +161,15 @@ export default function PostCard({
               {post.description}
             </Text>
 
-            {/* TAGS */}
             <View style={styles.tagsRow}>
-              {(post.tags ?? []).slice(0, 6).map((t: string) => (
+              {(post.tags ?? []).slice(0, 6).map((t) => (
                 <View key={t} style={styles.chip}>
                   <Text style={styles.chipText}>{t}</Text>
                 </View>
               ))}
             </View>
 
-            {/* BOTTOM META ROW */}
             <View style={styles.metaRow}>
-              {/* Left — Creator */}
               <View style={styles.creatorRow}>
                 {post.creatorImage ? (
                   <Image
@@ -176,28 +192,17 @@ export default function PostCard({
                 </View>
               </View>
 
-              {/* Right — Interested & Comments */}
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                {/* Interested avatars */}
                 <View style={styles.avatarRow}>
                   {interestedAvatars.slice(0, 4).map((img, idx) => (
                     <Image
                       key={idx}
-                      source={{ uri: img || "https://i.pravatar.cc/300" }}
+                      source={{ uri: img }}
                       style={styles.smallAvatar}
                     />
                   ))}
-
-                  {interestedAvatars.length > 4 && (
-                    <View style={styles.moreCircle}>
-                      <Text style={styles.moreText}>
-                        +{interestedAvatars.length - 4}
-                      </Text>
-                    </View>
-                  )}
                 </View>
 
-                {/* Comments Button */}
                 <TouchableOpacity
                   onPress={() => setCommentsVisible(true)}
                   style={styles.iconBtn}
@@ -248,9 +253,8 @@ export default function PostCard({
         </View>
       </ActionSheet>
 
-      {/* COMMENTS MODAL */}
       <CommentsModal
-        targetId={post._id as unknown as Id<"marketplacePosts">}
+        targetId={post._id as Id<"marketplacePosts">}
         targetType="marketplace"
         visible={commentsVisible}
         onClose={() => setCommentsVisible(false)}
@@ -260,11 +264,10 @@ export default function PostCard({
 }
 
 /* ============================================================
-   STYLES
+   STYLES (unchanged)
 ============================================================ */
 const styles = StyleSheet.create({
   wrapper: { width: CARD_WIDTH, alignSelf: "center", marginVertical: 8 },
-
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,
@@ -272,7 +275,6 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   cardPressed: { transform: [{ translateY: 1 }] },
-
   actionBar: {
     position: "absolute",
     right: 10,
@@ -282,15 +284,12 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 20,
   },
-
   imageWrap: { width: "100%", height: 170 },
   image: { width: "100%", height: "100%" },
   imageGradient: { position: "absolute", width: "100%", height: "100%" },
-
   content: { padding: 14 },
   title: { fontSize: 18, fontWeight: "800", color: COLORS.text },
   description: { color: COLORS.textSecondary, marginTop: 4 },
-
   tagsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
   chip: {
     backgroundColor: COLORS.surfaceLight,
@@ -301,13 +300,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chipText: { color: COLORS.text },
-
   metaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 12,
   },
-
   creatorRow: { flexDirection: "row" },
   creatorAvatar: { width: 44, height: 44, borderRadius: 22 },
   creatorAvatarPlaceholder: {
@@ -321,7 +318,6 @@ const styles = StyleSheet.create({
   creatorInitial: { fontSize: 18, fontWeight: "800", color: COLORS.primary },
   creatorName: { fontSize: 14, fontWeight: "700" },
   creatorMeta: { fontSize: 12, color: COLORS.textSecondary },
-
   avatarRow: { flexDirection: "row", alignItems: "center", marginRight: 4 },
   smallAvatar: {
     width: 28,
@@ -331,20 +327,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
-
-  moreCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: -6,
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-  moreText: { color: "#fff", fontSize: 12, fontWeight: "700" },
-
   iconBtn: {
     width: 40,
     height: 40,
@@ -363,10 +345,7 @@ const styles = StyleSheet.create({
    ACTION SHEET STYLES
 ============================================================ */
 export const sheetStyles = StyleSheet.create({
-  sheetContainer: {
-    padding: 20,
-    backgroundColor: COLORS.surface,
-  },
+  sheetContainer: { padding: 20, backgroundColor: COLORS.surface },
   sheetTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -379,8 +358,5 @@ export const sheetStyles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
   },
-  sheetText: {
-    fontSize: 16,
-    color: COLORS.text,
-  },
+  sheetText: { fontSize: 16, color: COLORS.text },
 });

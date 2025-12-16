@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Animated,
   Image,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,16 +19,20 @@ import { COLORS } from "../../../../constants/themes";
 import { api } from "../../../../convex/_generated/api";
 
 export default function MarketplacePostDetail() {
-  const { id, scrollTo, from } = useLocalSearchParams();
+  const { id, scrollTo } = useLocalSearchParams();
   const router = useRouter();
 
   const { userId: clerkId } = useAuth();
+
+  /* ---------------- CURRENT USER ---------------- */
   const me = useQuery(
     api.users.getUserByClerkId,
     clerkId ? { clerkId } : "skip"
   );
+
   const safeUserId = me?._id;
 
+  /* ---------------- POST ---------------- */
   const post = useQuery(
     api.marketplace.getMarketplacePostById,
     id ? { id: id as any } : "skip"
@@ -49,22 +52,28 @@ export default function MarketplacePostDetail() {
     }
   }, [scrollTo]);
 
-  if (!post)
+  /* ---------------- LOADING ---------------- */
+  if (!post) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
+  }
 
-  const isSelf = safeUserId === post.creatorId;
+  /* ---------------- STATE ---------------- */
+  const isSelf = String(safeUserId) === String(post.creatorId);
+
   const isJoined =
     safeUserId &&
     post.interestedUsers?.some(
       (u: any) => String(u._id) === String(safeUserId)
     );
 
-  /** JOIN / UNJOIN */
+  /* ---------------- JOIN / UNJOIN ---------------- */
   const handleJoinToggle = async () => {
+    if (isSelf) return;
+
     Animated.sequence([
       Animated.timing(joinAnim, {
         toValue: 0.9,
@@ -80,6 +89,30 @@ export default function MarketplacePostDetail() {
 
     await toggleInterest({ postId: post._id as Id<"marketplacePosts"> });
   };
+
+  /* ---------------- MESSAGE ORGANIZER ---------------- */
+  const handleMessageOrganizer = async () => {
+    // ❌ HARD STOP: user cannot chat with himself
+    if (!safeUserId || isSelf) return;
+
+    const conv = await startConversation({
+      otherUserId: post.creatorId as Id<"users">,
+    });
+
+    const conversationId =
+      typeof conv === "object" && conv && "_id" in conv ? conv._id : conv;
+
+    if (!conversationId) return;
+
+    router.push(
+      `/chat-screen?conversationId=${conversationId}&otherUserId=${post.creatorId}`
+    );
+  };
+  const interested = post.interestedUsers ?? [];
+  const previewUsers = interested.slice(0, 3);
+  const extraCount = interested.length - previewUsers.length;
+
+  /* ======================= UI ======================= */
 
   return (
     <ScrollView
@@ -103,7 +136,7 @@ export default function MarketplacePostDetail() {
       {/* TITLE */}
       <Text style={styles.title}>{post.title}</Text>
 
-      {/* CREATOR */}
+      {/* ORGANIZER CARD */}
       <View style={styles.creatorCard}>
         <Image
           source={{ uri: post.creatorImage || "https://i.pravatar.cc/200" }}
@@ -114,6 +147,21 @@ export default function MarketplacePostDetail() {
           <Text style={styles.creatorCardName}>{post.creatorName}</Text>
           <Text style={styles.creatorCardRole}>Organizer</Text>
         </View>
+
+        {/* 💬 MESSAGE ICON (ONLY IF NOT SELF) */}
+        {!isSelf && (
+          <TouchableOpacity
+            onPress={handleMessageOrganizer}
+            style={styles.messageBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={22}
+              color={COLORS.primary}
+            />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* STATS */}
@@ -143,37 +191,6 @@ export default function MarketplacePostDetail() {
         </View>
       </View>
 
-      {/* 📅 IMPORTANT DATES */}
-      {(post.eventDate || post.lastDateToJoin) && (
-        <View style={styles.dateBox}>
-          {post.type === "hackathon" && post.eventDate && (
-            <View style={styles.dateRow}>
-              <Ionicons
-                name="calendar-outline"
-                size={18}
-                color={COLORS.primary}
-              />
-              <Text style={styles.dateText}>
-                Event Date: {post.eventDate}
-              </Text>
-            </View>
-          )}
-
-          {post.lastDateToJoin && (
-            <View style={styles.dateRow}>
-              <Ionicons
-                name="time-outline"
-                size={18}
-                color={COLORS.secondary}
-              />
-              <Text style={styles.dateText}>
-                Last Date to Join: {post.lastDateToJoin}
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-
       {/* ABOUT */}
       <Text style={styles.sectionTitle}>About</Text>
       <Text style={styles.description}>{post.description}</Text>
@@ -191,8 +208,46 @@ export default function MarketplacePostDetail() {
           </View>
         </>
       )}
+      <View>
+        <Text style={styles.sectionTitle}>Interested Members</Text>
 
-      {/* JOIN BUTTON */}
+        {interested.length > 0 && (
+          <View style={styles.interestedRow}>
+            <View style={styles.avatarStack}>
+              {previewUsers.map((u: any, i: number) => (
+                <Image
+                  key={u._id}
+                  source={{ uri: u.image || "https://i.pravatar.cc/150" }}
+                  style={[
+                    styles.interestedAvatar,
+                    {
+                      marginLeft: i === 0 ? 0 : -14, 
+                      zIndex: 10 - i, 
+                    },
+                  ]}
+                />
+              ))}
+
+              {/* +N */}
+              {extraCount > 0 && (
+                <View
+                  style={[
+                    styles.moreCount,
+                    {
+                      marginLeft: -14,
+                      zIndex: 1,
+                    },
+                  ]}
+                >
+                  <Text style={styles.moreCountText}>+{extraCount}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* JOIN BUTTON (NOT FOR SELF) */}
       {!isSelf && (
         <Animated.View style={{ transform: [{ scale: joinAnim }] }}>
           <TouchableOpacity onPress={handleJoinToggle} style={styles.joinBtn}>
@@ -214,6 +269,7 @@ export default function MarketplacePostDetail() {
 }
 
 /* ========================= STYLES ========================= */
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -252,10 +308,17 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
   },
   creatorCardAvatar: { width: 52, height: 52, borderRadius: 26 },
   creatorCardName: { fontSize: 17, fontWeight: "700" },
   creatorCardRole: { color: COLORS.textSecondary },
+
+  messageBtn: {
+    padding: 10,
+    borderRadius: 20,
+    backgroundColor: "#F1F5F9",
+  },
 
   statsBox: {
     margin: 16,
@@ -269,18 +332,6 @@ const styles = StyleSheet.create({
   statNumber: { fontSize: 18, fontWeight: "700" },
   statLabel: { color: COLORS.textSecondary },
   divider: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: "#eee" },
-
-  /* 📅 Dates */
-  dateBox: {
-    marginHorizontal: 16,
-    marginTop: 10,
-    padding: 14,
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    gap: 10,
-  },
-  dateRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  dateText: { fontSize: 15, fontWeight: "600", color: COLORS.text },
 
   sectionTitle: {
     marginTop: 26,
@@ -322,4 +373,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   joinText: { color: "#fff", fontSize: 17, fontWeight: "800" },
+  interestedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 10,
+  },
+
+  interestedText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: "600",
+  },
+
+  avatarStack: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  interestedAvatar: {
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    borderWidth: 2,
+    borderColor: "#fff",
+    backgroundColor: "#eee",
+  },
+
+  moreCount: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+
+  moreCountText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
 });

@@ -580,7 +580,7 @@ export default function CreateScreen() {
             </View>
           </KeyboardAvoidingView>
         </SafeAreaView>
-        {/* Custom Alert Modal */}
+   
       </LinearGradient>
     </View>
   );

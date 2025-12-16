@@ -1,4 +1,4 @@
-// app/following.tsx
+// app/(tabs)/profile/following.tsx
 
 import AppHeader from "@/components/AppHeader";
 import { COLORS } from "@/constants/themes";

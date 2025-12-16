@@ -21,9 +21,7 @@ const MU_DEPARTMENTS = [
   "Electrical Engineering",
   "Chemical Engineering",
   "Environmental Science & Engineering",
-  "Chemistry",
-  "Physics",
-  "Mathematics",
+  "Biotechnology",
   "Microbiology",
   "Agriculture",
   "Business Administration",
@@ -33,7 +31,8 @@ const MU_DEPARTMENTS = [
   "Pharmacy",
   "Physiotherapy",
   "Humanities",
-  "Nursing",
+  "AI & ML",
+  
 ] as const;
 
 const INTEREST_SUGGESTIONS = [

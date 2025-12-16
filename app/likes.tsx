@@ -1,4 +1,4 @@
-// app/likes.tsx
+// app/(tabs)/profile/likes.tsx
 import AppHeader from "@/components/AppHeader";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";

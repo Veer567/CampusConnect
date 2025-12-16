@@ -1,11 +1,9 @@
-// app/followers.tsx
-
 import AppHeader from "@/components/AppHeader";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -25,78 +23,95 @@ export default function FollowersScreen() {
   const router = useRouter();
   const { userId, from } = useLocalSearchParams();
 
-  // Query followers
-  const rawFollowers = useQuery(api.users.getFollowers, {
-    userId: userId === "me" ? undefined : (userId as any),
-  });
+  /* ───────────────────────────────
+     🚀 Delay query for smooth nav
+  ─────────────────────────────── */
+  const [enabled, setEnabled] = useState(false);
 
-  const followers = (rawFollowers ?? []).filter((u) => u !== null);
+  useEffect(() => {
+    const t = setTimeout(() => setEnabled(true), 120);
+    return () => clearTimeout(t);
+  }, []);
+
+  const rawFollowers = useQuery(
+    api.users.getFollowers,
+    enabled
+      ? { userId: userId === "me" ? undefined : (userId as any) }
+      : "skip"
+  );
+
+  const followers = (rawFollowers ?? []).filter(Boolean);
 
   const toggleFollow = useMutation(api.users.toggleFollow);
   const startConversation = useMutation(api.chat.getOrStartConversation);
 
-  /*──────────────────────────────
-     SMART BACK HANDLING
-  ──────────────────────────────*/
+  /* ───────────────────────────────
+     ⬅️ Back handling (FAST)
+  ─────────────────────────────── */
   const handleBack = () => {
-    if (router.canGoBack()) return router.back();
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
 
-    const fallback =
-      from === "profile"
-        ? "/(tabs)/profile"
-        : from === "other"
-          ? `/other-profile?userId=${userId}`
-          : "/(tabs)";
-
-    router.replace(fallback as any);
+    if (from === "other") {
+      router.replace(`/other-profile?userId=${userId}`);
+    } else {
+      router.replace("/(tabs)/profile");
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       <AppHeader
         title="Followers"
-        showBackButton={true}
-        onBackPress={() => router.replace("/profile")}
+        showBackButton
+        onBackPress={handleBack}
       />
 
-      {/* Empty */}
-      {followers.length === 0 ? (
+      {/* Empty state */}
+      {enabled && followers.length === 0 ? (
         <View style={styles.emptyBox}>
           <Text style={styles.emptyText}>No followers yet</Text>
         </View>
       ) : (
         <FlatList
           data={followers}
+          keyExtractor={(item) => item!._id}
           showsVerticalScrollIndicator={false}
-          keyExtractor={(item) => item._id}
           contentContainerStyle={{ paddingBottom: hp(2) }}
           renderItem={({ item }) => (
             <View style={styles.row}>
               {/* Avatar */}
               <TouchableOpacity
-                onPress={() => router.push(`/other-profile?userId=${item._id}`)}
                 activeOpacity={0.7}
+                onPress={() =>
+                  router.push(`/other-profile?userId=${item!._id}`)
+                }
               >
                 <Image
                   source={{
                     uri:
-                      item.image ||
+                      item!.image ||
                       "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                   }}
                   style={styles.avatar}
                 />
               </TouchableOpacity>
 
-              {/* Name + Username */}
+              {/* User Info */}
               <TouchableOpacity
                 style={styles.userInfo}
-                onPress={() => router.push(`/other-profile?userId=${item._id}`)}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push(`/other-profile?userId=${item!._id}`)
+                }
               >
                 <Text numberOfLines={1} style={styles.name}>
-                  {item.fullname}
+                  {item!.fullname}
                 </Text>
                 <Text numberOfLines={1} style={styles.username}>
-                  @{item.username}
+                  @{item!.username}
                 </Text>
               </TouchableOpacity>
 
@@ -106,23 +121,25 @@ export default function FollowersScreen() {
                 activeOpacity={0.8}
                 onPress={async () => {
                   const conv = await startConversation({
-                    otherUserId: item._id,
+                    otherUserId: item!._id,
                   });
                   if (!conv || !conv._id) return;
 
                   router.push(
-                    `/chat-screen?conversationId=${conv._id}&otherUserId=${item._id}`
+                    `/chat-screen?conversationId=${conv._id}&otherUserId=${item!._id}`
                   );
                 }}
               >
                 <Text style={styles.msgBtnText}>Message</Text>
               </TouchableOpacity>
 
-              {/* Unfollow / Remove */}
+              {/* Remove / Unfollow */}
               <TouchableOpacity
-                activeOpacity={0.8}
                 style={styles.removeBtn}
-                onPress={() => toggleFollow({ followingId: item._id })}
+                activeOpacity={0.8}
+                onPress={() =>
+                  toggleFollow({ followingId: item!._id })
+                }
               >
                 <Text style={styles.removeX}>✕</Text>
               </TouchableOpacity>
@@ -134,16 +151,22 @@ export default function FollowersScreen() {
   );
 }
 
+/* ───────────────────────────────
+   STYLES
+─────────────────────────────── */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
 
   emptyBox: {
     marginTop: hp(15),
     alignItems: "center",
   },
   emptyText: {
-    color: COLORS.textSecondary,
     fontSize: wp(4),
+    color: COLORS.textSecondary,
   },
 
   row: {
@@ -168,10 +191,11 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    fontWeight: "700",
     fontSize: wp(4),
+    fontWeight: "700",
     color: COLORS.text,
   },
+
   username: {
     fontSize: wp(3.4),
     color: COLORS.textSecondary,
@@ -180,11 +204,12 @@ const styles = StyleSheet.create({
 
   msgBtn: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: wp(3.2),
+    paddingHorizontal: wp(3),
     paddingVertical: hp(0.9),
     borderRadius: wp(2),
     marginRight: wp(2),
   },
+
   msgBtnText: {
     color: "#fff",
     fontSize: wp(3.2),
@@ -199,9 +224,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   removeX: {
     fontSize: wp(4.4),
-    color: "#444",
     fontWeight: "700",
+    color: "#444",
   },
 });

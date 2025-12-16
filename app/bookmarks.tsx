@@ -1,4 +1,4 @@
-// app/profile/bookmarks.tsx
+//app/(tabs)/profile/bookmarks.tsx
 import AppHeader from "@/components/AppHeader";
 import { Loader } from "@/components/Loader";
 import { COLORS } from "@/constants/themes";

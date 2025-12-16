@@ -1,4 +1,4 @@
-import CustomStatusBar from "@/components/CustomStatusBar";
+// app/lost-found/add.tsx
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
