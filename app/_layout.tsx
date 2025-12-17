@@ -11,20 +11,24 @@ import StatusBarController from "@/components/StatusBarController";
 import { ToastProvider } from "@/components/Toast/ToastProvider";
 import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
 
+import { ensureFirebaseReady } from "./firebaseConfig";
+
+/* 🔥 Initialize Firebase ONCE at app start */
+ensureFirebaseReady();
+
 /*──────────────────────────────────────────────
-  🔔 Android Notification Channels (EARLY)
+  🔔 Android Notification Channels
 ──────────────────────────────────────────────*/
 if (Platform.OS === "android") {
-  // Messages (high priority, chat-style)
   Notifications.setNotificationChannelAsync("messages", {
     name: "Messages",
     importance: Notifications.AndroidImportance.MAX,
     sound: "default",
-    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    lockscreenVisibility:
+      Notifications.AndroidNotificationVisibility.PUBLIC,
     showBadge: true,
   });
 
-  // Default fallback channel
   Notifications.setNotificationChannelAsync("default", {
     name: "Default",
     importance: Notifications.AndroidImportance.DEFAULT,
@@ -42,7 +46,6 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <ToastProvider>
               <InitalLayout>
-                {/* Controls status bar based on route */}
                 <StatusBarController />
 
                 <Stack
@@ -52,16 +55,11 @@ export default function RootLayout() {
                     animationDuration: 180,
                   }}
                 >
-                  {/* Main tabs */}
                   <Stack.Screen name="(tabs)" />
-
-                  {/* Profile related */}
                   <Stack.Screen name="followers" />
                   <Stack.Screen name="following" />
                   <Stack.Screen name="user-posts" />
                   <Stack.Screen name="other-profile" />
-
-                  {/* Content */}
                   <Stack.Screen name="post-details" />
                   <Stack.Screen name="chat-screen" />
                 </Stack>
