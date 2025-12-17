@@ -1,4 +1,4 @@
-package com.vir567.Spotlight
+package com.campusconnect
 
 import android.app.Application
 import android.content.res.Configuration

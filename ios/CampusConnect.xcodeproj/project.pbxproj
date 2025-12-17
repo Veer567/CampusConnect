@@ -259,14 +259,12 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.vir567.Spotlight";
-				PRODUCT_NAME = "CampusConnect";
+				PRODUCT_BUNDLE_IDENTIFIER = org.name.CampusConnect;
+				PRODUCT_NAME = CampusConnect;
 				SWIFT_OBJC_BRIDGING_HEADER = "CampusConnect/CampusConnect-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
-				TARGETED_DEVICE_FAMILY = "1,2";
-				CODE_SIGN_ENTITLEMENTS = CampusConnect/CampusConnect.entitlements;
 			};
 			name = Debug;
 		};
@@ -288,13 +286,11 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.vir567.Spotlight";
-				PRODUCT_NAME = "CampusConnect";
+				PRODUCT_BUNDLE_IDENTIFIER = org.name.CampusConnect;
+				PRODUCT_NAME = CampusConnect;
 				SWIFT_OBJC_BRIDGING_HEADER = "CampusConnect/CampusConnect-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
-				TARGETED_DEVICE_FAMILY = "1,2";
-				CODE_SIGN_ENTITLEMENTS = CampusConnect/CampusConnect.entitlements;
 			};
 			name = Release;
 		};
