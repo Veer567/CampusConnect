@@ -124,7 +124,6 @@ export default function ChatScreen() {
 
     markRead({
       conversationId: convId,
-      upTo: messages[0].createdAt,
     }).catch(() => {});
 
     scrollToBottom(false);

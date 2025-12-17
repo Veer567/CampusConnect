@@ -59,13 +59,10 @@ async function notifyUsers(
   receivers: any[],
   sender: any,
   opts: {
-    type: "like" | "comment" | "mention" | "reply" | "message" | string;
-    postId?: Id<"posts"> | undefined;
-    commentId?: Id<"comments"> | undefined;
-    conversationId?: Id<"conversations"> | undefined;
+    type: "like" | "mention";
+    postId: Id<"posts">;
     title: string;
     body: string;
-    data?: any;
   }
 ) {
   const now = Date.now();
@@ -73,24 +70,23 @@ async function notifyUsers(
   for (const r of receivers) {
     if (!r || String(r._id) === String(sender._id)) continue;
 
-    // Insert notification row
+    // 1️⃣ Save DB notification
     await ctx.db.insert("notifications", {
       receiverId: r._id,
       senderId: sender._id,
       type: opts.type,
       postId: opts.postId,
-      commentId: opts.commentId,
-      conversationId: opts.conversationId,
       createdAt: now,
       read: false,
     });
 
-    // Push Notification (scheduled)
-    await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
-      userId: r._id,
-      title: opts.title,
-      body: opts.body,
-      data: opts.data ?? { type: opts.type, postId: opts.postId },
+    // 2️⃣ Push notification
+    if (!r.fcmToken) continue;
+
+    await ctx.scheduler.runAfter(0, api.fcm.sendLikeNotification, {
+      fcmToken: r.fcmToken,
+      username: sender.username || sender.fullname || "Someone",
+      postId: String(opts.postId),
     });
   }
 }
@@ -154,7 +150,6 @@ export const createPost = mutation({
               : args.caption) ||
             args.title ||
             "You were mentioned",
-          data: { type: "mention_post", postId },
         });
       }
     }
@@ -280,7 +275,6 @@ export const toggleLikePost = mutation({
         postId: args.postId,
         title: `${currentUser.username || currentUser.fullname} liked your post`,
         body: post.title ?? "Someone liked your post",
-        data: { type: "like", postId: args.postId },
       });
     }
 

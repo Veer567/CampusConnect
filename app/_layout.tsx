@@ -1,6 +1,3 @@
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
-
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -12,27 +9,17 @@ import { ToastProvider } from "@/components/Toast/ToastProvider";
 import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
 
 import { ensureFirebaseReady } from "./firebaseConfig";
+import useFCMNotifications from "@/hooks/useFCMNotifications";
 
-/* 🔥 Initialize Firebase ONCE at app start */
+/* 🔥 Firebase native modules are linked at build time */
 ensureFirebaseReady();
 
 /*──────────────────────────────────────────────
-  🔔 Android Notification Channels
+  Helper component (INSIDE providers)
 ──────────────────────────────────────────────*/
-if (Platform.OS === "android") {
-  Notifications.setNotificationChannelAsync("messages", {
-    name: "Messages",
-    importance: Notifications.AndroidImportance.MAX,
-    sound: "default",
-    lockscreenVisibility:
-      Notifications.AndroidNotificationVisibility.PUBLIC,
-    showBadge: true,
-  });
-
-  Notifications.setNotificationChannelAsync("default", {
-    name: "Default",
-    importance: Notifications.AndroidImportance.DEFAULT,
-  });
+function AppWithNotifications() {
+  useFCMNotifications(); // ✅ SAFE here
+  return null;
 }
 
 /*──────────────────────────────────────────────
@@ -41,6 +28,8 @@ if (Platform.OS === "android") {
 export default function RootLayout() {
   return (
     <ClerkAndConvexProvider>
+      <AppWithNotifications />
+
       <NotificationProvider>
         <SafeAreaProvider>
           <GestureHandlerRootView style={{ flex: 1 }}>

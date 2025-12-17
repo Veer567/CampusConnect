@@ -5,7 +5,7 @@ import { mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
 
 /*───────────────────────────────────────────
-  START OR GET CONVERSATION (1-to-1 or group)
+  START OR GET CONVERSATION
 ───────────────────────────────────────────*/
 export const startConversation = mutation({
   args: {
@@ -16,46 +16,34 @@ export const startConversation = mutation({
   },
   handler: async (ctx, args) => {
     const me = await getAuthenticatedUser(ctx);
-
-    // Ensure current user is included
     const participants = Array.from(new Set([...args.participants, me._id]));
 
-    // Direct chat (1-to-1)
-    const isDirect = !args.isGroup && participants.length === 2;
-
-    if (isDirect) {
-      // Check if conversation already exists
-      const existing = await ctx.db
-        .query("conversations")
-        .collect()
-        .then((all) =>
-          all.find((c) => {
-            if (!c.participants || c.participants.length !== 2) return false;
-            const a = new Set(c.participants.map(String));
-            const b = new Set(participants.map(String));
-            if (a.size !== b.size) return false;
-            for (const p of a) if (!b.has(p)) return false;
-            return true;
-          })
-        );
-
-      if (existing) return existing;
+    // Reuse existing 1-to-1 chat
+    if (!args.isGroup && participants.length === 2) {
+      const all = await ctx.db.query("conversations").collect();
+      const found = all.find((c) => {
+        if (c.participants.length !== 2) return false;
+        const a = c.participants.map(String).sort().join(",");
+        const b = participants.map(String).sort().join(",");
+        return a === b;
+      });
+      if (found) return found;
     }
 
-    // Create new conversation
     return await ctx.db.insert("conversations", {
       participants,
       title: args.title,
       imageUrl: args.imageUrl,
       isGroup: args.isGroup ?? participants.length > 2,
       createdBy: me._id,
+      lastMessage: "",
       lastMessageAt: Date.now(),
     });
   },
 });
 
 /*───────────────────────────────────────────
-  SEND MESSAGE (text or image)
+  SEND MESSAGE + FCM
 ───────────────────────────────────────────*/
 export const sendMessage = mutation({
   args: {
@@ -65,21 +53,18 @@ export const sendMessage = mutation({
   },
   handler: async (ctx, args) => {
     const me = await getAuthenticatedUser(ctx);
+    const conv = await ctx.db.get(args.conversationId);
+    if (!conv) throw new Error("Conversation not found");
 
-    const conversation = await ctx.db.get(args.conversationId);
-    if (!conversation) throw new Error("Conversation not found");
-
-    if (!conversation.participants.map(String).includes(String(me._id)))
-      throw new Error("Not a participant");
-
-    let imageUrl: string | undefined = undefined;
+    let imageUrl: string | undefined;
     if (args.storageId) {
-      imageUrl = (await ctx.storage.getUrl(args.storageId)) ?? undefined;
+      const url = await ctx.storage.getUrl(args.storageId);
+      imageUrl = url ?? undefined;
     }
 
     const now = Date.now();
 
-    const msgId = await ctx.db.insert("messages", {
+    await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       senderId: me._id,
       text: args.text,
@@ -89,13 +74,16 @@ export const sendMessage = mutation({
       readBy: [me._id],
     });
 
+    const preview =
+      args.text?.trim() || (imageUrl ? "📷 Photo" : "New message");
+
     await ctx.db.patch(args.conversationId, {
-      lastMessage: args.text ?? (imageUrl ? "📷 Photo" : "Attachment"),
+      lastMessage: preview,
       lastMessageAt: now,
     });
 
-    // Create DB notifications + PUSH notifications
-    for (const userId of conversation.participants) {
+    // Notifications + FCM
+    for (const userId of conv.participants) {
       if (String(userId) === String(me._id)) continue;
 
       await ctx.db.insert("notifications", {
@@ -107,146 +95,102 @@ export const sendMessage = mutation({
         read: false,
       });
 
-      // 🔥 Send MessagingStyle Push Notification (use new signature)
-      // We schedule to run immediately via scheduler to avoid blocking
-      await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
-        userId,
-        senderName: me.username || me.fullname || "Someone",
-        senderAvatar: me.image ?? undefined,
-        messages: [args.text ?? (imageUrl ? "📷 Photo" : "Attachment")],
-        chatId: String(args.conversationId),
-        screen: "/chat/[id]",
-        tab: "/(tabs)/messages",
+      const receiver = await ctx.db.get(userId);
+      if (!receiver?.fcmToken) continue;
+
+      await ctx.scheduler.runAfter(0, api.fcm.sendMessageNotification, {
+        fcmToken: receiver.fcmToken,
+        senderName: me.username || me.fullname || "New message",
+        message: preview,
+        conversationId: String(args.conversationId),
       });
     }
-
-    return msgId;
-  },
-});
-
-export const generateUploadUrl = mutation(async (ctx) => {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Unauthorized");
-
-  return await ctx.storage.generateUploadUrl();
-});
-
-/*───────────────────────────────────────────
-  PAGINATED MESSAGES (FAST, INDEX-BASED)
-───────────────────────────────────────────*/
-export const getMessagesPage = query({
-  args: {
-    conversationId: v.id("conversations"),
-    pageSize: v.number(),
-    before: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const cursor = args.before ?? Date.now();
-
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_conversation_createdAt", (q) =>
-        q.eq("conversationId", args.conversationId).lt("createdAt", cursor)
-      )
-      .order("desc")
-      .take(args.pageSize);
-
-    return {
-      messages,
-      hasMore: messages.length === args.pageSize,
-      nextBefore:
-        messages.length > 0
-          ? messages[messages.length - 1].createdAt
-          : undefined,
-    };
   },
 });
 
 /*───────────────────────────────────────────
-  GET USER CONVERSATIONS
+  GET MY CONVERSATIONS
 ───────────────────────────────────────────*/
 export const getMyConversations = query({
   args: {},
   handler: async (ctx) => {
     const me = await getAuthenticatedUser(ctx);
-
-    // Fetch all conversations the user participates in
     const all = await ctx.db.query("conversations").collect();
 
     const mine = all.filter((c) =>
       c.participants.map(String).includes(String(me._id))
     );
 
-    const results: any[] = [];
+    const result = [];
 
-    // For each conversation, fetch recent messages (using the index) and compute unread count
     for (const c of mine) {
-      // Fetch a reasonable number of recent messages for counting unread (you can increase if needed)
       const msgs = await ctx.db
         .query("messages")
         .withIndex("by_conversation_createdAt", (q) =>
           q.eq("conversationId", c._id)
         )
         .order("desc")
-        .take(200); // LIMIT: examine most recent 200 messages — change if you expect longer unread history
+        .take(200);
 
-      // Count messages that do NOT include current user in readBy
-      let unreadCount = 0;
+      let unread = 0;
       for (const m of msgs) {
         const readBy = m.readBy ?? [];
-        if (!readBy.map(String).includes(String(me._id))) unreadCount++;
+        const isMine = String(m.senderId) === String(me._id);
+        const isRead = readBy.map(String).includes(String(me._id));
+        if (!isMine && !isRead) unread++;
       }
 
-      results.push({
-        ...c,
-        unreadCount,
-      });
+      result.push({ ...c, unreadCount: unread });
     }
 
-    // Sort by lastMessageAt (desc)
-    return results.sort(
+    return result.sort(
       (a, b) => (b.lastMessageAt ?? 0) - (a.lastMessageAt ?? 0)
     );
   },
 });
 
 /*───────────────────────────────────────────
-  MARK MESSAGES AS READ
+  LIVE MESSAGES
 ───────────────────────────────────────────*/
-export const markMessagesRead = mutation({
-  args: {
-    conversationId: v.id("conversations"),
-    upTo: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const me = await getAuthenticatedUser(ctx);
-
-    // Get messages <= upTo
-    const messages = await ctx.db
+export const getMessagesLive = query({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, { conversationId }) => {
+    return await ctx.db
       .query("messages")
       .withIndex("by_conversation_createdAt", (q) =>
-        q.eq("conversationId", args.conversationId).lte("createdAt", args.upTo)
+        q.eq("conversationId", conversationId)
       )
-      .collect();
-
-    let updated = 0;
-
-    for (const m of messages) {
-      const readBy = m.readBy ?? [];
-      if (!readBy.map(String).includes(String(me._id))) {
-        await ctx.db.patch(m._id, {
-          readBy: [...readBy, me._id],
-        });
-        updated++;
-      }
-    }
-
-    return { updated };
+      .order("desc")
+      .take(50);
   },
 });
 
 /*───────────────────────────────────────────
-  TYPING INDICATORS (NO DUPLICATES)
+  MARK MESSAGES READ
+───────────────────────────────────────────*/
+export const markMessagesRead = mutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, { conversationId }) => {
+    const me = await getAuthenticatedUser(ctx);
+
+    const msgs = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_createdAt", (q) =>
+        q.eq("conversationId", conversationId)
+      )
+      .collect();
+
+    for (const m of msgs) {
+      const readBy = m.readBy ?? [];
+      if (!readBy.map(String).includes(String(me._id))) {
+        await ctx.db.patch(m._id, { readBy: [...readBy, me._id] });
+      }
+    }
+  },
+});
+
+/*───────────────────────────────────────────
+  TYPING INDICATOR (NO DUPLICATES)
 ───────────────────────────────────────────*/
 export const startTyping = mutation({
   args: { conversationId: v.id("conversations") },
@@ -254,7 +198,6 @@ export const startTyping = mutation({
     const me = await getAuthenticatedUser(ctx);
     const now = Date.now();
 
-    // Delete old entries for this user
     const old = await ctx.db
       .query("typing")
       .withIndex("by_conversation", (q) =>
@@ -262,9 +205,9 @@ export const startTyping = mutation({
       )
       .collect();
 
-    for (const e of old) {
-      if (String(e.userId) === String(me._id)) {
-        await ctx.db.delete(e._id);
+    for (const t of old) {
+      if (String(t.userId) === String(me._id)) {
+        await ctx.db.delete(t._id);
       }
     }
 
@@ -274,6 +217,63 @@ export const startTyping = mutation({
       createdAt: now,
       expiresAt: now + 5000,
     });
+  },
+});
+
+export const getTypingForConversation = query({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, { conversationId }) => {
+    const now = Date.now();
+    const all = await ctx.db
+      .query("typing")
+      .withIndex("by_conversation", (q) =>
+        q.eq("conversationId", conversationId)
+      )
+      .collect();
+
+    return all.filter((t) => t.expiresAt > now);
+  },
+});
+
+/*───────────────────────────────────────────
+  USER PRESENCE
+───────────────────────────────────────────*/
+export const updatePresence = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const me = await getAuthenticatedUser(ctx);
+    const now = Date.now();
+
+    const existing = await ctx.db
+      .query("presence")
+      .withIndex("by_user", (q) => q.eq("userId", me._id))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { lastSeen: now });
+    } else {
+      await ctx.db.insert("presence", {
+        userId: me._id,
+        lastSeen: now,
+      });
+    }
+  },
+});
+
+export const getUserPresence = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const entry = await ctx.db
+      .query("presence")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+
+    if (!entry) return { online: false, lastSeen: 0 };
+
+    return {
+      online: Date.now() - entry.lastSeen < 15000,
+      lastSeen: entry.lastSeen,
+    };
   },
 });
 
@@ -296,20 +296,31 @@ export const stopTyping = mutation({
     }
   },
 });
+export const deleteMessage = mutation({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, { messageId }) => {
+    const me = await getAuthenticatedUser(ctx);
+    const msg = await ctx.db.get(messageId);
+    if (!msg) throw new Error("Message not found");
 
-export const getTypingForConversation = query({
-  args: { conversationId: v.id("conversations") },
-  handler: async (ctx, { conversationId }) => {
-    const now = Date.now();
+    if (String(msg.senderId) !== String(me._id))
+      throw new Error("Not your message");
 
-    const entries = await ctx.db
-      .query("typing")
-      .withIndex("by_conversation", (q) =>
-        q.eq("conversationId", conversationId)
-      )
-      .collect();
+    await ctx.db.delete(messageId);
+  },
+});
 
-    return entries.filter((e) => e.expiresAt > now);
+export const editMessage = mutation({
+  args: { messageId: v.id("messages"), text: v.string() },
+  handler: async (ctx, { messageId, text }) => {
+    const me = await getAuthenticatedUser(ctx);
+    const msg = await ctx.db.get(messageId);
+    if (!msg) throw new Error("Message not found");
+
+    if (String(msg.senderId) !== String(me._id))
+      throw new Error("Not your message");
+
+    await ctx.db.patch(messageId, { text });
   },
 });
 
@@ -348,24 +359,6 @@ export const getOrStartConversation = mutation({
     return await ctx.db.get(id);
   },
 });
-export const getUnreadCount = query({
-  args: {},
-  handler: async (ctx) => {
-    const me = await getAuthenticatedUser(ctx);
-
-    const messages = await ctx.db.query("messages").collect();
-
-    const unread = messages.filter(
-      (m) =>
-        m.senderId !== me._id &&
-        (!m.readBy || !m.readBy.map(String).includes(String(me._id)))
-    );
-
-    return unread.length;
-  },
-});
-
-/** Count unread messages across all conversations */
 export const getUnreadMessageCount = query({
   args: {},
   handler: async (ctx) => {
@@ -400,225 +393,5 @@ export const getUnreadMessageCount = query({
     }
 
     return unreadTotal;
-  },
-});
-
-export const deleteMessage = mutation({
-  args: { messageId: v.id("messages") },
-  handler: async (ctx, { messageId }) => {
-    const me = await getAuthenticatedUser(ctx);
-    const msg = await ctx.db.get(messageId);
-    if (!msg) throw new Error("Message not found");
-
-    if (String(msg.senderId) !== String(me._id))
-      throw new Error("Not your message");
-
-    await ctx.db.delete(messageId);
-  },
-});
-
-export const editMessage = mutation({
-  args: { messageId: v.id("messages"), text: v.string() },
-  handler: async (ctx, { messageId, text }) => {
-    const me = await getAuthenticatedUser(ctx);
-    const msg = await ctx.db.get(messageId);
-    if (!msg) throw new Error("Message not found");
-
-    if (String(msg.senderId) !== String(me._id))
-      throw new Error("Not your message");
-
-    await ctx.db.patch(messageId, { text });
-  },
-});
-
-/*───────────────────────────────────────────
-  USER PRESENCE (Online / Last Seen)
-───────────────────────────────────────────*/
-
-/**
- * Called every time user performs an action (opening chat, sending msg, typing, navigating)
- */
-export const updatePresence = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const me = await getAuthenticatedUser(ctx);
-    if (!me) return; // User logged out → skip
-
-    const now = Date.now();
-
-    const existing = await ctx.db
-      .query("presence")
-      .withIndex("by_user", (q) => q.eq("userId", me._id))
-      .unique();
-
-    if (existing) {
-      await ctx.db.patch(existing._id, { lastSeen: now });
-    } else {
-      await ctx.db.insert("presence", {
-        userId: me._id,
-        lastSeen: now,
-      });
-    }
-  },
-});
-
-/**
- * Get presence info for another user
- * Returns: { online: boolean, lastSeen: number }
- */
-export const getUserPresence = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, { userId }) => {
-    const entry = await ctx.db
-      .query("presence")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .unique();
-
-    if (!entry) return { online: false, lastSeen: 0 };
-
-    const now = Date.now();
-    const diff = now - entry.lastSeen;
-
-    // User is online if active in last 15 seconds
-    const online = diff < 15000;
-
-    return {
-      online,
-      lastSeen: entry.lastSeen,
-    };
-  },
-});
-
-/**
- * Automatically delete stale presence entries
- * (runs when presence is fetched)
- */
-export const cleanupExpiredPresence = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const now = Date.now();
-    const threshold = now - 5 * 60 * 1000; // 5 minutes
-
-    const all = await ctx.db.query("presence").collect();
-
-    for (const p of all) {
-      if (p.lastSeen < threshold) {
-        await ctx.db.delete(p._id);
-      }
-    }
-  },
-});
-
-// Convex: add this query to convex/chat.ts (server-side)
-export const getMessagesLive = query({
-  args: { conversationId: v.id("conversations") },
-  handler: async (ctx, { conversationId }) => {
-    // Return the latest 50 messages for a conversation as a live query.
-    return await ctx.db
-      .query("messages")
-      .withIndex("by_conversation_createdAt", (q) =>
-        q.eq("conversationId", conversationId)
-      )
-      .order("desc")
-      .take(50);
-  },
-});
-
-/*───────────────────────────────────────────
-  NEW: Inline reply & mark-as-read mutations (for notifications)
-───────────────────────────────────────────*/
-
-/**
- * Send a message using inline reply (triggered from notification)
- */
-export const sendReplyFromNotification = mutation({
-  args: {
-    conversationId: v.id("conversations"),
-    text: v.string(),
-  },
-  handler: async (ctx, { conversationId, text }) => {
-    const me = await getAuthenticatedUser(ctx);
-    if (!me) throw new Error("Unauthorized");
-
-    const now = Date.now();
-
-    const messageId = await ctx.db.insert("messages", {
-      conversationId,
-      senderId: me._id,
-      text,
-      createdAt: now,
-      readBy: [me._id],
-    });
-
-    await ctx.db.patch(conversationId, {
-      lastMessage: text,
-      lastMessageAt: now,
-    });
-
-    // increment unread for other participants
-    const conv = await ctx.db.get(conversationId);
-    if (conv?.participants) {
-      for (const p of conv.participants) {
-        if (String(p) === String(me._id)) continue;
-        // create DB notification entry
-        await ctx.db.insert("notifications", {
-          receiverId: p,
-          senderId: me._id,
-          type: "message",
-          conversationId,
-          createdAt: now,
-          read: false,
-        });
-
-        // send push to other participant(s) as a quick message alert
-        await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
-          userId: p,
-          senderName: me.username || me.fullname || "Someone",
-          senderAvatar: me.image ?? undefined,
-          messages: [text],
-          chatId: String(conversationId),
-          screen: "/chat/[id]",
-          tab: "/(tabs)/messages",
-        });
-      }
-    }
-
-    return { ok: true, messageId };
-  },
-});
-
-/**
- * Mark a conversation as read for the current user
- */
-export const markChatAsRead = mutation({
-  args: {
-    conversationId: v.id("conversations"),
-  },
-  handler: async (ctx, { conversationId }) => {
-    const me = await getAuthenticatedUser(ctx);
-    if (!me) throw new Error("Unauthorized");
-
-    // Mark all messages in this conversation as read by current user
-    const msgs = await ctx.db
-      .query("messages")
-      .withIndex("by_conversation_createdAt", (q) =>
-        q.eq("conversationId", conversationId)
-      )
-      .collect();
-
-    for (const m of msgs) {
-      const readBy = m.readBy ?? [];
-      if (!readBy.map(String).includes(String(me._id))) {
-        await ctx.db.patch(m._id, { readBy: [...readBy, me._id] });
-      }
-    }
-
-    // Also create a notification record (optional) or update chat meta
-    await ctx.db.patch(conversationId, {
-      // optionally reset unread counters stored on conversation
-      // unreadCountPerUser: { ...(conv.unreadCountPerUser || {}), [me._id]: 0 }
-    });
-
-    return { ok: true };
   },
 });

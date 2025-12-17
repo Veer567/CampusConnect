@@ -24,7 +24,8 @@ export default defineSchema({
     posts: v.number(),
     clerkId: v.string(),
     isOnboarded: v.optional(v.boolean()),
-
+    fcmToken: v.optional(v.string()),
+    fcmTokenUpdatedAt: v.optional(v.number()),
     // 🔥 required for push notifications
     pushToken: v.optional(v.string()),
   }).index("by_clerk_id", ["clerkId"]),
@@ -46,7 +47,6 @@ export default defineSchema({
     eventDate: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
     createdAt: v.optional(v.number()),
-    
   }).index("by_user", ["userId"]),
 
   /*───────────────────────────────
@@ -171,7 +171,7 @@ export default defineSchema({
     createdAt: v.number(),
     expiresAt: v.number(),
   }).index("by_conversation", ["conversationId"]),
-  
+
   presence: defineTable({
     userId: v.id("users"),
     lastSeen: v.number(),

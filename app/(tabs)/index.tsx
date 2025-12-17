@@ -4,7 +4,7 @@ import AppHeader from "@/components/AppHeader";
 import Post from "@/components/Posts";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
-import usePushNotifications from "@/hooks/usePushNotifications";
+
 import { feedStyles } from "@/styles/feed.styles";
 
 import { useQuery } from "convex/react";
@@ -201,7 +201,7 @@ const FullFeedSkeleton = () => {
    FEED SCREEN
 ---------------------------------------------------------- */
 export default function FeedScreen() {
-  usePushNotifications();
+
   const { width } = useWindowDimensions();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);

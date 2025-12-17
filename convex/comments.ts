@@ -5,53 +5,60 @@ import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 
 /*───────────────────────────────────────────────
- 🔹 Helper: extract mentions using @Full Name
+ 🔹 Extract @Full Name mentions
 ───────────────────────────────────────────────*/
 function extractFullnameMentions(text: string): string[] {
   if (!text) return [];
-
   const re = /@([A-Za-z0-9À-ÖØ-öø-ÿ'’\-\.\s]{2,80}?)\b/g;
-  const found = new Set<string>();
+  const out = new Set<string>();
 
-  let m;
+  let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
-    const raw = m[1].trim();
-    if (raw) found.add(raw);
+    const name = m[1].trim();
+    if (name) out.add(name);
   }
 
-  return [...found];
+  return [...out];
 }
 
 /*───────────────────────────────────────────────
- 🔹 Helper: find users by FULLNAME (case-insensitive)
+ 🔹 Find users by fullname (case-insensitive)
 ───────────────────────────────────────────────*/
 async function findUsersByFullnames(ctx: any, names: string[]) {
   if (!names.length) return [];
-  const allUsers = await ctx.db.query("users").collect();
+  const users = await ctx.db.query("users").collect();
 
   const map = new Map<string, any>();
-  for (const u of allUsers) {
+  for (const u of users) {
     if (u.fullname) map.set(u.fullname.toLowerCase(), u);
   }
 
-  const result = [];
-  for (const name of names) {
-    const u = map.get(name.toLowerCase());
-    if (u) result.push(u);
-  }
-  return result;
+  return names
+    .map((n) => map.get(n.toLowerCase()))
+    .filter(Boolean);
 }
 
 /*───────────────────────────────────────────────
- 🔹 Helper: send DB notification + push
+ 🔔 DB notification + FCM push
 ───────────────────────────────────────────────*/
-async function notifyUsers(ctx: any, receivers: any[], sender: any, opts: any) {
+async function notifyUsers(
+  ctx: any,
+  receivers: any[],
+  sender: any,
+  opts: {
+    type: "comment" | "reply" | "mention";
+    postId?: Id<"posts">;
+    commentId?: Id<"comments">;
+    title: string;
+    body: string;
+  }
+) {
   const now = Date.now();
 
   for (const r of receivers) {
     if (!r || String(r._id) === String(sender._id)) continue;
 
-    // Insert DB notification
+    // 1️⃣ Save DB notification
     await ctx.db.insert("notifications", {
       receiverId: r._id,
       senderId: sender._id,
@@ -62,18 +69,23 @@ async function notifyUsers(ctx: any, receivers: any[], sender: any, opts: any) {
       read: false,
     });
 
-    // 🚀 Schedule push notification
-    await ctx.scheduler.runAfter(0, api.push.sendPushNotification, {
-      userId: r._id,
+    // 2️⃣ Send FCM
+    if (!r.fcmToken) continue;
+
+    await ctx.scheduler.runAfter(0, api.fcm.sendCommentNotification, {
+      fcmToken: r.fcmToken,
       title: opts.title,
       body: opts.body,
-      data: opts.data ?? {},
+      postId: opts.postId ? String(opts.postId) : undefined,
+      commentId: opts.commentId ? String(opts.commentId) : undefined,
+      type: opts.type,
     });
   }
 }
 
+
 /*───────────────────────────────────────────────
- 🔹 Helper: fetch post or marketplace item
+ 🔹 Get target (post / marketplace)
 ───────────────────────────────────────────────*/
 async function getTarget(
   ctx: any,
@@ -85,7 +97,7 @@ async function getTarget(
 }
 
 /*───────────────────────────────────────────────
- 🔹 Add Comment (with comment, reply & mention notifications)
+ 💬 ADD COMMENT
 ───────────────────────────────────────────────*/
 export const addComment = mutation({
   args: {
@@ -96,14 +108,13 @@ export const addComment = mutation({
   },
   handler: async (ctx, { targetId, targetType, content, parentId }) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated.");
+    if (!identity) throw new Error("Unauthorized");
 
     const me = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
-
-    if (!me) throw new Error("User not found.");
+    if (!me) throw new Error("User not found");
 
     const now = Date.now();
 
@@ -120,82 +131,62 @@ export const addComment = mutation({
     const target = await getTarget(ctx, targetType, targetId);
     if (!target) return commentId;
 
-    // increment post comment count only for top-level comments
+    // Increment post comment count (top-level only)
     if (targetType === "post" && !parentId) {
       await ctx.db.patch(targetId, {
         comments: (target.comments ?? 0) + 1,
       });
     }
 
-    /*─────────────────────────────────────────────
-     🔸 Case 1: Comment on post → notify post owner
-    ─────────────────────────────────────────────*/
-    const postOwnerId =
-      targetType === "post" ? target.userId : target.creatorId;
+    /*──────── Comment → Post owner ────────*/
+    if (!parentId) {
+      const ownerId =
+        targetType === "post" ? target.userId : target.creatorId;
 
-    if (!parentId && String(postOwnerId) !== String(me._id)) {
-      const postOwner = await ctx.db.get(postOwnerId);
+      if (String(ownerId) !== String(me._id)) {
+        const owner = await ctx.db.get(ownerId);
 
-      await notifyUsers(ctx, [postOwner], me, {
-        type: "comment",
-        postId: targetType === "post" ? targetId : undefined,
-        commentId,
-        title: `${me.username ?? me.fullname} commented`,
-        body: content.length > 100 ? content.slice(0, 100) + "…" : content,
-        data: {
+        await notifyUsers(ctx, [owner], me, {
           type: "comment",
-          postId: targetType === "post" ? targetId : undefined,
+          postId: targetType === "post" ? (targetId as Id<"posts">) : undefined,
           commentId,
-        },
-      });
+          title: `${me.username ?? me.fullname} commented`,
+          body:
+            content.length > 100 ? content.slice(0, 100) + "…" : content,
+        });
+      }
     }
 
-    /*─────────────────────────────────────────────
-     🔸 Case 2: Reply → notify parent comment owner
-    ─────────────────────────────────────────────*/
+    /*──────── Reply → Parent owner ────────*/
     if (parentId) {
-      const parentComment = await ctx.db.get(parentId);
-
-      if (parentComment && String(parentComment.userId) !== String(me._id)) {
-        const parentOwner = await ctx.db.get(parentComment.userId);
+      const parent = await ctx.db.get(parentId);
+      if (parent && String(parent.userId) !== String(me._id)) {
+        const parentOwner = await ctx.db.get(parent.userId);
 
         await notifyUsers(ctx, [parentOwner], me, {
           type: "reply",
-          postId: targetType === "post" ? targetId : undefined,
+          postId: targetType === "post" ? (targetId as Id<"posts">) : undefined,
           commentId,
-          title: `${me.username ?? me.fullname} replied to your comment`,
-          body: content.length > 100 ? content.slice(0, 100) + "…" : content,
-          data: {
-            type: "reply",
-            postId: targetType === "post" ? targetId : undefined,
-            commentId,
-          },
+          title: `${me.username ?? me.fullname} replied`,
+          body:
+            content.length > 100 ? content.slice(0, 100) + "…" : content,
         });
       }
     }
 
-    /*─────────────────────────────────────────────
-     🔸 Case 3: Mentions inside comment → notify mentioned users
-    ─────────────────────────────────────────────*/
+    /*──────── Mentions ────────*/
     const mentions = extractFullnameMentions(content);
+    if (mentions.length) {
+      const users = await findUsersByFullnames(ctx, mentions);
 
-    if (mentions.length > 0) {
-      const mentionedUsers = await findUsersByFullnames(ctx, mentions);
-
-      if (mentionedUsers.length > 0) {
-        await notifyUsers(ctx, mentionedUsers, me, {
-          type: "mention",
-          postId: targetType === "post" ? targetId : undefined,
-          commentId,
-          title: `${me.username ?? me.fullname} mentioned you`,
-          body: content.length > 100 ? content.slice(0, 100) + "…" : content,
-          data: {
-            type: "mention",
-            postId: targetType === "post" ? targetId : undefined,
-            commentId,
-          },
-        });
-      }
+      await notifyUsers(ctx, users, me, {
+        type: "mention",
+        postId: targetType === "post" ? (targetId as Id<"posts">) : undefined,
+        commentId,
+        title: `${me.username ?? me.fullname} mentioned you`,
+        body:
+          content.length > 100 ? content.slice(0, 100) + "…" : content,
+      });
     }
 
     return commentId;
@@ -203,108 +194,43 @@ export const addComment = mutation({
 });
 
 /*───────────────────────────────────────────────
- 🔹 Get Comments (top level)
+ 📥 GET COMMENTS
 ───────────────────────────────────────────────*/
 export const getComments = query({
   args: {
     targetId: v.union(v.id("posts"), v.id("marketplacePosts")),
   },
   handler: async (ctx, { targetId }) => {
-    const all = await ctx.db
+    const comments = await ctx.db
       .query("comments")
       .withIndex("by_target", (q) => q.eq("targetId", targetId))
       .order("desc")
       .collect();
 
-    const top = all.filter((c) => !c.parentId);
-
     return Promise.all(
-      top.map(async (c) => {
-        const user = await ctx.db.get(c.userId);
+      comments
+        .filter((c) => !c.parentId)
+        .map(async (c) => {
+          const user = await ctx.db.get(c.userId);
+          const replies = await ctx.db
+            .query("comments")
+            .withIndex("by_parent", (q) => q.eq("parentId", c._id))
+            .collect();
 
-        const replies = await ctx.db
-          .query("comments")
-          .withIndex("by_parent", (q) => q.eq("parentId", c._id))
-          .collect();
-
-        return {
-          ...c,
-          replyCount: replies.length,
-          user: {
-            username: user?.username ?? "",
-            fullname: user?.fullname ?? "",
-            image: user?.image ?? null,
-            _id: user?._id,
-          },
-        };
-      })
+          return {
+            ...c,
+            replyCount: replies.length,
+            user: {
+              _id: user?._id,
+              username: user?.username ?? "",
+              fullname: user?.fullname ?? "",
+              image: user?.image ?? null,
+            },
+          };
+        })
     );
   },
 });
-
-/*───────────────────────────────────────────────
- 🔹 Get Replies
-───────────────────────────────────────────────*/
-export const getReplies = query({
-  args: { parentId: v.id("comments") },
-  handler: async (ctx, { parentId }) => {
-    const replies = await ctx.db
-      .query("comments")
-      .withIndex("by_parent", (q) => q.eq("parentId", parentId))
-      .order("asc")
-      .collect();
-
-    return Promise.all(
-      replies.map(async (r) => {
-        const user = await ctx.db.get(r.userId);
-        return {
-          ...r,
-          user: {
-            username: user?.username ?? "",
-            fullname: user?.fullname ?? "",
-            image: user?.image ?? null,
-            _id: user?._id,
-          },
-        };
-      })
-    );
-  },
-});
-
-/*───────────────────────────────────────────────
- 🔹 Edit Comment
-───────────────────────────────────────────────*/
-export const editComment = mutation({
-  args: { commentId: v.id("comments"), text: v.string() },
-  handler: async (ctx, { commentId, text }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated.");
-
-    const me = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-    if (!me) throw new Error("User not found.");
-
-    const comment = await ctx.db.get(commentId);
-    if (!comment) throw new Error("Comment not found.");
-
-    if (String(comment.userId) !== String(me._id)) {
-      throw new Error("Not authorized.");
-    }
-
-    await ctx.db.patch(commentId, {
-      content: text,
-      editedAt: Date.now(),
-    });
-
-    return true;
-  },
-});
-
-/*───────────────────────────────────────────────
- 🔹 Delete Comment
-───────────────────────────────────────────────*/
 export const deleteComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, { commentId }) => {
@@ -359,3 +285,29 @@ export const deleteComment = mutation({
     return true;
   },
 });
+export const getReplies = query({
+  args: { parentId: v.id("comments") },
+  handler: async (ctx, { parentId }) => {
+    const replies = await ctx.db
+      .query("comments")
+      .withIndex("by_parent", (q) => q.eq("parentId", parentId))
+      .order("asc")
+      .collect();
+
+    return Promise.all(
+      replies.map(async (r) => {
+        const user = await ctx.db.get(r.userId);
+        return {
+          ...r,
+          user: {
+            username: user?.username ?? "",
+            fullname: user?.fullname ?? "",
+            image: user?.image ?? null,
+            _id: user?._id,
+          },
+        };
+      })
+    );
+  },
+});
+
