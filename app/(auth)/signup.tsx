@@ -193,6 +193,7 @@ export default function SignupScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   placeholder="Enter your Marwadi email"
+                  placeholderTextColor={COLORS.grey}
                   style={localStyles.input}
                   onSubmitEditing={() => passRef.current?.focus()}
                 />
@@ -204,6 +205,7 @@ export default function SignupScreen() {
                     value={password}
                     placeholder="Enter password"
                     onChangeText={setPassword}
+                    placeholderTextColor={COLORS.grey}
                     secureTextEntry={!showPassword}
                     style={localStyles.passwordInput}
                     onSubmitEditing={() =>
@@ -229,6 +231,7 @@ export default function SignupScreen() {
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showConfirmPassword}
+                    placeholderTextColor={COLORS.grey}
                     style={localStyles.passwordInput}
                     onSubmitEditing={handleSignUp}
                   />
@@ -274,6 +277,8 @@ export default function SignupScreen() {
                   value={code}
                   onChangeText={setCode}
                   keyboardType="number-pad"
+                  placeholder="Enter code"
+                  placeholderTextColor={COLORS.grey}
                   maxLength={6}
                   style={localStyles.codeInput}
                   onSubmitEditing={handleVerifyCode}

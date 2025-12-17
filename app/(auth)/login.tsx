@@ -166,6 +166,7 @@ const LoginScreen: React.FC = () => {
               keyboardType="email-address"
               autoCapitalize="none"
               placeholder="Enter your Marwadi email"
+              placeholderTextColor={COLORS.grey}
               style={styles.input}
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
@@ -179,6 +180,7 @@ const LoginScreen: React.FC = () => {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 placeholder="Enter password"
+                placeholderTextColor={COLORS.grey}
                 style={styles.passwordInput}
                 returnKeyType="done"
                 onSubmitEditing={handleSignIn}
@@ -271,6 +273,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     marginVertical: 8,
+
   },
   passwordRow: {
     flexDirection: "row",

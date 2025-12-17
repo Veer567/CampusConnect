@@ -317,6 +317,7 @@ export default function ChatScreen() {
       <View style={styles.inputBar}>
         <TextInput
           placeholder="Message..."
+          placeholderTextColor={COLORS.grey}
           value={text}
           onChangeText={setText}
           style={styles.input}

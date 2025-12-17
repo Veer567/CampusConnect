@@ -198,6 +198,7 @@ const ResetPasswordScreen: React.FC = () => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   placeholder="Enter your email"
+                  placeholderTextColor={COLORS.grey}
                   style={styles.input}
                   onSubmitEditing={handleRequestReset}
                 />
@@ -226,6 +227,7 @@ const ResetPasswordScreen: React.FC = () => {
                   onChangeText={setCode}
                   keyboardType="number-pad"
                   placeholder="Enter code"
+                  placeholderTextColor={COLORS.grey}
                   style={styles.input}
                   onSubmitEditing={() => newPassRef.current?.focus()}
                 />
@@ -237,6 +239,8 @@ const ResetPasswordScreen: React.FC = () => {
                     value={newPassword}
                     onChangeText={setNewPassword}
                     secureTextEntry={!showPassword}
+                    placeholder="Enter new password"
+                    placeholderTextColor={COLORS.grey}
                     style={styles.passwordInput}
                   />
                   <TouchableOpacity
@@ -257,6 +261,8 @@ const ResetPasswordScreen: React.FC = () => {
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showConfirmPassword}
+                    placeholder="Confirm new password"
+                    placeholderTextColor={COLORS.grey}
                     style={styles.passwordInput}
                     onSubmitEditing={handleResetPassword}
                   />

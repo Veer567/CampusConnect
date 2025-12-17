@@ -221,8 +221,8 @@ export default function MarketplacePostDetail() {
                   style={[
                     styles.interestedAvatar,
                     {
-                      marginLeft: i === 0 ? 0 : -14, 
-                      zIndex: 10 - i, 
+                      marginLeft: i === 0 ? 0 : -14,
+                      zIndex: 10 - i,
                     },
                   ]}
                 />
@@ -256,7 +256,7 @@ export default function MarketplacePostDetail() {
               style={styles.joinGradient}
             >
               <Text style={styles.joinText}>
-                {isJoined ? "I'm Joined" : "I'm Interested"}
+                {isJoined ? "Send Message" : "Express Interest"}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
