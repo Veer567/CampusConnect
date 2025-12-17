@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "60830183072",
+    "project_id": "campusconnect-1b139",
+    "storage_bucket": "campusconnect-1b139.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:60830183072:android:06f877d2cff27d94dce3c5",
+        "android_client_info": {
+          "package_name": "com.vir567.Spotlight"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0b49YZvZgG9oCoo37HdDrGg3s7xEWWfI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

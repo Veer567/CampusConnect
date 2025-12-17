@@ -10,9 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import HackathonsScreen from "./screens/HackathonsScreen";
-import ProjectScreen from "./screens/ProjectScreen";
-import StartupsScreen from "./screens/StartupsSreen";
+import HackathonsScreen from "../marketplace/screens/HackathonsScreen";
+import ProjectScreen from "../marketplace/screens/ProjectScreen";
+import StartupsScreen from "../marketplace/screens/StartupsSreen";
 
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
