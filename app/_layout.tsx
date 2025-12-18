@@ -1,6 +1,8 @@
-import { Stack } from "expo-router";
+// app/_layout.tsx
+import { Stack, useRouter } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useEffect } from "react";
 
 import InitalLayout from "@/components/initalLayout";
 import { NotificationProvider } from "@/components/NotificationManager";
@@ -11,14 +13,49 @@ import ClerkAndConvexProvider from "@/providers/ClerkAndConvexProvider";
 import { ensureFirebaseReady } from "./firebaseConfig";
 import useFCMNotifications from "@/hooks/useFCMNotifications";
 
-/* 🔥 Firebase native modules are linked at build time */
+import messaging from "@react-native-firebase/messaging";
+
+/* 🔥 Ensure Firebase native modules are linked */
 ensureFirebaseReady();
 
 /*──────────────────────────────────────────────
-  Helper component (INSIDE providers)
+  Notification Deep Link Handler
+──────────────────────────────────────────────*/
+function NotificationNavigationHandler() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // 🔹 App opened from killed state
+    messaging()
+      .getInitialNotification()
+      .then((remoteMessage) => {
+        const screen = remoteMessage?.data?.screen;
+        if (screen) {
+          router.replace(screen as any);
+        }
+      });
+
+    // 🔹 App opened from background
+    const unsubscribe = messaging().onNotificationOpenedApp(
+      (remoteMessage) => {
+        const screen = remoteMessage?.data?.screen;
+        if (screen) {
+          router.push(screen as any);
+        }
+      }
+    );
+
+    return unsubscribe;
+  }, []);
+
+  return null;
+}
+
+/*──────────────────────────────────────────────
+  FCM Registration (token, permissions, listeners)
 ──────────────────────────────────────────────*/
 function AppWithNotifications() {
-  useFCMNotifications(); // ✅ SAFE here
+  useFCMNotifications(); // registers token + foreground handling
   return null;
 }
 
@@ -28,7 +65,9 @@ function AppWithNotifications() {
 export default function RootLayout() {
   return (
     <ClerkAndConvexProvider>
+      {/* 🔔 FCM + Deep Linking */}
       <AppWithNotifications />
+      <NotificationNavigationHandler />
 
       <NotificationProvider>
         <SafeAreaProvider>
@@ -44,7 +83,10 @@ export default function RootLayout() {
                     animationDuration: 180,
                   }}
                 >
+                  {/* Tabs */}
                   <Stack.Screen name="(tabs)" />
+
+                  {/* Other Screens */}
                   <Stack.Screen name="followers" />
                   <Stack.Screen name="following" />
                   <Stack.Screen name="user-posts" />

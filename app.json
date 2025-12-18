@@ -4,9 +4,17 @@
     "slug": "Spotlight",
     "version": "1.0.0",
     "orientation": "portrait",
+
     "icon": "./assets/splash/image2.png",
+
     "scheme": "spotlight",
     "userInterfaceStyle": "automatic",
+
+    "splash": {
+      "image": "./assets/splash/image2.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
 
     "ios": {
       "supportsTablet": true,
@@ -18,28 +26,22 @@
     "android": {
       "package": "com.vir567.Spotlight",
       "versionCode": 2,
-      "useNextNotificationsApi": true,
-      "permissions": ["NOTIFICATIONS"],
-
       "googleServicesFile": "./firebase/google-services.json",
+      "permissions": ["NOTIFICATIONS"],
 
       "adaptiveIcon": {
         "foregroundImage": "./assets/splash/image2.png",
         "backgroundColor": "#ffffff"
       },
+
       "softwareKeyboardLayoutMode": "pan",
       "edgeToEdgeEnabled": false
-    },
-
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
     },
 
     "plugins": [
       "expo-router",
 
+ 
       [
         "expo-notifications",
         {
@@ -71,7 +73,6 @@
     "runtimeVersion": "1.0.0",
 
     "updates": {
-      "url": "https://u.expo.dev/bfeea64c-946c-4d50-8b0c-9e0d0d495f52",
       "fallbackToCacheTimeout": 0
     }
   }
