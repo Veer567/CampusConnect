@@ -1,9 +1,9 @@
 // convex/fcm.ts
 "use node";
 
+import { v } from "convex/values";
 import admin from "firebase-admin";
 import { action } from "./_generated/server";
-import { v } from "convex/values";
 
 /*──────────────────────────────────────────────
  🔐 Firebase Admin Singleton (SAFE)
@@ -64,11 +64,11 @@ export const sendMessageNotification = action({
         body: args.message,
       },
       data: stringify({
+        screen: "/notification-redirect",
         type: "message",
         conversationId: args.conversationId,
-        screen: "/chat/[id]",
-        tab: "/(tabs)/messages",
       }),
+
       android: {
         priority: "high",
         notification: { channelId: "messages" },
@@ -98,10 +98,11 @@ export const sendLikeNotification = action({
         body: `${args.username} liked your post`,
       },
       data: stringify({
-        type: "like",
+        screen: "/notification-redirect",
+        type: "post",
         postId: args.postId,
-        screen: "/post/[id]",
       }),
+
       android: {
         priority: "normal",
         notification: { channelId: "default" },
@@ -131,10 +132,11 @@ export const sendFollowNotification = action({
         body: `${args.username} started following you`,
       },
       data: stringify({
-        type: "follow",
+        screen: "/notification-redirect",
+        type: "profile",
         userId: args.userId,
-        screen: "/profile/[id]",
       }),
+
       android: {
         priority: "normal",
         notification: { channelId: "default" },
@@ -171,11 +173,12 @@ export const sendCommentNotification = action({
         body: args.body,
       },
       data: stringify({
+        screen: "/notification-redirect",
         type: args.type,
         postId: args.postId,
         commentId: args.commentId,
-        screen: "/post/[id]",
       }),
+
       android: {
         priority: "high",
         notification: { channelId: "default" },

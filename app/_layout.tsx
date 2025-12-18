@@ -1,4 +1,6 @@
 // app/_layout.tsx
+import "@/firebaseBackground"
+
 import { Stack, useRouter } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";

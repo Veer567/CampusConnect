@@ -41,12 +41,11 @@
     "plugins": [
       "expo-router",
 
- 
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification.png",
-          "color": "#ffffff"
+          "icon": "./assets/notification/icon.png",
+          "color": "#0EA5E9"
         }
       ],
 

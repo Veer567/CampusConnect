@@ -55,7 +55,7 @@ export default function OtherUserProfile() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 15 }}
+        contentContainerStyle={{ paddingBottom: 50, paddingHorizontal: 15, marginTop: 20 }}
       >
         <ProfileHeader
           imageUrl={user.image}
@@ -306,6 +306,8 @@ const sk = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
     alignItems: "center",
+    marginTop: 20,
+
   },
 
   shimmer: {
@@ -405,6 +407,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     paddingHorizontal: 12, // ✔ consistent on all devices
     paddingTop: 10,
+    marginTop : 10,
   },
 
   loadingBox: { flex: 1, justifyContent: "center", alignItems: "center" },

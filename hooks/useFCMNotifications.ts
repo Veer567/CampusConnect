@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useAuth } from "@clerk/clerk-expo";
 import messaging from "@react-native-firebase/messaging";
 import { useMutation } from "convex/react";
 import { router } from "expo-router";
-import { useAuth } from "@clerk/clerk-expo";
+import { useEffect } from "react";
 
 import { api } from "@/convex/_generated/api";
 
@@ -11,14 +11,11 @@ export default function useFCMNotifications() {
   const saveFcmToken = useMutation(api.pushTokens.saveFcmToken);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) {
-      // ⏳ Wait until Clerk is ready
-      return;
-    }
+    if (!isLoaded || !isSignedIn) return;
 
-    let unsubscribeOnMessage: any;
-    let unsubscribeOnOpen: any;
-    let unsubscribeOnTokenRefresh: any;
+    let unsubMessage: () => void;
+    let unsubOpen: () => void;
+    let unsubRefresh: () => void;
 
     async function initFCM() {
       /* 1️⃣ Permission */
@@ -32,36 +29,28 @@ export default function useFCMNotifications() {
         return;
       }
 
-      /* 2️⃣ Get token */
+      /* 2️⃣ Initial token */
       const token = await messaging().getToken();
       if (token) {
-        console.log("🔥 FCM Token:", token);
         await saveFcmToken({ token });
       }
 
       /* 3️⃣ Token refresh */
-      unsubscribeOnTokenRefresh = messaging().onTokenRefresh(
-        async (newToken) => {
-          console.log("🔄 Token refreshed:", newToken);
-          await saveFcmToken({ token: newToken });
-        }
-      );
+      unsubRefresh = messaging().onTokenRefresh(async (newToken) => {
+        await saveFcmToken({ token: newToken });
+      });
 
       /* 4️⃣ Foreground messages */
-      unsubscribeOnMessage = messaging().onMessage(
-        async (remoteMessage) => {
-          console.log("📩 Foreground message:", remoteMessage);
-        }
-      );
+      unsubMessage = messaging().onMessage(async (remoteMessage) => {
+        console.log("📩 Foreground FCM:", remoteMessage);
+      });
 
-      /* 5️⃣ Background open */
-      unsubscribeOnOpen = messaging().onNotificationOpenedApp(
-        (remoteMessage) => {
-          handleNavigation(remoteMessage.data);
-        }
-      );
+      /* 5️⃣ Background → open */
+      unsubOpen = messaging().onNotificationOpenedApp((remoteMessage) => {
+        handleNavigation(remoteMessage.data);
+      });
 
-      /* 6️⃣ Quit state */
+      /* 6️⃣ Quit → open */
       const initial = await messaging().getInitialNotification();
       if (initial) {
         handleNavigation(initial.data);
@@ -71,9 +60,9 @@ export default function useFCMNotifications() {
     initFCM();
 
     return () => {
-      unsubscribeOnMessage?.();
-      unsubscribeOnOpen?.();
-      unsubscribeOnTokenRefresh?.();
+      unsubMessage?.();
+      unsubOpen?.();
+      unsubRefresh?.();
     };
   }, [isLoaded, isSignedIn]);
 
@@ -86,10 +75,7 @@ export default function useFCMNotifications() {
     }
 
     if (data.screen) {
-      router.push({
-        pathname: data.screen,
-        params: data.params ? JSON.parse(data.params) : {},
-      });
+      router.push(data.screen);
     }
   }
 
