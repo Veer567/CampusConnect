@@ -1,19 +1,21 @@
 // FEED SCREEN — WITH BADGE + FULL SKELETON LOADER (NO HOOK ORDER ERRORS)
 
 import AppHeader from "@/components/AppHeader";
+import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 import Post from "@/components/Posts";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 
 import { feedStyles } from "@/styles/feed.styles";
 
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useQuery } from "convex/react";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Animated,
   Dimensions,
@@ -53,7 +55,6 @@ type RawPost = {
   tags?: string[];
 };
 
-
 // Categories
 export const categories = [
   {
@@ -70,11 +71,7 @@ export const categories = [
     id: 2,
     name: "Workshops",
     icon: (
-      <MaterialCommunityIcons
-        name="hammer-wrench"
-        size={24}
-        color="#00BFA6"
-      />
+      <MaterialCommunityIcons name="hammer-wrench" size={24} color="#00BFA6" />
     ), // teal
   },
   {
@@ -99,6 +96,13 @@ export const categories = [
   },
 ];
 
+async function requestNotificationPermission() {
+  const { status } = await Notifications.getPermissionsAsync();
+
+  if (status !== "granted") {
+    await Notifications.requestPermissionsAsync();
+  }
+}
 
 /* ----------------------------------------------------------
    FULL SCREEN SKELETON LOADER
@@ -127,19 +131,13 @@ const FullFeedSkeleton = () => {
 
   const Shimmer = () => (
     <Animated.View
-      style={[
-        feedSkeletonStyles.shimmer,
-        { transform: [{ translateX }] },
-      ]}
+      style={[feedSkeletonStyles.shimmer, { transform: [{ translateX }] }]}
     />
   );
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <LinearGradient
-        colors={["#EFF6FF", "#FFFFFF"]}
-        style={{ flex: 1 }}
-      >
+      <LinearGradient colors={["#EFF6FF", "#FFFFFF"]} style={{ flex: 1 }}>
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12 }}
@@ -156,7 +154,6 @@ const FullFeedSkeleton = () => {
 
           {/* ---------- SEARCH BAR ---------- */}
           <View style={feedSkeletonStyles.searchBar} />
-          
 
           {/* ---------- CATEGORY CHIPS ---------- */}
           <FlatList
@@ -170,9 +167,7 @@ const FullFeedSkeleton = () => {
             horizontal
             showsHorizontalScrollIndicator={false}
             style={{ marginBottom: 20 }}
-          >
-          </FlatList>
-        
+          ></FlatList>
 
           {/* ---------- POSTS ---------- */}
           {Array.from({ length: 4 }).map((_, i) => (
@@ -196,15 +191,51 @@ const FullFeedSkeleton = () => {
   );
 };
 
-
 /* ----------------------------------------------------------
    FEED SCREEN
 ---------------------------------------------------------- */
 export default function FeedScreen() {
-
   const { width } = useWindowDimensions();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const showAlert = useAlert((s) => s.show);
+
+  useEffect(() => {
+    const checkNotificationPrompt = async () => {
+      try {
+        const alreadyPrompted = await AsyncStorage.getItem(
+          "@notifications_permission_prompted"
+        );
+
+        if (alreadyPrompted) return;
+
+        showAlert({
+          title: "Enable Notifications",
+          message:
+            "Allow notifications to stay updated with messages, likes, comments, and important campus updates.",
+          confirmText: "Allow",
+          cancelText: "Not Now",
+          onConfirm: async () => {
+            await requestNotificationPermission();
+            await AsyncStorage.setItem(
+              "@notifications_permission_prompted",
+              "true"
+            );
+          },
+          onCancel: async () => {
+            await AsyncStorage.setItem(
+              "@notifications_permission_prompted",
+              "true"
+            );
+          },
+        });
+      } catch (e) {
+        console.log("Notification permission check failed", e);
+      }
+    };
+
+    checkNotificationPrompt();
+  }, []);
 
   // DATA
   const unreadMessages = useQuery(api.chat.getUnreadMessageCount) ?? 0;
@@ -215,32 +246,31 @@ export default function FeedScreen() {
   const isLoading = !posts;
 
   // MAP POSTS
-const mappedPosts = useMemo(() => {
-  if (!posts) return [];
+  const mappedPosts = useMemo(() => {
+    if (!posts) return [];
 
-  return posts.map((post: RawPost) => ({
-    _id: post._id,
-    title: post.title ?? "Untitled",
-    caption: post.caption ?? "",
-    category: post.category ?? "Other",
-    imageUrl: post.imageUrl,
-    author: {
-      _id: post.author?._id ?? "",
-      username: post.author?.username ?? "Anonymous",
-      image: post.author?.image ?? "",
-    },
-    likes: post.likes ?? 0,
-    comments: post.comments ?? 0,
-    isLiked: !!post.isLiked,
-    isBookmarked: !!post.isBookmarked,
-    _creationTime: post._creationTime,
-    location: post.location,
-    eventDate: post.eventDate,
-    isOwner: !!post.isOwner,
-    tags: post.tags ?? [],
-  }));
-}, [posts]);
-
+    return posts.map((post: RawPost) => ({
+      _id: post._id,
+      title: post.title ?? "Untitled",
+      caption: post.caption ?? "",
+      category: post.category ?? "Other",
+      imageUrl: post.imageUrl,
+      author: {
+        _id: post.author?._id ?? "",
+        username: post.author?.username ?? "Anonymous",
+        image: post.author?.image ?? "",
+      },
+      likes: post.likes ?? 0,
+      comments: post.comments ?? 0,
+      isLiked: !!post.isLiked,
+      isBookmarked: !!post.isBookmarked,
+      _creationTime: post._creationTime,
+      location: post.location,
+      eventDate: post.eventDate,
+      isOwner: !!post.isOwner,
+      tags: post.tags ?? [],
+    }));
+  }, [posts]);
 
   // CATEGORY ANIM
   const categoryScales = useRef(
@@ -261,10 +291,7 @@ const mappedPosts = useMemo(() => {
 
   return (
     <SafeAreaProvider>
-      <LinearGradient
-        colors={["#EFF6FF", "#FFFFFF"]}
-        style={{ flex: 1 }}
-      >
+      <LinearGradient colors={["#EFF6FF", "#FFFFFF"]} style={{ flex: 1 }}>
         <SafeAreaView style={feedStyles.container}>
           {/* HEADER */}
           <View style={{ position: "relative" }}>
@@ -384,6 +411,7 @@ const mappedPosts = useMemo(() => {
               }
             />
           )}
+          <GlobalAlert />
         </SafeAreaView>
       </LinearGradient>
     </SafeAreaProvider>
@@ -506,4 +534,3 @@ const feedSkeletonStyles = StyleSheet.create({
     width: "90%",
   },
 });
-

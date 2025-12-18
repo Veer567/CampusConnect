@@ -1,14 +1,21 @@
 // app/notifications.tsx
+
 import AppHeader from "@/components/AppHeader";
+import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
-import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
+import {
+  differenceInCalendarWeeks,
+  formatDistanceToNow,
+  isToday,
+  isYesterday,
+} from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import React, { useMemo } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useMemo, useRef } from "react";
 import {
   Dimensions,
   FlatList,
@@ -22,106 +29,193 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
-const hp = (p: number) => (height * p) / 100;
 
-/*───────────────────────────────────────────
+/* ──────────────────────────────────────
   TYPES
-───────────────────────────────────────────*/
-type GroupedNotification = {
+────────────────────────────────────── */
+type NotificationItem = {
   _id: string;
-  type: string;
   createdAt: number;
-  read: boolean;
-  count: number;
+  read?: boolean;
+  type?: string;
   sender?: { _id?: string; username?: string; image?: string } | null;
+  senderId?: string;
+  post?: { _id?: string; title?: string } | null;
   postId?: string;
+  conversationId?: string;
+  title?: string;
+  comment?: string;
+  count?: number;
 };
 
-type DayGroup = {
-  label: "Today" | "Yesterday" | "Older";
-  items: GroupedNotification[];
-};
+/* ──────────────────────────────────────
+  DATE GROUPING
+────────────────────────────────────── */
+function groupLabelForDate(d: Date) {
+  if (isToday(d)) return "Today";
+  if (isYesterday(d)) return "Yesterday";
+  const weeks = differenceInCalendarWeeks(new Date(), d);
+  if (weeks === 0) return "This Week";
+  return "Older";
+}
 
-type Row =
-  | { type: "header"; label: string }
-  | { type: "item"; item: GroupedNotification };
+/* ──────────────────────────────────────
+  GROUP SIMILAR NOTIFICATIONS
+────────────────────────────────────── */
+function groupSimilarNotifications(
+  notifications: NotificationItem[]
+): NotificationItem[] {
+  const map = new Map<string, NotificationItem>();
 
-/*───────────────────────────────────────────
-  MAIN
-───────────────────────────────────────────*/
+  for (const n of notifications) {
+    const day = new Date(n.createdAt).toDateString();
+    const key = [
+      n.type,
+      n.senderId ?? n.sender?._id,
+      n.postId ?? n.post?._id,
+      day,
+    ].join("|");
+
+    if (!map.has(key)) {
+      map.set(key, { ...n, count: 1 });
+    } else {
+      const existing = map.get(key)!;
+      existing.count = (existing.count ?? 1) + 1;
+      existing.createdAt = Math.max(existing.createdAt, n.createdAt);
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+/* ──────────────────────────────────────
+  SCREEN
+────────────────────────────────────── */
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { userId } = useAuth();
+  const { userId: clerkId } = useAuth();
   const showAlert = useAlert((s) => s.show);
 
-  const data = useQuery(
-    api.notifications.getNotifications,
-    userId ? {} : "skip"
-  ) as DayGroup[] | undefined;
+  // 🔒 Prevent double navigation
+  const hasNavigatedRef = useRef(false);
 
-  const markRead = useMutation(api.notifications.markNotificationRead);
+  useFocusEffect(
+    useCallback(() => {
+      hasNavigatedRef.current = false;
+    }, [])
+  );
+
+  const notificationsRaw = useQuery(api.notifications.getNotifications);
+  const loading = notificationsRaw === undefined;
+
+  const markSingleRead = useMutation(api.notifications.markNotificationRead);
+  const markMessagesFromSenderRead = useMutation(
+    api.notifications.markMessagesFromSenderRead
+  );
   const deleteNotif = useMutation(api.notifications.deleteNotification);
   const clearAll = useMutation(api.notifications.clearAllNotifications);
+  const getOrStartConversation = useMutation(api.chat.getOrStartConversation);
 
-  /*───────────────────────────────────────────
-    FLATTEN FOR FLATLIST
-  ───────────────────────────────────────────*/
-  const rows = useMemo<Row[]>(() => {
-    if (!data) return [];
+  /* ──────────────────────────────────────
+    GROUP DATA
+  ─────────────────────────────────────── */
+  const grouped = useMemo(() => {
+    if (!notificationsRaw) return {};
+    const groupedSimilar = groupSimilarNotifications(notificationsRaw);
 
-    return data.flatMap((group) => [
-      { type: "header", label: group.label },
-      ...group.items.map((item) => ({ type: "item", item } as Row)),
-    ]) as Row[];
-  }, [data]);
+    return groupedSimilar.reduce<Record<string, NotificationItem[]>>(
+      (acc, n) => {
+        const label = groupLabelForDate(new Date(n.createdAt));
+        if (!acc[label]) acc[label] = [];
+        acc[label].push(n);
+        return acc;
+      },
+      {}
+    );
+  }, [notificationsRaw]);
 
-  /*───────────────────────────────────────────
-    HANDLERS
-  ───────────────────────────────────────────*/
-  const onPress = async (n: GroupedNotification) => {
-    if (!n.read) {
-      await markRead({ id: n._id as any });
-    }
+  const groupOrder = ["Today", "Yesterday", "This Week", "Older"];
 
+  const flattened = useMemo(() => {
+    return groupOrder
+      .filter((g) => grouped[g]?.length)
+      .map((g) => ({ label: g, data: grouped[g] }));
+  }, [grouped]);
+
+  /* ──────────────────────────────────────
+    PRESS HANDLER (FULLY FIXED)
+  ─────────────────────────────────────── */
+  const onPressNotification = async (n: NotificationItem) => {
+    if (hasNavigatedRef.current) return;
+    hasNavigatedRef.current = true;
+
+    // MESSAGE (GROUPED)
     if (n.type === "message") {
-      return router.push("/chat-screen");
-    }
+      const senderId = n.sender?._id ?? n.senderId;
+      if (!senderId) return;
 
-    if (n.type === "follow") {
-      return router.push({
-        pathname: "/other-profile",
-        params: { userId: n.sender?._id },
+      // ✅ Mark ALL messages from this sender as read
+      await markMessagesFromSenderRead({
+        senderId: senderId as any,
       });
+
+      const conv = await getOrStartConversation({
+        otherUserId: senderId as any,
+      });
+
+      router.push({
+        pathname: "/chat-screen",
+        params: {
+          conversationId: String(conv?._id),
+          otherUserId: String(senderId),
+        },
+      });
+      return;
     }
 
-    if (n.postId) {
-      return router.push({
+    // NON-MESSAGE → mark only this one
+    if (!n.read) {
+      try {
+        await markSingleRead({ id: n._id as any });
+      } catch {}
+    }
+
+    // FOLLOW
+    if (n.type === "follow") {
+      router.replace({
+        pathname: "/other-profile",
+        params: { userId: n.senderId ?? n.sender?._id },
+      });
+      return;
+    }
+
+    // POST / COMMENT
+    if (n.postId || n.post?._id) {
+      router.replace({
         pathname: "/post-details",
-        params: { postId: n.postId },
+        params: { postId: n.postId ?? n.post?._id },
       });
     }
   };
 
-  const renderItem = ({ item }: { item: Row }) => {
-    if (item.type === "header") {
-      return <Text style={styles.groupLabel}>{item.label}</Text>;
-    }
-
-    const n = item.item;
+  /* ──────────────────────────────────────
+    CARD
+  ─────────────────────────────────────── */
+  const renderCard = (n: NotificationItem) => {
+    const timeText = formatDistanceToNow(new Date(n.createdAt), {
+      addSuffix: true,
+    });
 
     return (
       <Pressable
-        onPress={() => onPress(n)}
+        key={n._id}
+        style={styles.card}
         android_ripple={{ color: "rgba(0,0,0,0.05)" }}
-        style={[
-          styles.card,
-          !n.read && { backgroundColor: "#F0F9FF" },
-        ]}
+        onPress={() => onPressNotification(n)}
       >
-        <View style={styles.row}>
-          {/* Avatar */}
+        <View style={styles.cardInner}>
           <View style={styles.iconContainer}>
             {n.sender?.image ? (
               <Image source={{ uri: n.sender.image }} style={styles.avatar} />
@@ -134,23 +228,19 @@ export default function NotificationsScreen() {
             )}
           </View>
 
-          {/* Text */}
           <View style={{ flex: 1 }}>
             <Text style={styles.text}>
-              {n.sender?.username}{" "}
-              <Text style={{ fontWeight: "700" }}>
-                {n.type}
-              </Text>
-              {n.count > 1 && (
-                <Text style={{ fontWeight: "700" }}>
-                  {" "}
-                  ({n.count})
-                </Text>
+              {n.sender?.username ? `${n.sender.username} ` : ""}
+              <Text style={{ fontWeight: "700" }}>{n.title ?? n.type}</Text>
+              {n.count && n.count > 1 && (
+                <Text style={{ fontWeight: "700" }}> ({n.count})</Text>
               )}
+              {n.post?.title ? ` • ${n.post.title}` : ""}
             </Text>
+
+            <Text style={styles.timeText}>{timeText}</Text>
           </View>
 
-          {/* Delete */}
           <TouchableOpacity onPress={() => deleteNotif({ id: n._id as any })}>
             <Ionicons name="close" size={18} color="#ff3b30" />
           </TouchableOpacity>
@@ -159,9 +249,9 @@ export default function NotificationsScreen() {
     );
   };
 
-  /*───────────────────────────────────────────
+  /* ──────────────────────────────────────
     UI
-  ───────────────────────────────────────────*/
+  ─────────────────────────────────────── */
   return (
     <LinearGradient colors={["#EFF6FF", "#FFFFFF"]} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container} edges={[]}>
@@ -170,76 +260,96 @@ export default function NotificationsScreen() {
           rightIcon="trash-outline"
           onRightPress={() =>
             showAlert({
-              title: "Clear all?",
+              title: "Clear Notifications",
               message: "Delete all notifications?",
               confirmText: "Clear",
               cancelText: "Cancel",
-              onConfirm: async () => await clearAll(),
+              onConfirm: clearAll,
             })
           }
+          onBackPress={() => {
+            router.replace("/(tabs)");
+          }}
         />
 
-        <FlatList
-          data={rows}
-          keyExtractor={(item, idx) =>
-            item.type === "header"
-              ? `h-${item.label}`
-              : `n-${item.item._id}`
-          }
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
+        {loading ? (
+          <View style={{ padding: wp(5) }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <View key={i} style={styles.skeleton} />
+            ))}
+          </View>
+        ) : (
+          <FlatList
+            data={flattened}
+            keyExtractor={(item) => item.label}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.list}
+            renderItem={({ item }) => (
+              <View>
+                <Text style={styles.groupLabel}>{item.label}</Text>
+                {item.data.map((n) => (
+                  <View key={n._id} style={{ marginBottom: 8 }}>
+                    {renderCard(n)}
+                  </View>
+                ))}
+              </View>
+            )}
+          />
+        )}
       </SafeAreaView>
+
       <GlobalAlert />
     </LinearGradient>
   );
 }
 
-/*───────────────────────────────────────────
+/* ──────────────────────────────────────
   STYLES
-───────────────────────────────────────────*/
+────────────────────────────────────── */
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  list: { paddingHorizontal: wp(5), paddingBottom: hp(10) },
+  list: { paddingHorizontal: wp(5), paddingBottom: 80 },
 
   groupLabel: {
-    marginTop: hp(2),
-    marginBottom: hp(1),
+    marginTop: 20,
+    marginBottom: 10,
     fontWeight: "700",
     color: COLORS.textSecondary,
   },
 
   card: {
     borderRadius: wp(3),
-    padding: wp(3.5),
-    marginBottom: hp(1),
     backgroundColor: COLORS.surface,
-    borderWidth: Platform.OS === "ios" ? 0.6 : 0.5,
+    borderWidth: Platform.OS === "ios" ? 0.5 : 0.3,
     borderColor: "#EAEAEA",
+    elevation: 2,
   },
 
-  row: {
+  cardInner: {
     flexDirection: "row",
     alignItems: "center",
+    padding: wp(3.5),
   },
 
   iconContainer: {
-    width: wp(10),
-    height: wp(10),
-    borderRadius: wp(5),
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
     backgroundColor: "rgba(14,165,233,0.08)",
     justifyContent: "center",
     alignItems: "center",
     marginRight: wp(3),
-    overflow: "hidden",
   },
 
   avatar: { width: "100%", height: "100%" },
 
-  text: {
-    color: COLORS.text,
-    fontSize: wp(3.8),
-    lineHeight: wp(4.8),
+  text: { fontSize: wp(3.8), color: COLORS.text },
+  timeText: { fontSize: wp(3.1), color: COLORS.grey, marginTop: 2 },
+
+  skeleton: {
+    height: 72,
+    backgroundColor: "#eee",
+    borderRadius: 12,
+    marginBottom: 12,
   },
 });

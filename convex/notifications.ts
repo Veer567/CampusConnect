@@ -1,36 +1,11 @@
+
+// convex/notifications.ts
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthenticatedUser } from "./users";
 
 /*───────────────────────────────────────────
-  HELPERS
-───────────────────────────────────────────*/
-function dayLabel(timestamp: number) {
-  const date = new Date(timestamp);
-  const today = new Date();
-
-  const isSameDay =
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
-
-  if (isSameDay) return "Today";
-
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-
-  const isYesterday =
-    date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear();
-
-  if (isYesterday) return "Yesterday";
-
-  return "Older";
-}
-
-/*───────────────────────────────────────────
-  GET UNREAD COUNT
+  GET UNREAD NOTIFICATION COUNT
 ───────────────────────────────────────────*/
 export const getUnreadCount = query({
   handler: async (ctx) => {
@@ -39,106 +14,44 @@ export const getUnreadCount = query({
     const notifs = await ctx.db
       .query("notifications")
       .withIndex("by_receiver", (q) => q.eq("receiverId", me._id))
-      .filter((q) => q.eq(q.field("read"), false))
       .collect();
 
-    return notifs.length;
+    return notifs.filter((n) => !n.read).length;
   },
 });
 
 /*───────────────────────────────────────────
-  FETCH NOTIFICATIONS (BATCHED BY DAY)
+  FETCH ALL NOTIFICATIONS (LATEST FIRST)
 ───────────────────────────────────────────*/
 export const getNotifications = query({
   handler: async (ctx) => {
     const me = await getAuthenticatedUser(ctx);
 
-    // 🔥 LIMIT results
-    const raw = await ctx.db
+    const notifs = await ctx.db
       .query("notifications")
       .withIndex("by_receiver", (q) => q.eq("receiverId", me._id))
       .order("desc")
-      .take(50);
+      .collect();
 
-    // ─────────────────────────────
-    // Fetch senders in ONE pass
-    // ─────────────────────────────
-    const senderIds = Array.from(
-      new Set(raw.map((n) => n.senderId).filter(Boolean))
-    );
-
-    const senders = await Promise.all(
-      senderIds.map((id) => ctx.db.get(id!))
-    );
-
-    const senderMap = new Map(
-      senders
-        .filter(Boolean)
-        .map((s) => [
-          String(s!._id),
-          { _id: s!._id, username: s!.username, image: s!.image },
-        ])
-    );
-
-    // ─────────────────────────────
-    // GROUP + BATCH LOGIC
-    // ─────────────────────────────
-    const dayMap = new Map<string, any[]>();
-    const groupMap = new Map<string, any>();
-
-    for (const n of raw) {
-      const day = dayLabel(n.createdAt);
-
-      const groupKey = [
-        day,
-        n.senderId,
-        n.type,
-        n.postId ?? "none",
-      ].join("|");
-
-      if (!groupMap.has(groupKey)) {
-        const grouped = {
+    const withSender = await Promise.all(
+      notifs.map(async (n) => {
+        const sender = n.senderId ? await ctx.db.get(n.senderId) : null;
+        return {
           ...n,
-          count: 1,
-          sender: n.senderId
-            ? senderMap.get(String(n.senderId)) ?? null
+          sender: sender
+            ? { _id: sender._id, username: sender.username, image: sender.image }
             : null,
         };
+      })
+    );
 
-        groupMap.set(groupKey, grouped);
-
-        if (!dayMap.has(day)) dayMap.set(day, []);
-        dayMap.get(day)!.push(grouped);
-      } else {
-        const existing = groupMap.get(groupKey);
-        existing.count += 1;
-
-        // Keep latest timestamp
-        if (n.createdAt > existing.createdAt) {
-          existing.createdAt = n.createdAt;
-        }
-
-        // unread stays unread if ANY is unread
-        existing.read = existing.read && n.read;
-      }
-    }
-
-    // ─────────────────────────────
-    // FINAL ORDERED RESULT
-    // ─────────────────────────────
-    const order = ["Today", "Yesterday", "Older"];
-
-    return order
-      .filter((label) => dayMap.has(label))
-      .map((label) => ({
-        label,
-        items: dayMap.get(label)!,
-      }));
+    return withSender;
   },
 });
 
 /*───────────────────────────────────────────
-  MARK SINGLE AS READ
+  MARK A SINGLE NOTIFICATION AS READ
+  (authorization check added)
 ───────────────────────────────────────────*/
 export const markNotificationRead = mutation({
   args: { id: v.id("notifications") },
@@ -147,8 +60,7 @@ export const markNotificationRead = mutation({
 
     const n = await ctx.db.get(id);
     if (!n) throw new Error("Notification not found");
-    if (String(n.receiverId) !== String(me._id))
-      throw new Error("Not authorized");
+    if (String(n.receiverId) !== String(me._id)) throw new Error("Not authorized");
 
     await ctx.db.patch(id, { read: true });
     return { ok: true };
@@ -156,7 +68,7 @@ export const markNotificationRead = mutation({
 });
 
 /*───────────────────────────────────────────
-  MARK ALL AS READ
+  MARK ALL NOTIFICATIONS AS READ (only user's)
 ───────────────────────────────────────────*/
 export const markAllNotificationsRead = mutation({
   handler: async (ctx) => {
@@ -167,16 +79,14 @@ export const markAllNotificationsRead = mutation({
       .withIndex("by_receiver", (q) => q.eq("receiverId", me._id))
       .collect();
 
-    await Promise.all(
-      notifs.map((n) => ctx.db.patch(n._id, { read: true }))
-    );
+    await Promise.all(notifs.map((n) => ctx.db.patch(n._id, { read: true })));
 
     return { ok: true };
   },
 });
 
 /*───────────────────────────────────────────
-  DELETE SINGLE
+  DELETE NOTIFICATION (only receiver can delete)
 ───────────────────────────────────────────*/
 export const deleteNotification = mutation({
   args: { id: v.id("notifications") },
@@ -185,26 +95,24 @@ export const deleteNotification = mutation({
 
     const n = await ctx.db.get(id);
     if (!n) throw new Error("Notification not found");
-    if (String(n.receiverId) !== String(me._id))
-      throw new Error("Not authorized");
+    if (String(n.receiverId) !== String(me._id)) throw new Error("Not authorized");
 
     await ctx.db.delete(id);
     return { ok: true };
   },
 });
 
-/*───────────────────────────────────────────
-  CLEAR ALL
-───────────────────────────────────────────*/
 export const clearAllNotifications = mutation({
   handler: async (ctx) => {
-    const me = await getAuthenticatedUser(ctx);
+    const me = await getAuthenticatedUser(ctx); // use same logic
 
+    // Fetch all notifs for this user
     const notifs = await ctx.db
       .query("notifications")
       .withIndex("by_receiver", (q) => q.eq("receiverId", me._id))
       .collect();
 
+    // Delete each
     for (const n of notifs) {
       await ctx.db.delete(n._id);
     }
@@ -212,3 +120,33 @@ export const clearAllNotifications = mutation({
     return { ok: true };
   },
 });
+/*───────────────────────────────────────────
+  MARK ALL MESSAGE NOTIFICATIONS FROM A SENDER AS READ
+───────────────────────────────────────────*/
+export const markMessagesFromSenderRead = mutation({
+  args: {
+    senderId: v.id("users"),
+  },
+  handler: async (ctx, { senderId }) => {
+    const me = await getAuthenticatedUser(ctx);
+
+    const notifs = await ctx.db
+      .query("notifications")
+      .withIndex("by_receiver", (q) => q.eq("receiverId", me._id))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("type"), "message"),
+          q.eq(q.field("senderId"), senderId),
+          q.eq(q.field("read"), false)
+        )
+      )
+      .collect();
+
+    await Promise.all(
+      notifs.map((n) => ctx.db.patch(n._id, { read: true }))
+    );
+
+    return { ok: true };
+  },
+});
+

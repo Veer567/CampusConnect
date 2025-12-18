@@ -58,7 +58,7 @@ export default function ChatList() {
 
   return (
     <View style={styles.screen}>
-      <AppHeader title="Chats"  />
+      <AppHeader title="Chats" />
 
       <ScrollView>
         {conversations.map((c: any) => {
@@ -105,8 +105,10 @@ export default function ChatList() {
               </View>
 
               <View style={styles.middle}>
-                <Text style={styles.name}>{other?.fullname || other?.username || "Unknown"}</Text>
-               
+                <Text style={styles.name}>
+                  {other?.fullname || other?.username || "Unknown"}
+                </Text>
+
                 <Text numberOfLines={1} style={styles.lastMsg}>
                   {c.lastMessage || "Say hi 👋"}
                 </Text>
@@ -279,6 +281,4 @@ const chatSkeleton = StyleSheet.create({
     borderRadius: 6,
   },
   time: { width: 40, height: 14, borderRadius: 6, backgroundColor: "#e3e3e3" },
-
-
 });

@@ -3,8 +3,8 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -53,6 +53,7 @@ const getDateLabel = (ts: number) => {
   });
 };
 
+
 /* ---------------- Screen ---------------- */
 
 export default function ChatScreen() {
@@ -62,6 +63,30 @@ export default function ChatScreen() {
   const convId = params.conversationId as Id<"conversations">;
   const meId = params.currentUserId as Id<"users">;
   const otherId = params.otherUserId as Id<"users">;
+
+  const markAllNotificationsRead = useMutation(
+    api.notifications.markAllNotificationsRead
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      markAllNotificationsRead();
+    }, [])
+  );
+
+  const handleBack = () => {
+  if (params.from === "notifications") {
+    router.replace("/notifications");
+    return;
+  }
+
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace("/(tabs)");
+  }
+};
+
 
   /* ---------------- Queries ---------------- */
 
@@ -255,7 +280,7 @@ export default function ChatScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={handleBack}>
           <Ionicons name="arrow-back" size={26} />
         </TouchableOpacity>
 
@@ -505,8 +530,6 @@ const contextStyles = StyleSheet.create({
   row: {
     paddingVertical: 12,
   },
-
-  
 });
 const sheetStyles = StyleSheet.create({
   backdrop: {
