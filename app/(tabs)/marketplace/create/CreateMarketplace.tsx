@@ -6,6 +6,7 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   Alert,
@@ -198,9 +199,6 @@ export default function CreateMarketplace() {
       );
     }
 
-    
-
-
     // Hackathon-only validation
     if (postType === "hackathon" && !eventDate) {
       return toast.show(
@@ -220,7 +218,6 @@ export default function CreateMarketplace() {
       );
     }
 
-   
     if (!location.trim()) {
       return toast.show(
         { title: "Location Missing", message: "Please enter the location." },
@@ -418,242 +415,249 @@ export default function CreateMarketplace() {
      Render
   --------------------------------------------------------- */
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={hp(2)}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Back */}
-        <TouchableOpacity
-          onPress={() => router.replace(`/marketplace?tab=${postType}`)}
-          style={styles.backRow}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
+    <View style={{ flex: 1, backgroundColor: COLORS.background  , marginTop: -50}}>
+      <SafeAreaView style={{ flex: 1 }}>
+        {/* Header / Back */}
+  
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
         >
-          <Ionicons name="arrow-back" size={26} color={COLORS.text} />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-
-        {/* Title */}
-        <Text style={styles.header}>
-          Create {postType[0].toUpperCase() + postType.slice(1)}
-        </Text>
-
-        {/* Type Selector */}
-        <View style={styles.typeRow}>
-          {(["project", "hackathon", "startup"] as ValidType[]).map((t) => {
-            const active = postType === t;
-            return (
-              <TouchableOpacity
-                key={t}
-                onPress={() => setPostType(t)}
-                style={[
-                  styles.typeBtn,
-                  active && { backgroundColor: COLORS.primary },
-                ]}
-                accessibilityRole="button"
-              >
-                <Text style={[styles.typeBtnText, active && { color: "#fff" }]}>
-                  {t[0].toUpperCase() + t.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Image Picker */}
-        <Text style={styles.label}>Cover Image</Text>
-        <TouchableOpacity onPress={pickImage} style={styles.uploadBox}>
-          {!image ? (
-            <>
-              <Text style={styles.uploadText}>Upload Cover Image</Text>
-              <Text style={styles.uploadSub}>Tap to select</Text>
-            </>
-          ) : (
-            <RNImage source={{ uri: image }} style={styles.previewImage} />
-          )}
-        </TouchableOpacity>
-
-        {/* Dynamic Fields */}
-        {fieldConfig[postType].map((field) => {
-          const meta = fieldMeta[field];
-          // For date fields we will show the same TextInput UI but open the picker on focus
-          if (field === "eventDate") {
-            return (
-              <View key={field}>
-                <Text style={styles.label}>{meta.label}</Text>
-                <View style={styles.dateInputWrapper}>
-                  <TextInput
-                    ref={eventInputRef}
-                    value={eventDate}
-                    placeholder={meta.placeholder}
-                    placeholderTextColor={COLORS.textSecondary}
-                    onChangeText={(v) => setValue(field, v)}
-                    onFocus={() => {
-                      eventInputRef.current?.blur();
-                      openPicker("event", eventDate);
-                    }}
-                    style={styles.dateTextInput}
-                  />
-
-                  <TouchableOpacity
-                    onPress={() => openPicker("event", eventDate)}
-                  >
-                    <Ionicons
-                      name="calendar-outline"
-                      size={22}
-                      color={COLORS.textSecondary}
-                      style={styles.calendarIcon}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          }
-
-          if (field === "lastDateToJoin") {
-            return (
-              <View key={field}>
-                <Text style={styles.label}>{meta.label}</Text>
-                <View style={styles.dateInputWrapper}>
-                  <TextInput
-                    ref={joinInputRef}
-                    value={lastDateToJoin}
-                    placeholder={meta.placeholder}
-                    placeholderTextColor={COLORS.textSecondary}
-                    onChangeText={(v) => setValue(field, v)}
-                    onFocus={() => {
-                      joinInputRef.current?.blur();
-                      openPicker("join", lastDateToJoin);
-                    }}
-                    style={styles.dateTextInput}
-                  />
-
-                  <TouchableOpacity
-                    onPress={() => openPicker("join", lastDateToJoin)}
-                  >
-                    <Ionicons
-                      name="calendar-outline"
-                      size={22}
-                      color={COLORS.textSecondary}
-                      style={styles.calendarIcon}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          }
-
-          // Normal input
-          const multiline = Boolean(meta.multiline);
-          return (
-            <View key={field}>
-              <Text style={styles.label}>{meta.label}</Text>
-              <TextInput
-                value={getValue(field)}
-                onChangeText={(v) => setValue(field, v)}
-                placeholder={meta.placeholder}
-                placeholderTextColor={COLORS.textSecondary}
-                multiline={multiline}
-                style={[styles.input, multiline && styles.multilineInput]}
-              />
-            </View>
-          );
-        })}
-
-        {/* Submit */}
-        <TouchableOpacity
-          disabled={loading}
-          style={[styles.submitBtn, loading && { opacity: 0.6 }]}
-          onPress={submit}
-        >
-          <LinearGradient
-            colors={[COLORS.primary, COLORS.secondary]}
-            style={styles.submitGradient}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ padding: wp(5), paddingBottom: hp(1) }}
           >
-            <Text style={styles.submitText}>Publish</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* DATE PICKER MODAL (sliding beautiful UI) */}
-        <Modal visible={showPicker} transparent animationType="fade">
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: "rgba(0,0,0,0.4)",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Animated.View
-              style={{
-                width: "90%",
-                backgroundColor: "#fff",
-                borderRadius: 16,
-                padding: 15,
-                transform: [
-                  {
-                    translateY: slideAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [200, 0],
-                    }),
-                  },
-                ],
-                opacity: slideAnim,
-                elevation: 10,
-              }}
+            {/* Back */}
+            <TouchableOpacity
+              onPress={() => router.replace(`/marketplace?tab=${postType}`)}
+              style={styles.backRow}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
             >
-              <Text
+              <Ionicons name="arrow-back" size={26} color={COLORS.text} />
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
+
+            {/* Title */}
+            <Text style={styles.header}>
+              Create {postType[0].toUpperCase() + postType.slice(1)}
+            </Text>
+
+            {/* Type Selector */}
+            <View style={styles.typeRow}>
+              {(["project", "hackathon", "startup"] as ValidType[]).map((t) => {
+                const active = postType === t;
+                return (
+                  <TouchableOpacity
+                    key={t}
+                    onPress={() => setPostType(t)}
+                    style={[
+                      styles.typeBtn,
+                      active && { backgroundColor: COLORS.primary },
+                    ]}
+                    accessibilityRole="button"
+                  >
+                    <Text
+                      style={[styles.typeBtnText, active && { color: "#fff" }]}
+                    >
+                      {t[0].toUpperCase() + t.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Image Picker */}
+            <Text style={styles.label}>Cover Image</Text>
+            <TouchableOpacity onPress={pickImage} style={styles.uploadBox}>
+              {!image ? (
+                <>
+                  <Text style={styles.uploadText}>Upload Cover Image</Text>
+                  <Text style={styles.uploadSub}>Tap to select</Text>
+                </>
+              ) : (
+                <RNImage source={{ uri: image }} style={styles.previewImage} />
+              )}
+            </TouchableOpacity>
+
+            {/* Dynamic Fields */}
+            {fieldConfig[postType].map((field) => {
+              const meta = fieldMeta[field];
+              // For date fields we will show the same TextInput UI but open the picker on focus
+              if (field === "eventDate") {
+                return (
+                  <View key={field}>
+                    <Text style={styles.label}>{meta.label}</Text>
+                    <View style={styles.dateInputWrapper}>
+                      <TextInput
+                        ref={eventInputRef}
+                        value={eventDate}
+                        placeholder={meta.placeholder}
+                        placeholderTextColor={COLORS.textSecondary}
+                        onChangeText={(v) => setValue(field, v)}
+                        onFocus={() => {
+                          eventInputRef.current?.blur();
+                          openPicker("event", eventDate);
+                        }}
+                        style={styles.dateTextInput}
+                      />
+
+                      <TouchableOpacity
+                        onPress={() => openPicker("event", eventDate)}
+                      >
+                        <Ionicons
+                          name="calendar-outline"
+                          size={22}
+                          color={COLORS.textSecondary}
+                          style={styles.calendarIcon}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              }
+
+              if (field === "lastDateToJoin") {
+                return (
+                  <View key={field}>
+                    <Text style={styles.label}>{meta.label}</Text>
+                    <View style={styles.dateInputWrapper}>
+                      <TextInput
+                        ref={joinInputRef}
+                        value={lastDateToJoin}
+                        placeholder={meta.placeholder}
+                        placeholderTextColor={COLORS.textSecondary}
+                        onChangeText={(v) => setValue(field, v)}
+                        onFocus={() => {
+                          joinInputRef.current?.blur();
+                          openPicker("join", lastDateToJoin);
+                        }}
+                        style={styles.dateTextInput}
+                      />
+
+                      <TouchableOpacity
+                        onPress={() => openPicker("join", lastDateToJoin)}
+                      >
+                        <Ionicons
+                          name="calendar-outline"
+                          size={22}
+                          color={COLORS.textSecondary}
+                          style={styles.calendarIcon}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              }
+
+              // Normal input
+              const multiline = Boolean(meta.multiline);
+              return (
+                <View key={field}>
+                  <Text style={styles.label}>{meta.label}</Text>
+                  <TextInput
+                    value={getValue(field)}
+                    onChangeText={(v) => setValue(field, v)}
+                    placeholder={meta.placeholder}
+                    placeholderTextColor={COLORS.textSecondary}
+                    multiline={multiline}
+                    style={[styles.input, multiline && styles.multilineInput]}
+                  />
+                </View>
+              );
+            })}
+
+            {/* Submit */}
+            <TouchableOpacity
+              disabled={loading}
+              style={[styles.submitBtn, loading && { opacity: 0.6 }]}
+              onPress={submit}
+            >
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.secondary]}
+                style={styles.submitGradient}
+              >
+                <Text style={styles.submitText}>Publish</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* DATE PICKER MODAL (sliding beautiful UI) */}
+            <Modal visible={showPicker} transparent animationType="fade">
+              <View
                 style={{
-                  fontSize: 18,
-                  fontWeight: "600",
-                  marginBottom: 10,
-                  textAlign: "center",
+                  flex: 1,
+                  backgroundColor: "rgba(0,0,0,0.4)",
+                  justifyContent: "center",
+                  alignItems: "center",
                 }}
               >
-                Select Date
-              </Text>
+                <Animated.View
+                  style={{
+                    width: "90%",
+                    backgroundColor: "#fff",
+                    borderRadius: 16,
+                    padding: 15,
+                    transform: [
+                      {
+                        translateY: slideAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [200, 0],
+                        }),
+                      },
+                    ],
+                    opacity: slideAnim,
+                    elevation: 10,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 18,
+                      fontWeight: "600",
+                      marginBottom: 10,
+                      textAlign: "center",
+                    }}
+                  >
+                    Select Date
+                  </Text>
 
-              <DateTimePicker
-                mode="single"
-                date={selectedDate}
-                onChange={(params) => {
-                  if (!params.date) return;
+                  <DateTimePicker
+                    mode="single"
+                    date={selectedDate}
+                    onChange={(params) => {
+                      if (!params.date) return;
 
-                  const d =
-                    params.date instanceof Date
-                      ? params.date
-                      : dayjs(params.date).toDate();
+                      const d =
+                        params.date instanceof Date
+                          ? params.date
+                          : dayjs(params.date).toDate();
 
-                  setSelectedDate(d);
-                  const formatted = dayjs(d).format("DD/MM/YYYY");
+                      setSelectedDate(d);
+                      const formatted = dayjs(d).format("DD/MM/YYYY");
 
-                  if (calendarField === "event") setEventDate(formatted);
-                  else if (calendarField === "join")
-                    setLastDateToJoin(formatted);
+                      if (calendarField === "event") setEventDate(formatted);
+                      else if (calendarField === "join")
+                        setLastDateToJoin(formatted);
 
-                  closePicker();
-                }}
-              />
+                      closePicker();
+                    }}
+                  />
 
-              <TouchableOpacity
-                onPress={closePicker}
-                style={{ marginTop: 10, padding: 12, alignItems: "center" }}
-              >
-                <Text style={{ color: COLORS.primary, fontSize: 16 }}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-        </Modal>
-      </ScrollView>
-    </KeyboardAvoidingView>
+                  <TouchableOpacity
+                    onPress={closePicker}
+                    style={{ marginTop: 10, padding: 12, alignItems: "center" }}
+                  >
+                    <Text style={{ color: COLORS.primary, fontSize: 16 }}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              </View>
+            </Modal>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 

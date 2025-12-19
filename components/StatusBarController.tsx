@@ -5,7 +5,7 @@ import { COLORS } from "@/constants/themes";
 export default function StatusBarController() {
   const pathname = usePathname();
 
-  const hiddenScreens = ["/index", "/profile", "/other-profile"];
+  const hiddenScreens = ["/index", "/profile", "/other-profile",];
 
   const shouldHide =
     hiddenScreens.includes(pathname) || pathname.startsWith("/hello");

@@ -8,6 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useNavigation } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/Toast/ToastProvider";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   Animated,
@@ -163,15 +164,17 @@ export default function AddLostItem() {
   };
 
   return (
-  
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? hp(8) : 0}
-      >
+     <View style={{ flex: 1, backgroundColor: COLORS.background  , marginTop: -50}}>
+       <SafeAreaView style={{ flex: 1 }}>
+         {/* Header / Back */}
+   
+         <KeyboardAvoidingView
+           behavior={Platform.OS === "ios" ? "padding" : "height"}
+           style={{ flex: 1 }}
+         >
         <ScrollView
           style={styles.container}
-          contentContainerStyle={{ paddingBottom: hp(10) }}
+          contentContainerStyle={{ paddingBottom: hp(5) }}
         >
           <Text style={styles.header}>Report Item</Text>
           <Text style={styles.subheader}>
@@ -271,7 +274,9 @@ export default function AddLostItem() {
             </Animated.View>
           </Pressable>
         </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   
   );
 }

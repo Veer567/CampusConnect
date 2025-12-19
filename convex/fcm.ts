@@ -35,13 +35,17 @@ function getFirebaseAdmin() {
 }
 
 /*──────────────────────────────────────────────
- 🧩 Helper: stringify FCM data payload
+ 🧩 Helpers
 ──────────────────────────────────────────────*/
 function stringify(data?: Record<string, any>) {
   if (!data) return undefined;
   return Object.fromEntries(
     Object.entries(data).map(([k, v]) => [k, String(v)])
   );
+}
+
+function truncate(text: string, max = 70) {
+  return text.length > max ? `${text.slice(0, max - 3)}...` : text;
 }
 
 /*──────────────────────────────────────────────
@@ -60,15 +64,14 @@ export const sendMessageNotification = action({
     await app.messaging().send({
       token: args.fcmToken,
       notification: {
-        title: args.senderName,
-        body: args.message,
+        title: `💬 New message from ${args.senderName}`,
+        body: truncate(args.message, 80),
       },
       data: stringify({
         screen: "/notification-redirect",
         type: "message",
         conversationId: args.conversationId,
       }),
-
       android: {
         priority: "high",
         notification: { channelId: "messages" },
@@ -94,15 +97,14 @@ export const sendLikeNotification = action({
     await app.messaging().send({
       token: args.fcmToken,
       notification: {
-        title: "❤️ New Like",
-        body: `${args.username} liked your post`,
+        title: "❤️ Someone liked your post",
+        body: `${args.username} showed some love on your post`,
       },
       data: stringify({
         screen: "/notification-redirect",
         type: "post",
         postId: args.postId,
       }),
-
       android: {
         priority: "normal",
         notification: { channelId: "default" },
@@ -128,15 +130,14 @@ export const sendFollowNotification = action({
     await app.messaging().send({
       token: args.fcmToken,
       notification: {
-        title: "👤 New Follower",
-        body: `${args.username} started following you`,
+        title: "👤 You have a new follower",
+        body: `${args.username} is now following you`,
       },
       data: stringify({
         screen: "/notification-redirect",
         type: "profile",
         userId: args.userId,
       }),
-
       android: {
         priority: "normal",
         notification: { channelId: "default" },
@@ -153,7 +154,6 @@ export const sendFollowNotification = action({
 export const sendCommentNotification = action({
   args: {
     fcmToken: v.string(),
-    title: v.string(),
     body: v.string(),
     postId: v.optional(v.string()),
     commentId: v.optional(v.string()),
@@ -166,11 +166,17 @@ export const sendCommentNotification = action({
   handler: async (_, args) => {
     const app = getFirebaseAdmin();
 
+    const titleMap = {
+      comment: "💬 New comment on your post",
+      reply: "↩️ Someone replied to your comment",
+      mention: "📣 You were mentioned",
+    };
+
     await app.messaging().send({
       token: args.fcmToken,
       notification: {
-        title: args.title,
-        body: args.body,
+        title: titleMap[args.type],
+        body: truncate(args.body, 80),
       },
       data: stringify({
         screen: "/notification-redirect",
@@ -178,7 +184,6 @@ export const sendCommentNotification = action({
         postId: args.postId,
         commentId: args.commentId,
       }),
-
       android: {
         priority: "high",
         notification: { channelId: "default" },
@@ -204,8 +209,8 @@ export const sendAnnouncementNotification = action({
     await app.messaging().send({
       token: args.fcmToken,
       notification: {
-        title: args.title,
-        body: args.body,
+        title: `📢 ${args.title}`,
+        body: truncate(args.body, 90),
       },
       android: {
         priority: "high",
@@ -228,8 +233,8 @@ export const sendTestNotification = action({
     await app.messaging().send({
       token: fcmToken,
       notification: {
-        title: "🔥 Test Notification",
-        body: "If you see this, FCM is working!",
+        title: "🚀 Notifications are live!",
+        body: "Everything is set up correctly. You’re good to go 🎉",
       },
       android: {
         priority: "high",

@@ -3,7 +3,6 @@
 import AppHeader from "@/components/AppHeader";
 import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 import Post from "@/components/Posts";
-import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
 
 import { feedStyles } from "@/styles/feed.styles";
@@ -20,7 +19,6 @@ import {
   Animated,
   Dimensions,
   FlatList,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -118,7 +116,7 @@ const FullFeedSkeleton = () => {
     Animated.loop(
       Animated.timing(shimmer, {
         toValue: 1,
-        duration: 1300,
+        duration: 900,
         useNativeDriver: true,
       })
     ).start();
@@ -156,18 +154,11 @@ const FullFeedSkeleton = () => {
           <View style={feedSkeletonStyles.searchBar} />
 
           {/* ---------- CATEGORY CHIPS ---------- */}
-          <FlatList
-            data={Array.from({ length: 7 })}
-            keyExtractor={(_, i) => i.toString()}
-            renderItem={() => (
-              <View style={feedSkeletonStyles.categoryChip}>
-                <Shimmer />
-              </View>
-            )}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginBottom: 20 }}
-          ></FlatList>
+          <View style={{ flexDirection: "row", marginBottom: 20 }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <View key={i} style={feedSkeletonStyles.categoryChip} />
+            ))}
+          </View>
 
           {/* ---------- POSTS ---------- */}
           {Array.from({ length: 4 }).map((_, i) => (
@@ -234,7 +225,7 @@ export default function FeedScreen() {
   const posts = useQuery(api.posts.getFeedPosts);
 
   // LOADING FLAG (NO EARLY RETURN)
-  const isLoading = !posts;
+  const isLoading = posts === undefined;
 
   // MAP POSTS
   const mappedPosts = useMemo(() => {
@@ -386,20 +377,13 @@ export default function FeedScreen() {
           ) : (
             <FlatList
               data={filteredPosts}
-              renderItem={({ item }) => <Post post={item as any} />}
+              renderItem={({ item }) => <Post post={item as any}  />}
               keyExtractor={(item) => item._id}
+              initialNumToRender={4}
+              maxToRenderPerBatch={6}
+              windowSize={5}
+              removeClippedSubviews
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[
-                feedStyles.postsList,
-                { minHeight: height * 0.5 },
-              ]}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  tintColor={COLORS.primary}
-                />
-              }
             />
           )}
           <GlobalAlert />

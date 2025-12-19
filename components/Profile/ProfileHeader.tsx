@@ -3,11 +3,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useRef } from "react";
+import { Image } from "expo-image";
 import {
   Animated,
   Dimensions,
   Easing,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -26,8 +26,8 @@ interface ProfileHeaderProps {
   imageUrl?: string;
   imageCacheBuster: number;
 
-  fullname?: string;     // editable, optional
-  username: string;      // ✅ ALWAYS present (default display)
+  fullname?: string; // editable, optional
+  username: string; // ✅ ALWAYS present (default display)
 
   year: string;
   editing: boolean;
@@ -91,6 +91,11 @@ export function ProfileHeader(props: ProfileHeaderProps) {
     inputRange: [0, 1],
     outputRange: ["0deg", "180deg"],
   });
+  const finalImageUrl = imageUrl
+    ? imageCacheBuster
+      ? `${imageUrl}?v=${imageCacheBuster}` // only changes after upload
+      : imageUrl
+    : "https://i.pravatar.cc/300";
 
   /* ---------------- RENDER ---------------- */
 
@@ -125,17 +130,10 @@ export function ProfileHeader(props: ProfileHeaderProps) {
 
       <View style={styles.container}>
         {/* PROFILE IMAGE */}
-        <Pressable
-          onPress={openImageCropper}
-          disabled={!isOwner}
-        >
+        <Pressable onPress={openImageCropper} disabled={!isOwner}>
           <View style={{ position: "relative" }}>
             <Image
-              source={{
-                uri: imageUrl
-                  ? `${imageUrl}?t=${imageCacheBuster}`
-                  : "https://i.pravatar.cc/300",
-              }}
+              source={{ uri: finalImageUrl }}
               style={[
                 styles.avatar,
                 {
@@ -144,6 +142,10 @@ export function ProfileHeader(props: ProfileHeaderProps) {
                   borderRadius: imageSize / 2,
                 },
               ]}
+             
+              contentFit="cover"
+              transition={150}
+              cachePolicy="memory-disk"
             />
 
             {isOwner && (
@@ -179,9 +181,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
           />
         ) : (
           <View style={styles.yearBadge}>
-            <Text style={styles.yearBadgeText}>
-              Year: {year || "—"}
-            </Text>
+            <Text style={styles.yearBadgeText}>Year: {year || "—"}</Text>
           </View>
         )}
 
@@ -349,5 +349,4 @@ const styles = StyleSheet.create({
     marginTop: hp(0.4),
   },
 });
-
-export default ProfileHeader;
+export default React.memo(ProfileHeader);

@@ -428,6 +428,7 @@ export default function PostDetailsScreen() {
               value={commentText}
               onChangeText={setCommentText}
               placeholder="Write a comment..."
+              placeholderTextColor={COLORS.grey}
               style={styles.input}
             />
 

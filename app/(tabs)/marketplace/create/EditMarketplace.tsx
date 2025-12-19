@@ -15,7 +15,9 @@ import {
   Dimensions,
   Easing,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,6 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker from "react-native-ui-datepicker";
 import { COLORS } from "../../../../constants/themes";
 import { api } from "../../../../convex/_generated/api";
@@ -225,114 +228,134 @@ export default function EditMarketplace() {
      UI
 ----------------------------*/
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity
-        onPress={() => router.replace(`/marketplace?tab=${postType}`)}
-        style={styles.backRow}
-      >
-        <Ionicons name="arrow-back" size={26} color={COLORS.text} />
-        <Text style={styles.backText}>Back</Text>
-      </TouchableOpacity>
+    <View
+      style={{ flex: 1, backgroundColor: COLORS.background, marginTop: -50 }}
+    >
+      <SafeAreaView style={{ flex: 1 }}>
+        {/* Header / Back */}
 
-      <Text style={styles.header}>Edit {postType.toUpperCase()}</Text>
-
-      <Text style={styles.label}>Cover Image</Text>
-      <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
-        {!image ? (
-          <>
-            <Text style={styles.uploadText}>Upload Cover Image</Text>
-            <Text style={styles.uploadSub}>Tap to select</Text>
-          </>
-        ) : (
-          <Image source={{ uri: image }} style={styles.previewImage} />
-        )}
-      </TouchableOpacity>
-
-      <Input label="Title" value={title} onChange={setTitle} />
-      <Input
-        label="Description"
-        value={description}
-        onChange={setDescription}
-        multiline
-      />
-      <Input label="Skills / Tags" value={tags} onChange={setTags} />
-      <Input label="Looking For" value={lookingFor} onChange={setLookingFor} />
-
-      {postType === "hackathon" && (
-        <DateInput
-          label="Event Date"
-          value={eventDate}
-          onPress={() => openPicker("event", eventDate)}
-        />
-      )}
-
-      <DateInput
-        label="Last Date to Join"
-        value={lastDateToJoin}
-        onPress={() => openPicker("join", lastDateToJoin)}
-      />
-
-      <Input label="Location" value={location} onChange={setLocation} />
-
-      <TouchableOpacity
-        disabled={loading}
-        style={[styles.submitBtn, loading && { opacity: 0.6 }]}
-        onPress={submit}
-      >
-        <LinearGradient
-          colors={[COLORS.primary, COLORS.secondary]}
-          style={styles.submitGradient}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
         >
-          <Text style={styles.submitText}>
-            {loading ? "Saving..." : "Save Changes"}
-          </Text>
-        </LinearGradient>
-      </TouchableOpacity>
+          <ScrollView contentContainerStyle={styles.container}>
+            <TouchableOpacity
+              onPress={() => router.replace(`/marketplace?tab=${postType}`)}
+              style={styles.backRow}
+            >
+              <Ionicons name="arrow-back" size={26} color={COLORS.text} />
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
 
-      <TouchableOpacity style={styles.deleteBtn} onPress={deleteConfirm}>
-        <Text style={styles.deleteText}>Delete Post</Text>
-      </TouchableOpacity>
+            <Text style={styles.header}>Edit {postType.toUpperCase()}</Text>
 
-      {/* DATE PICKER */}
-      <Modal visible={showPicker} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <Animated.View
-            style={[
-              styles.modalBox,
-              {
-                transform: [
-                  {
-                    translateY: slideAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [200, 0],
-                    }),
-                  },
-                ],
-                opacity: slideAnim,
-              },
-            ]}
-          >
-            <Text style={styles.modalTitle}>Select Date</Text>
+            <Text style={styles.label}>Cover Image</Text>
+            <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
+              {!image ? (
+                <>
+                  <Text style={styles.uploadText}>Upload Cover Image</Text>
+                  <Text style={styles.uploadSub}>Tap to select</Text>
+                </>
+              ) : (
+                <Image source={{ uri: image }} style={styles.previewImage} />
+              )}
+            </TouchableOpacity>
 
-            <DateTimePicker
-              mode="single"
-              date={pickerDate}
-              onChange={(p) => {
-                if (!p.date) return;
-                const d = dayjs(p.date).format("DD/MM/YYYY");
-                if (pickerField === "event") setEventDate(d);
-                if (pickerField === "join") setLastDateToJoin(d);
-                closePicker();
-              }}
+            <Input label="Title" value={title} onChange={setTitle} />
+            <Input
+              label="Description"
+              value={description}
+              onChange={setDescription}
+              multiline
+            />
+            <Input label="Skills / Tags" value={tags} onChange={setTags} />
+            <Input
+              label="Looking For"
+              value={lookingFor}
+              onChange={setLookingFor}
             />
 
-            <TouchableOpacity onPress={closePicker} style={styles.modalCancel}>
-              <Text style={{ color: COLORS.primary }}>Cancel</Text>
+            {postType === "hackathon" && (
+              <DateInput
+                label="Event Date"
+                value={eventDate}
+                onPress={() => openPicker("event", eventDate)}
+              />
+            )}
+
+            <DateInput
+              label="Last Date to Join"
+              value={lastDateToJoin}
+              onPress={() => openPicker("join", lastDateToJoin)}
+            />
+
+            <Input label="Location" value={location} onChange={setLocation} />
+
+            <TouchableOpacity
+              disabled={loading}
+              style={[styles.submitBtn, loading && { opacity: 0.6 }]}
+              onPress={submit}
+            >
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.secondary]}
+                style={styles.submitGradient}
+              >
+                <Text style={styles.submitText}>
+                  {loading ? "Saving..." : "Save Changes"}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
-          </Animated.View>
-        </View>
-      </Modal>
-    </ScrollView>
+
+            <TouchableOpacity style={styles.deleteBtn} onPress={deleteConfirm}>
+              <Text style={styles.deleteText}>Delete Post</Text>
+            </TouchableOpacity>
+
+            {/* DATE PICKER */}
+            <Modal visible={showPicker} transparent animationType="fade">
+              <View style={styles.modalOverlay}>
+                <Animated.View
+                  style={[
+                    styles.modalBox,
+                    {
+                      transform: [
+                        {
+                          translateY: slideAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [200, 0],
+                          }),
+                        },
+                      ],
+                      opacity: slideAnim,
+                    },
+                  ]}
+                >
+                  <Text style={styles.modalTitle}>Select Date</Text>
+
+                  <DateTimePicker
+                    mode="single"
+                    date={pickerDate}
+                    onChange={(p) => {
+                      if (!p.date) return;
+                      const d = dayjs(p.date).format("DD/MM/YYYY");
+                      if (pickerField === "event") setEventDate(d);
+                      if (pickerField === "join") setLastDateToJoin(d);
+                      closePicker();
+                    }}
+                  />
+
+                  <TouchableOpacity
+                    onPress={closePicker}
+                    style={styles.modalCancel}
+                  >
+                    <Text style={{ color: COLORS.primary }}>Cancel</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              </View>
+            </Modal>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -380,7 +403,7 @@ function Input({ label, value, onChange, multiline = false }: any) {
 const styles = StyleSheet.create({
   container: {
     padding: wp(5),
-    paddingBottom: hp(10),
+    paddingBottom: hp(2),
     backgroundColor: COLORS.background,
   },
   backRow: { flexDirection: "row", alignItems: "center", marginBottom: hp(1) },

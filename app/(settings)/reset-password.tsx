@@ -115,7 +115,7 @@ export default function ChangePasswordScreen() {
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.replace("/(settings)/account")}
+            onPress={() => router.back()}
           >
             <Ionicons name="arrow-back" size={26} color="#111" />
           </TouchableOpacity>

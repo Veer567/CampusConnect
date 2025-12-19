@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import { useToast } from "@/components/Toast/ToastProvider";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import React, { useEffect, useState } from "react";
 import {
@@ -102,10 +103,14 @@ export default function EditLostItem() {
 
   // UI
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#F8FAFC" }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+     <View style={{ flex: 1, backgroundColor: COLORS.background  , marginTop: -50}}>
+       <SafeAreaView style={{ flex: 1 }}>
+         {/* Header / Back */}
+   
+         <KeyboardAvoidingView
+           behavior={Platform.OS === "ios" ? "padding" : "height"}
+           style={{ flex: 1 }}
+         >
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.header}>Edit Item</Text>
 
@@ -176,7 +181,9 @@ export default function EditLostItem() {
           <Text style={styles.submitText}>Save Changes</Text>
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -193,7 +200,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: wp(5),
     paddingTop: 20,
-    paddingBottom: 30,
+    paddingBottom: wp(2),
   },
 
   header: {

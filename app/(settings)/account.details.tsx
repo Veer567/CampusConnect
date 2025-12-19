@@ -75,12 +75,11 @@ export default function AccountDetailsScreen() {
     <View style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.replace("/(settings)/account")} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={26} color="#1A1A1A" />
         </Pressable>
         <Text style={styles.headerTitle}>Account Details</Text>
       </View>
-
       <ScrollView
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
@@ -96,7 +95,7 @@ export default function AccountDetailsScreen() {
 
         {/* DETAILS CARD */}
         <View style={styles.card}>
-          <DetailItem label="Full Name" value={displayName} />
+          <DetailItem label="Name" value={displayName} />
           <DetailItem label="Email Address" value={email || "—"} />
 
           <DetailItem label="Joined On" value={createdAt} />

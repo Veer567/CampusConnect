@@ -4,13 +4,13 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
   Image,
   InteractionManager,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -20,41 +20,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 const BUBBLE_MAX_WIDTH = width * 0.78;
-
-/* ---------------- Utils ---------------- */
-
-const isSameDay = (a: number, b: number) => {
-  const d1 = new Date(a);
-  const d2 = new Date(b);
-  return (
-    d1.getDate() === d2.getDate() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getFullYear() === d2.getFullYear()
-  );
-};
-
-const getDateLabel = (ts: number) => {
-  const now = new Date();
-  const date = new Date(ts);
-
-  if (isSameDay(ts, now.getTime())) return "Today";
-
-  const yesterday = new Date();
-  yesterday.setDate(now.getDate() - 1);
-  if (isSameDay(ts, yesterday.getTime())) return "Yesterday";
-
-  return date.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-
-/* ---------------- Screen ---------------- */
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -63,30 +32,6 @@ export default function ChatScreen() {
   const convId = params.conversationId as Id<"conversations">;
   const meId = params.currentUserId as Id<"users">;
   const otherId = params.otherUserId as Id<"users">;
-
-  const markAllNotificationsRead = useMutation(
-    api.notifications.markAllNotificationsRead
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      markAllNotificationsRead();
-    }, [])
-  );
-
-  const handleBack = () => {
-  if (params.from === "notifications") {
-    router.replace("/notifications");
-    return;
-  }
-
-  if (router.canGoBack()) {
-    router.back();
-  } else {
-    router.replace("/(tabs)");
-  }
-};
-
 
   /* ---------------- Queries ---------------- */
 
@@ -118,6 +63,9 @@ export default function ChatScreen() {
   const markRead = useMutation(api.chat.markMessagesRead);
   const deleteMessageMut = useMutation(api.chat.deleteMessage);
   const editMessageMut = useMutation(api.chat.editMessage);
+  const markAllNotificationsRead = useMutation(
+    api.notifications.markAllNotificationsRead
+  );
 
   /* ---------------- State ---------------- */
 
@@ -126,7 +74,6 @@ export default function ChatScreen() {
   const [text, setText] = useState("");
   const [menuForMessage, setMenuForMessage] = useState<any | null>(null);
   const [isMenuVisible, setMenuVisible] = useState(false);
-
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [editingMessage, setEditingMessage] = useState<any | null>(null);
 
@@ -134,36 +81,34 @@ export default function ChatScreen() {
     (t: any) => String(t.userId) === String(otherId)
   );
 
-  /* ---------------- Keyboard-safe scroll ---------------- */
+  /* ---------------- Effects ---------------- */
+
+  useFocusEffect(
+    useCallback(() => {
+      markAllNotificationsRead();
+    }, [])
+  );
+
+  useEffect(() => {
+    if (!messages?.length || !convId) return;
+    markRead({ conversationId: convId }).catch(() => {});
+    scrollToBottom(false);
+  }, [messages]);
+
+  useEffect(() => {
+    if (!convId) return;
+    if (text.length > 0) startTyping({ conversationId: convId });
+    const t = setTimeout(() => stopTyping({ conversationId: convId }), 800);
+    return () => clearTimeout(t);
+  }, [text]);
+
+  /* ---------------- Helpers ---------------- */
 
   const scrollToBottom = (animated = true) => {
     InteractionManager.runAfterInteractions(() => {
       flatRef.current?.scrollToOffset({ offset: 0, animated });
     });
   };
-
-  /* ---------------- Effects ---------------- */
-
-  useEffect(() => {
-    if (!messages?.length || !convId) return;
-
-    markRead({
-      conversationId: convId,
-    }).catch(() => {});
-
-    scrollToBottom(false);
-  }, [messages]);
-
-  useEffect(() => {
-    if (!convId) return;
-
-    if (text.length > 0) startTyping({ conversationId: convId });
-
-    const t = setTimeout(() => stopTyping({ conversationId: convId }), 800);
-    return () => clearTimeout(t);
-  }, [text]);
-
-  /* ---------------- Send ---------------- */
 
   const handleSend = async () => {
     const trimmed = text.trim();
@@ -172,246 +117,233 @@ export default function ChatScreen() {
     setText("");
     scrollToBottom();
 
+    if (isEditingMode && editingMessage) {
+      await editMessageMut({
+        messageId: editingMessage._id,
+        text: trimmed,
+      });
+      setIsEditingMode(false);
+      setEditingMessage(null);
+      return;
+    }
+
     await sendMessage({
       conversationId: convId,
       text: trimmed,
     });
   };
 
-  /* ---------------- Edit / Delete ---------------- */
-
-  const startEditFlow = () => {
-    if (!menuForMessage) return;
-    setIsEditingMode(true);
-    setEditingMessage(menuForMessage);
-    setText(menuForMessage.text);
-    setMenuVisible(false);
-  };
-
-  const submitEdit = async () => {
-    if (!editingMessage) return;
-
-    const newText = text.trim();
-    if (!newText) return;
-
-    await editMessageMut({
-      messageId: editingMessage._id,
-      text: newText,
-    });
-
-    setIsEditingMode(false);
-    setEditingMessage(null);
-    setText("");
-  };
-
-  const handleDeleteMessage = async () => {
-    if (!menuForMessage) return;
-    await deleteMessageMut({ messageId: menuForMessage._id });
-    setMenuVisible(false);
+  const handleBack = () => {
+    if (params.from === "notifications") {
+      router.replace("/notifications");
+      return;
+    }
+    router.canGoBack() ? router.back() : router.replace("/(tabs)");
   };
 
   /* ---------------- Render Message ---------------- */
 
-  const renderItem = ({ item, index }: any) => {
+  const renderItem = ({ item }: any) => {
     const mine = String(item.senderId) === String(meId);
-    const prev = messages?.[index + 1];
-    const showDate = !prev || !isSameDay(prev.createdAt, item.createdAt);
 
     return (
-      <>
-        {showDate && (
-          <View style={styles.dateSeparator}>
-            <Text style={styles.dateText}>{getDateLabel(item.createdAt)}</Text>
-          </View>
-        )}
-
-        <Pressable
-          onLongPress={() => {
-            if (mine) {
-              setMenuForMessage(item);
-              setMenuVisible(true);
-            }
-          }}
+      <Pressable
+        onLongPress={() => {
+          if (mine) {
+            setMenuForMessage(item);
+            setMenuVisible(true);
+          }
+        }}
+        style={[
+          styles.msgRow,
+          { justifyContent: mine ? "flex-end" : "flex-start" },
+        ]}
+      >
+        <View
           style={[
-            styles.msgRow,
-            { justifyContent: mine ? "flex-end" : "flex-start" },
+            styles.bubble,
+            {
+              backgroundColor: mine ? COLORS.primary : "#EEE",
+              maxWidth: BUBBLE_MAX_WIDTH,
+            },
           ]}
         >
-          <View
-            style={[
-              styles.bubble,
-              {
-                backgroundColor: mine ? COLORS.primary : "#EEE",
-                maxWidth: BUBBLE_MAX_WIDTH,
-              },
-            ]}
-          >
-            {item.imageUrl && (
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={styles.image}
-                onLoadEnd={() => scrollToBottom(false)} // 🔥 image height fix
-              />
-            )}
+          {item.imageUrl && (
+            <Image source={{ uri: item.imageUrl }} style={styles.image} />
+          )}
 
-            {item.text && (
-              <Text style={{ color: mine ? "#fff" : "#000" }}>{item.text}</Text>
-            )}
-
-            <Text style={styles.time}>
-              {new Date(item.createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+          {item.text && (
+            <Text style={{ color: mine ? "#fff" : "#000" }}>
+              {item.text}
             </Text>
-          </View>
-        </Pressable>
-      </>
+          )}
+
+          <Text style={styles.time}>
+            {new Date(item.createdAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+        </View>
+      </Pressable>
     );
   };
 
   /* ---------------- UI ---------------- */
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack}>
-          <Ionicons name="arrow-back" size={26} />
-        </TouchableOpacity>
+    <>
 
-        <TouchableOpacity
-          onPress={() =>
-            router.push({
-              pathname: "/other-profile",
-              params: { userId: otherId },
-            })
-          }
-        >
-          <Image
-            source={{
-              uri:
-                other?.image ||
-                "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-            }}
-            style={styles.avatar}
-          />
-        </TouchableOpacity>
 
-        <View style={{ marginLeft: 10 }}>
-          <Text style={styles.headerName}>
-            {other?.fullname || other?.username}
-          </Text>
-          <Text style={styles.typingText}>
-            {isOtherTyping
-              ? "typing…"
-              : presence?.online
-                ? "online"
-                : "offline"}
-          </Text>
-        </View>
-      </View>
+      <View style={styles.container}>
+        {/* 🔒 FIXED HEADER (NEVER MOVES) */}
+        <SafeAreaView edges={["top"]} style={styles.headerSafe}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={handleBack}>
+              <Ionicons name="arrow-back" size={26} />
+            </TouchableOpacity>
 
-      {/* Messages (INVERTED) */}
-      <FlatList
-        ref={flatRef}
-        data={messages}
-        inverted
-        keyExtractor={(i) => String(i._id)}
-        renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 16 }}
-        showsVerticalScrollIndicator={false}
-      />
-
-      {/* Edit Banner */}
-      {isEditingMode && (
-        <View style={styles.editBanner}>
-          <Text>Editing message</Text>
-          <Pressable onPress={() => setIsEditingMode(false)}>
-            <Ionicons name="close" size={18} />
-          </Pressable>
-        </View>
-      )}
-
-      {/* Input */}
-      <View style={styles.inputBar}>
-        <TextInput
-          placeholder="Message..."
-          placeholderTextColor={COLORS.grey}
-          value={text}
-          onChangeText={setText}
-          style={styles.input}
-        />
-        <TouchableOpacity onPress={isEditingMode ? submitEdit : handleSend}>
-          <Ionicons
-            name={isEditingMode ? "checkmark" : "send"}
-            size={26}
-            color={COLORS.primary}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Menu */}
-      {/* Action Sheet Modal */}
-      <Modal visible={isMenuVisible} transparent animationType="fade">
-        <Pressable
-          style={sheetStyles.backdrop}
-          onPress={() => setMenuVisible(false)}
-        >
-          <View style={sheetStyles.sheet}>
-            {/* Handle */}
-            <View style={sheetStyles.handle} />
-
-            {/* Edit */}
-            <Pressable
-              style={({ pressed }) => [
-                sheetStyles.actionRow,
-                pressed && sheetStyles.pressed,
-              ]}
-              onPress={startEditFlow}
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: "/other-profile",
+                  params: { userId: otherId },
+                })
+              }
             >
-              <Ionicons name="create-outline" size={22} color="#111" />
-              <Text style={sheetStyles.actionText}>Edit Message</Text>
-            </Pressable>
+              <Image
+                source={{
+                  uri:
+                    other?.image ||
+                    "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                }}
+                style={styles.avatar}
+              />
+            </TouchableOpacity>
 
-            {/* Divider */}
-            <View style={sheetStyles.divider} />
-
-            {/* Delete */}
-            <Pressable
-              style={({ pressed }) => [
-                sheetStyles.actionRow,
-                pressed && sheetStyles.pressed,
-              ]}
-              onPress={handleDeleteMessage}
-            >
-              <Ionicons name="trash-outline" size={22} color="#ff3b30" />
-              <Text style={[sheetStyles.actionText, { color: "#ff3b30" }]}>
-                Delete Message
+            <View style={{ marginLeft: 10 }}>
+              <Text style={styles.headerName}>
+                {other?.fullname || other?.username}
               </Text>
-            </Pressable>
-
-            {/* Cancel */}
-            <Pressable
-              style={sheetStyles.cancel}
-              onPress={() => setMenuVisible(false)}
-            >
-              <Text style={sheetStyles.cancelText}>Cancel</Text>
-            </Pressable>
+              <Text style={styles.typingText}>
+                {isOtherTyping
+                  ? "typing…"
+                  : presence?.online
+                  ? "online"
+                  : "offline"}
+              </Text>
+            </View>
           </View>
-        </Pressable>
-      </Modal>
-    </KeyboardAvoidingView>
+        </SafeAreaView>
+
+        {/* 🟢 CHAT BODY (PANS, HEADER DOES NOT) */}
+        <View style={{ flex: 1 }}>
+          <FlatList
+            ref={flatRef}
+            data={messages}
+            inverted
+            keyExtractor={(i) => String(i._id)}
+            renderItem={renderItem}
+            contentContainerStyle={{ paddingBottom: 8 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          />
+
+          {isEditingMode && (
+            <View style={styles.editBanner}>
+              <Text>Editing message</Text>
+              <Pressable onPress={() => setIsEditingMode(false)}>
+                <Ionicons name="close" size={18} />
+              </Pressable>
+            </View>
+          )}
+
+          {/* INPUT */}
+          <View style={styles.inputBar}>
+            <TextInput
+              placeholder="Message..."
+              placeholderTextColor={COLORS.grey}
+              value={text}
+              onChangeText={setText}
+              style={styles.input}
+              multiline
+            />
+            <TouchableOpacity onPress={handleSend}>
+              <Ionicons
+                name={isEditingMode ? "checkmark" : "send"}
+                size={26}
+                color={COLORS.primary}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ACTION SHEET */}
+        <Modal visible={isMenuVisible} transparent animationType="fade">
+          <Pressable
+            style={sheetStyles.backdrop}
+            onPress={() => setMenuVisible(false)}
+          >
+            <View style={sheetStyles.sheet}>
+              <View style={sheetStyles.handle} />
+
+              <Pressable
+                style={sheetStyles.actionRow}
+                onPress={() => {
+                  setIsEditingMode(true);
+                  setEditingMessage(menuForMessage);
+                  setText(menuForMessage.text);
+                  setMenuVisible(false);
+                }}
+              >
+                <Ionicons name="create-outline" size={22} />
+                <Text style={sheetStyles.actionText}>Edit Message</Text>
+              </Pressable>
+
+              <View style={sheetStyles.divider} />
+
+              <Pressable
+                style={sheetStyles.actionRow}
+                onPress={async () => {
+                  await deleteMessageMut({
+                    messageId: menuForMessage._id,
+                  });
+                  setMenuVisible(false);
+                }}
+              >
+                <Ionicons name="trash-outline" size={22} color="#ff3b30" />
+                <Text style={[sheetStyles.actionText, { color: "#ff3b30" }]}>
+                  Delete Message
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={sheetStyles.cancel}
+                onPress={() => setMenuVisible(false)}
+              >
+                <Text style={sheetStyles.cancelText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      </View>
+    </>
   );
 }
 
 /* ---------------- Styles ---------------- */
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    marginTop: -50
+  },
+
+  headerSafe: {
+    backgroundColor: COLORS.background,
+  },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -419,19 +351,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: "#eee",
   },
+
   avatar: { width: 44, height: 44, borderRadius: 22, marginLeft: 10 },
   headerName: { fontWeight: "700", fontSize: 16 },
   typingText: { fontSize: 12, color: COLORS.primary },
 
   msgRow: { flexDirection: "row", padding: 8 },
   bubble: { padding: 12, borderRadius: 16 },
-
-  timeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
-  },
-  time: { fontSize: 10, opacity: 0.7 },
+  time: { fontSize: 10, opacity: 0.6, marginTop: 4 },
 
   inputBar: {
     flexDirection: "row",
@@ -440,37 +367,16 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     alignItems: "center",
   },
+
   input: {
     flex: 1,
     backgroundColor: "#f1f1f1",
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingTop: 10,
+    paddingBottom: 10,
     borderRadius: 22,
     marginRight: 10,
-  },
-
-  newMsgButton: {
-    position: "absolute",
-    right: 15,
-    bottom: 100,
-    backgroundColor: COLORS.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  dateSeparator: {
-    alignItems: "center",
-    marginVertical: 10,
-  },
-  dateText: {
-    backgroundColor: "#ddd",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    fontSize: 12,
+    maxHeight: 120,
   },
 
   editBanner: {
@@ -479,58 +385,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: "#ddd",
   },
-  editBannerTitle: {
-    fontWeight: "700",
-    fontSize: 13,
-    color: COLORS.primary,
-  },
-  editBannerPreview: {
-    fontSize: 13,
-    color: "#555",
-  },
+
   image: {
     width: BUBBLE_MAX_WIDTH - 24,
     height: 200,
     borderRadius: 12,
     marginBottom: 8,
   },
-
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  menu: {
-    width: 200,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
 });
 
-const contextStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  box: {
-    width: "80%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 15,
-  },
-  row: {
-    paddingVertical: 12,
-  },
-});
 const sheetStyles = StyleSheet.create({
   backdrop: {
     flex: 1,
@@ -566,17 +429,11 @@ const sheetStyles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 14,
     fontWeight: "500",
-    color: "#111",
   },
 
   divider: {
     height: 1,
     backgroundColor: "#eee",
-  },
-
-  pressed: {
-    backgroundColor: "#f2f2f2",
-    borderRadius: 10,
   },
 
   cancel: {
@@ -590,6 +447,5 @@ const sheetStyles = StyleSheet.create({
   cancelText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
   },
 });
