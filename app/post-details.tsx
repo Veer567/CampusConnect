@@ -85,9 +85,7 @@ const Shimmer: React.FC<{
   );
 };
 
-/* ============================================================
-   SCREEN SETUP
-============================================================ */
+//Screen dimensions helpers
 
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;

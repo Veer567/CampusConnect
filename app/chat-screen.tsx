@@ -1,10 +1,11 @@
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
+import { useAuth } from "@clerk/clerk-expo";
+
 import type { Id } from "@/convex/_generated/dataModel";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
@@ -12,7 +13,6 @@ import {
   Image,
   InteractionManager,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -30,8 +30,16 @@ export default function ChatScreen() {
   const params = useLocalSearchParams();
 
   const convId = params.conversationId as Id<"conversations">;
-  const meId = params.currentUserId as Id<"users">;
+
   const otherId = params.otherUserId as Id<"users">;
+  const { userId: clerkId } = useAuth();
+
+  const me = useQuery(
+    api.users.getUserByClerkId,
+    clerkId ? { clerkId } : "skip"
+  );
+
+  const meId = me?._id; // ✅ ALWAYS CORRECT
 
   /* ---------------- Queries ---------------- */
 
@@ -173,9 +181,7 @@ export default function ChatScreen() {
           )}
 
           {item.text && (
-            <Text style={{ color: mine ? "#fff" : "#000" }}>
-              {item.text}
-            </Text>
+            <Text style={{ color: mine ? "#fff" : "#000" }}>{item.text}</Text>
           )}
 
           <Text style={styles.time}>
@@ -193,8 +199,6 @@ export default function ChatScreen() {
 
   return (
     <>
-
-
       <View style={styles.container}>
         {/* 🔒 FIXED HEADER (NEVER MOVES) */}
         <SafeAreaView edges={["top"]} style={styles.headerSafe}>
@@ -229,8 +233,8 @@ export default function ChatScreen() {
                 {isOtherTyping
                   ? "typing…"
                   : presence?.online
-                  ? "online"
-                  : "offline"}
+                    ? "online"
+                    : "offline"}
               </Text>
             </View>
           </View>
@@ -337,7 +341,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    marginTop: -50
+    marginTop: -50,
   },
 
   headerSafe: {

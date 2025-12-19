@@ -7,6 +7,8 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
+import { BackHandler } from "react-native";
+
 import {
   differenceInCalendarWeeks,
   formatDistanceToNow,
@@ -97,6 +99,26 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { userId: clerkId } = useAuth();
   const showAlert = useAlert((s) => s.show);
+
+  useFocusEffect(
+  useCallback(() => {
+    hasNavigatedRef.current = false;
+
+    const onBackPress = () => {
+      router.replace("/(tabs)");
+      return true; // ⛔ stop default back behavior
+    };
+
+    const sub = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onBackPress
+    );
+
+    return () => sub.remove();
+  }, [])
+);
+
+
 
   // 🔒 Prevent double navigation
   const hasNavigatedRef = useRef(false);
