@@ -14,8 +14,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -199,7 +199,6 @@ export default function FeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const showAlert = useAlert((s) => s.show);
-
   useEffect(() => {
     const checkNotificationPrompt = async () => {
       try {
@@ -210,19 +209,11 @@ export default function FeedScreen() {
         if (alreadyPrompted) return;
 
         showAlert({
-          title: "Enable Notifications",
+          title: "Notifications",
           message:
-            "Allow notifications to stay updated with messages, likes, comments, and important campus updates.",
-          confirmText: "Allow",
-          cancelText: "Not Now",
+            "You can enable notifications anytime from Settings to stay updated with messages, likes, comments, and campus updates.",
+          confirmText: "OK",
           onConfirm: async () => {
-            await requestNotificationPermission();
-            await AsyncStorage.setItem(
-              "@notifications_permission_prompted",
-              "true"
-            );
-          },
-          onCancel: async () => {
             await AsyncStorage.setItem(
               "@notifications_permission_prompted",
               "true"
@@ -230,7 +221,7 @@ export default function FeedScreen() {
           },
         });
       } catch (e) {
-        console.log("Notification permission check failed", e);
+        console.log("Notification info prompt failed", e);
       }
     };
 
