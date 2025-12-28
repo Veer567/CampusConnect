@@ -1,6 +1,6 @@
 // styles/auth.styles.ts
 import { COLORS } from "@/constants/themes";
-import { StyleSheet, Dimensions } from "react-native";
+import { Dimensions, StyleSheet } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 
@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
   logoContainer: {
     width: 80,
     height: 80,
-    resizeMode: 'contain'
+    resizeMode: "contain",
   },
   appName: {
     fontSize: 42,
@@ -30,7 +30,7 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.grey,
     letterSpacing: 1,
-  
+    marginBottom: 7,
   },
   illustrationContainer: {
     flex: 1,

@@ -1,6 +1,8 @@
 // FEED SCREEN — WITH BADGE + FULL SKELETON LOADER (NO HOOK ORDER ERRORS)
 
 import AppHeader from "@/components/AppHeader";
+import { useAuth } from "@clerk/clerk-expo";
+
 import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 import Post from "@/components/Posts";
 import { api } from "@/convex/_generated/api";
@@ -186,6 +188,8 @@ const FullFeedSkeleton = () => {
    FEED SCREEN
 ---------------------------------------------------------- */
 export default function FeedScreen() {
+  const { isSignedIn } = useAuth();
+
   const { width } = useWindowDimensions();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
@@ -220,9 +224,13 @@ export default function FeedScreen() {
   }, []);
 
   // DATA
-  const unreadMessages = useQuery(api.chat.getUnreadMessageCount) ?? 0;
-  const unreadNotifications = useQuery(api.notifications.getUnreadCount) ?? 0;
-  const posts = useQuery(api.posts.getFeedPosts);
+  const unreadMessages =
+    useQuery(api.chat.getUnreadMessageCount, isSignedIn ? {} : "skip") ?? 0;
+
+  const unreadNotifications =
+    useQuery(api.notifications.getUnreadCount, isSignedIn ? {} : "skip") ?? 0;
+
+  const posts = useQuery(api.posts.getFeedPosts, isSignedIn ? {} : "skip");
 
   // LOADING FLAG (NO EARLY RETURN)
   const isLoading = posts === undefined;
@@ -377,7 +385,11 @@ export default function FeedScreen() {
           ) : (
             <FlatList
               data={filteredPosts}
-              renderItem={({ item }) => <Post post={item as any}  />}
+              renderItem={({
+                item,
+              }: {
+                item: (typeof filteredPosts)[number];
+              }) => <Post post={item as any} />}
               keyExtractor={(item) => item._id}
               initialNumToRender={4}
               maxToRenderPerBatch={6}

@@ -140,7 +140,6 @@ async function updateFollowCounts(
  🔔 SAVE FCM TOKEN
 ───────────────────────────────────────────────*/
 
-
 /*───────────────────────────────────────────────
  🔍 USERS & SEARCH
 ───────────────────────────────────────────────*/
@@ -198,7 +197,6 @@ export const getUserByClerkId = query({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkId))
       .unique();
   },
-
 });
 export const getUserProfile = query({
   args: { id: v.id("users") },
@@ -362,5 +360,40 @@ export const getMe = query({
   args: {},
   handler: async (ctx) => {
     return await getAuthenticatedUser(ctx);
+  },
+});
+/*───────────────────────────────────────────────
+ ✏️ UPDATE USER PROFILE
+───────────────────────────────────────────────*/
+/*───────────────────────────────────────────────
+ ✏️ UPDATE USER PROFILE (SAFE + STRICT)
+───────────────────────────────────────────────*/
+export const updateUserProfile = mutation({
+  args: {
+    fullname: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    image: v.optional(v.string()),
+    departments: v.optional(v.array(v.string())),
+    interests: v.optional(v.array(v.string())),
+    emails: v.optional(v.array(v.string())), // secondary only
+    resumeUrl: v.optional(v.string()),
+    year: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+
+    const updates: any = {};
+
+    if (args.fullname !== undefined) updates.fullname = args.fullname;
+    if (args.bio !== undefined) updates.bio = args.bio;
+    if (args.image !== undefined) updates.image = args.image;
+    if (args.departments !== undefined) updates.departments = args.departments;
+    if (args.interests !== undefined) updates.interests = args.interests;
+    if (args.emails !== undefined) updates.emails = args.emails;
+    if (args.resumeUrl !== undefined) updates.resumeUrl = args.resumeUrl;
+    if (args.year !== undefined) updates.year = args.year;
+
+    await ctx.db.patch(user._id, updates);
+    return await ctx.db.get(user._id);
   },
 });

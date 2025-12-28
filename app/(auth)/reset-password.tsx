@@ -200,19 +200,18 @@ const ResetPasswordScreen: React.FC = () => {
                   placeholder="Enter your email"
                   placeholderTextColor={COLORS.grey}
                   style={styles.input}
+                  selectionColor={COLORS.primary}
+                  cursorColor={COLORS.primary}
                   onSubmitEditing={handleRequestReset}
                 />
 
                 <TouchableOpacity
                   onPress={handleRequestReset}
                   disabled={loading}
-                  style={[
-                    styles.button,
-                    loading && styles.buttonDisabled,
-                  ]}
+                  style={[styles.button, loading && styles.buttonDisabled]}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={COLORS.white} />
                   ) : (
                     <Text style={styles.buttonText}>Send Reset Code</Text>
                   )}
@@ -229,6 +228,8 @@ const ResetPasswordScreen: React.FC = () => {
                   placeholder="Enter code"
                   placeholderTextColor={COLORS.grey}
                   style={styles.input}
+                  selectionColor={COLORS.primary}
+                  cursorColor={COLORS.primary}
                   onSubmitEditing={() => newPassRef.current?.focus()}
                 />
 
@@ -242,14 +243,14 @@ const ResetPasswordScreen: React.FC = () => {
                     placeholder="Enter new password"
                     placeholderTextColor={COLORS.grey}
                     style={styles.passwordInput}
+                    selectionColor={COLORS.primary}
+                    cursorColor={COLORS.primary}
                   />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword((s) => !s)}
-                  >
+                  <TouchableOpacity onPress={() => setShowPassword((s) => !s)}>
                     <Ionicons
                       name={showPassword ? "eye-off" : "eye"}
                       size={22}
-                      color={COLORS.grey}
+                      color={COLORS.text}
                     />
                   </TouchableOpacity>
                 </View>
@@ -264,17 +265,17 @@ const ResetPasswordScreen: React.FC = () => {
                     placeholder="Confirm new password"
                     placeholderTextColor={COLORS.grey}
                     style={styles.passwordInput}
+                    selectionColor={COLORS.primary}
+                    cursorColor={COLORS.primary}
                     onSubmitEditing={handleResetPassword}
                   />
                   <TouchableOpacity
-                    onPress={() =>
-                      setShowConfirmPassword((s) => !s)
-                    }
+                    onPress={() => setShowConfirmPassword((s) => !s)}
                   >
                     <Ionicons
                       name={showConfirmPassword ? "eye-off" : "eye"}
                       size={22}
-                      color={COLORS.grey}
+                      color={COLORS.text}
                     />
                   </TouchableOpacity>
                 </View>
@@ -282,17 +283,12 @@ const ResetPasswordScreen: React.FC = () => {
                 <TouchableOpacity
                   onPress={handleResetPassword}
                   disabled={loading}
-                  style={[
-                    styles.button,
-                    loading && styles.buttonDisabled,
-                  ]}
+                  style={[styles.button, loading && styles.buttonDisabled]}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={COLORS.white} />
                   ) : (
-                    <Text style={styles.buttonText}>
-                      Reset Password
-                    </Text>
+                    <Text style={styles.buttonText}>Reset Password</Text>
                   )}
                 </TouchableOpacity>
               </>
@@ -319,39 +315,59 @@ export default ResetPasswordScreen;
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background },
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
   flex: { flex: 1 },
+
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface,
     borderRadius: 16,
     padding: 20,
     elevation: 6,
   },
+
   title: {
     fontSize: 22,
     fontWeight: "700",
     marginBottom: 18,
     textAlign: "center",
-    color: COLORS.blue,
+    color: COLORS.text, // ✅ explicit
   },
-  label: { color: COLORS.grey, marginBottom: 6 },
+
+  label: {
+    color: COLORS.textSecondary, // ✅ explicit
+    marginBottom: 6,
+  },
+
   input: {
     borderWidth: 1,
-    borderColor: COLORS.grey + "40",
+    borderColor: COLORS.border,
     borderRadius: 10,
     padding: 12,
     marginBottom: 12,
+    backgroundColor: COLORS.surface,
+    color: COLORS.text, // ✅ input text color
   },
+
   passwordRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.grey + "40",
+    borderColor: COLORS.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     marginBottom: 12,
+    backgroundColor: COLORS.surface,
   },
-  passwordInput: { flex: 1, paddingVertical: 10 },
+
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 10,
+    color: COLORS.text,
+  },
+
   button: {
     backgroundColor: COLORS.blue,
     paddingVertical: 14,
@@ -359,8 +375,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
+
   buttonDisabled: { opacity: 0.7 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  backButton: { marginTop: 16, alignItems: "center" },
-  backText: { color: COLORS.blue, fontWeight: "600" },
+
+  buttonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  backButton: {
+    marginTop: 16,
+    alignItems: "center",
+  },
+
+  backText: {
+    color: COLORS.blue,
+    fontWeight: "600",
+  },
 });

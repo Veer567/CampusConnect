@@ -14,6 +14,7 @@ import {
 } from "react-native";
 
 import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
+import { COLORS } from "@/constants/themes";
 
 export default function Report() {
   const router = useRouter();
@@ -45,27 +46,34 @@ export default function Report() {
 
   return (
     <>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Back Button */}
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={26} />
+          <Ionicons name="arrow-back" size={26} color={COLORS.text} />
         </Pressable>
 
+        {/* Title */}
         <Text style={styles.title}>Report a Problem</Text>
 
+        {/* Input */}
         <TextInput
           placeholder="Describe the issue..."
+          placeholderTextColor={COLORS.grey}
           style={styles.input}
           multiline
           value={issue}
           onChangeText={setIssue}
+          selectionColor={COLORS.primary}
+          cursorColor={COLORS.primary}
         />
 
+        {/* Submit */}
         <TouchableOpacity style={styles.btn} onPress={submit}>
           <Text style={styles.btnText}>Submit Report</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {/* ⭐ GlobalAlert must be mounted */}
+      {/* Required for alerts */}
       <GlobalAlert />
     </>
   );
@@ -74,41 +82,51 @@ export default function Report() {
 /* ------------------------- STYLES ------------------------- */
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: "#fff", flex: 1 },
+  container: {
+    padding: 20,
+    backgroundColor: COLORS.background,
+    flex: 1,
+  },
 
-  back: { paddingBottom: 10 },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
 
-  title: { fontSize: 26, fontWeight: "700", marginBottom: 20 },
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
+    marginBottom: 20,
+    color: COLORS.text, // ✅ explicit
+  },
 
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: COLORS.border,
     borderRadius: 10,
     padding: 12,
     minHeight: 150,
     textAlignVertical: "top",
+    backgroundColor: COLORS.surface,
+    color: COLORS.text, // ✅ input text color
   },
 
   btn: {
     marginTop: 20,
-    backgroundColor: "#FF3B30",
+    backgroundColor: COLORS.red,
     padding: 14,
     borderRadius: 10,
   },
 
   btnText: {
     textAlign: "center",
-    color: "#fff",
+    color: COLORS.white,
     fontWeight: "700",
     fontSize: 16,
-  },
-    backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f1f1f1",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
   },
 });

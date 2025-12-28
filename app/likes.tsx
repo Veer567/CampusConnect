@@ -22,11 +22,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
-const params = useLocalSearchParams();
-const from = Array.isArray(params.from) ? params.from[0] : params.from;
+
+
+
 export default function LikesScreen() {
   const router = useRouter();
-
+const params = useLocalSearchParams();
+const from = Array.isArray(params.from) ? params.from[0] : params.from;
   // Fetch liked posts (reactive)
   const rawLikes = useQuery(api.posts.getLikedPosts) ?? [];
 

@@ -12,19 +12,17 @@ import {
   ScrollView,
   StatusBar,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import ProfileContent from "@/components/Profile/ProfileContent";
 import { useProfileImageCache } from "@/hooks/useProfileImageCache";
 import { ActivityStatsCard } from "../../components/Profile/ActivityStatsCard";
 import { ProfileBottomSheet } from "../../components/Profile/ProfileBottomSheet";
-import ProfileContent from "@/components/Profile/ProfileContent";
 
-
-import { ProfileHeader } from "../../components/Profile/ProfileHeader";
 import { useEffect, useRef } from "react";
+import { ProfileHeader } from "../../components/Profile/ProfileHeader";
 
 /* ------------------------------------------------------------------
     FULL PAGE SKELETON LOADER (SHIMMER)
@@ -74,6 +72,8 @@ const Shimmer = ({ style }: any) => {
 };
 
 const ProfileScreenSkeleton = () => {
+  const imageCacheBuster = useProfileImageCache();
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: COLORS.background }}
@@ -217,6 +217,8 @@ export default function ProfileScreen({
     setInterests,
     imageUrl,
     setImageUrl,
+
+    primaryEmail, // ✅ ADD THIS LINE
     resumeUrl,
     setResumeUrl,
     sheetVisible,
@@ -294,16 +296,15 @@ export default function ProfileScreen({
           >
             <ProfileHeader
               imageUrl={imageUrl}
+              imageCacheBuster={imageCacheBuster}
               fullname={fullname}
               year={year}
               editing={editing}
-              imageCacheBuster={imageCacheBuster}
               setFullname={setFullname}
               setYear={setYear}
-              openImageCropper={openImageCropper}
+              openImageCropper={openImageCropper} // ✅ now valid
               isOwner={isOwner}
               username={current.username}
-        
               posts={current.posts}
               followers={current.followers}
               following={current.following}
@@ -313,6 +314,7 @@ export default function ProfileScreen({
 
           {/* CONTENT */}
           <ProfileContent
+            primaryEmail={primaryEmail} // ✅ ADD
             emails={emails}
             departments={departments}
             interests={interests}
@@ -383,9 +385,7 @@ export default function ProfileScreen({
                   onPress={saveProfile}
                 >
                   <MaterialIcons name="save" size={18} color="#fff" />
-                  <Text style={{ color: "#fff", fontWeight: "700" }}>
-                    Save
-                  </Text>
+                  <Text style={{ color: "#fff", fontWeight: "700" }}>Save</Text>
                 </Pressable>
               </View>
             )}

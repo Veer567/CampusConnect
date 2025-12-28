@@ -163,7 +163,10 @@ export const createPost = mutation({
 ──────────────────────────────────────────*/
 export const getFeedPosts = query({
   handler: async (ctx) => {
-    const currentUser = await getAuthenticatedUser(ctx);
+    const identity = await ctx.auth.getUserIdentity();
+
+    // 👤 user is optional in feed
+    const currentUser = identity ? await getAuthenticatedUser(ctx) : null;
 
     const posts = await ctx.db.query("posts").order("desc").collect();
     if (posts.length === 0) return [];
@@ -181,43 +184,49 @@ export const getFeedPosts = query({
       posts.map(async (post) => {
         const postAuthor = authorMap.get(post.userId);
 
-        if (!postAuthor) {
-          return {
-            ...post,
-            tags: post.tags ?? [],
-            author: { _id: null, username: "Unknown", image: undefined },
-            isLiked: false,
-            isBookmarked: false,
-            isOwner: false,
-          };
+        // defaults for logged-out users
+        let isLiked = false;
+        let isBookmarked = false;
+        let isOwner = false;
+
+        if (currentUser) {
+          const like = await ctx.db
+            .query("likes")
+            .withIndex("by_user_and_post", (q) =>
+              q.eq("userId", currentUser._id).eq("postId", post._id)
+            )
+            .first();
+
+          const bookmark = await ctx.db
+            .query("bookmarks")
+            .withIndex("by_user_and_post", (q) =>
+              q.eq("userId", currentUser._id).eq("postId", post._id)
+            )
+            .first();
+
+          isLiked = !!like;
+          isBookmarked = !!bookmark;
+          isOwner = post.userId === currentUser._id;
         }
-
-        const like = await ctx.db
-          .query("likes")
-          .withIndex("by_user_and_post", (q) =>
-            q.eq("userId", currentUser._id).eq("postId", post._id)
-          )
-          .first();
-
-        const bookmark = await ctx.db
-          .query("bookmarks")
-          .withIndex("by_user_and_post", (q) =>
-            q.eq("userId", currentUser._id).eq("postId", post._id)
-          )
-          .first();
 
         return {
           ...post,
           tags: post.tags ?? [],
-          author: {
-            _id: postAuthor._id,
-            username: postAuthor.username,
-            image: postAuthor.image,
-            fullname: postAuthor.fullname,
-          },
-          isLiked: !!like,
-          isBookmarked: !!bookmark,
-          isOwner: post.userId === currentUser._id,
+          author: postAuthor
+            ? {
+                _id: postAuthor._id,
+                username: postAuthor.username,
+                image: postAuthor.image,
+                fullname: postAuthor.fullname,
+              }
+            : {
+                _id: null,
+                username: "Unknown",
+                image: undefined,
+              },
+          isLiked,
+          isBookmarked,
+          isOwner,
         };
       })
     );

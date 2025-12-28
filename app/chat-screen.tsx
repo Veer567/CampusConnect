@@ -21,11 +21,14 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useKeepAwake } from "expo-keep-awake";
 
 const { width } = Dimensions.get("window");
 const BUBBLE_MAX_WIDTH = width * 0.78;
 
 export default function ChatScreen() {
+  useKeepAwake();
+  
   const router = useRouter();
   const params = useLocalSearchParams();
 

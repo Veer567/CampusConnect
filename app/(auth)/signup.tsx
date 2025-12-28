@@ -176,8 +176,12 @@ export default function SignupScreen() {
                 source={require("@/assets/images/education.png")}
               />
             </View>
-            <Text style={authStyles.appName}>CampusConnect</Text>
-            <Text style={authStyles.tagline}>Let's Connect</Text>
+            <Text style={[authStyles.appName, { color: COLORS.primary }]}>
+              CampusConnect
+            </Text>
+            <Text style={[authStyles.tagline, { color: COLORS.grey }]}>
+              Let&apos;s Connect
+            </Text>
           </View>
 
           {/* Card */}
@@ -195,6 +199,8 @@ export default function SignupScreen() {
                   placeholder="Enter your Marwadi email"
                   placeholderTextColor={COLORS.grey}
                   style={localStyles.input}
+                  selectionColor={COLORS.primary}
+                  cursorColor={COLORS.primary}
                   onSubmitEditing={() => passRef.current?.focus()}
                 />
 
@@ -208,6 +214,8 @@ export default function SignupScreen() {
                     placeholderTextColor={COLORS.grey}
                     secureTextEntry={!showPassword}
                     style={localStyles.passwordInput}
+                    selectionColor={COLORS.primary}
+                    cursorColor={COLORS.primary}
                     onSubmitEditing={() =>
                       confirmPassRef.current?.focus()
                     }
@@ -218,7 +226,7 @@ export default function SignupScreen() {
                     <Ionicons
                       name={showPassword ? "eye-off" : "eye"}
                       size={22}
-                      color={COLORS.grey}
+                      color={COLORS.text}
                     />
                   </TouchableOpacity>
                 </View>
@@ -233,6 +241,8 @@ export default function SignupScreen() {
                     secureTextEntry={!showConfirmPassword}
                     placeholderTextColor={COLORS.grey}
                     style={localStyles.passwordInput}
+                    selectionColor={COLORS.primary}
+                    cursorColor={COLORS.primary}
                     onSubmitEditing={handleSignUp}
                   />
                   <TouchableOpacity
@@ -243,7 +253,7 @@ export default function SignupScreen() {
                     <Ionicons
                       name={showConfirmPassword ? "eye-off" : "eye"}
                       size={22}
-                      color={COLORS.grey}
+                      color={COLORS.text}
                     />
                   </TouchableOpacity>
                 </View>
@@ -257,18 +267,21 @@ export default function SignupScreen() {
                   ]}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={COLORS.white} />
                   ) : (
-                    <Text style={localStyles.buttonText}>
-                      Sign Up
-                    </Text>
+                    <Text style={localStyles.buttonText}>Sign Up</Text>
                   )}
                 </Pressable>
               </>
             ) : (
               <>
                 <Text style={localStyles.title}>Verify Email</Text>
-                <Text style={{ color: COLORS.grey, marginBottom: 8 }}>
+                <Text
+                  style={{
+                    color: COLORS.textSecondary,
+                    marginBottom: 8,
+                  }}
+                >
                   Enter the 6-digit code sent to your Marwadi email:
                 </Text>
 
@@ -281,6 +294,8 @@ export default function SignupScreen() {
                   placeholderTextColor={COLORS.grey}
                   maxLength={6}
                   style={localStyles.codeInput}
+                  selectionColor={COLORS.primary}
+                  cursorColor={COLORS.primary}
                   onSubmitEditing={handleVerifyCode}
                 />
 
@@ -294,7 +309,7 @@ export default function SignupScreen() {
                   ]}
                 >
                   {verificationLoading ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={COLORS.white} />
                   ) : (
                     <Text style={localStyles.buttonText}>
                       Verify & Continue
@@ -317,33 +332,51 @@ export default function SignupScreen() {
 
 const localStyles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface,
     borderRadius: 20,
     padding: 24,
     elevation: 6,
   },
-  title: { fontSize: 20, fontWeight: "700", marginBottom: 20 },
-  label: { fontSize: 14, color: COLORS.grey },
+
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 20,
+    color: COLORS.text, // ✅ explicit
+  },
+
+  label: {
+    fontSize: 14,
+    color: COLORS.textSecondary, // ✅ explicit
+  },
+
   input: {
     borderWidth: 1,
-    borderColor: COLORS.grey + "40",
+    borderColor: COLORS.border,
     borderRadius: 10,
     padding: 12,
     marginVertical: 8,
+    backgroundColor: COLORS.surface,
+    color: COLORS.text,
   },
+
   passwordRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.grey + "40",
+    borderColor: COLORS.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     marginVertical: 8,
+    backgroundColor: COLORS.surface,
   },
+
   passwordInput: {
     flex: 1,
     paddingVertical: Platform.OS === "ios" ? 12 : 8,
+    color: COLORS.text,
   },
+
   button: {
     backgroundColor: COLORS.blue,
     paddingVertical: 14,
@@ -351,20 +384,25 @@ const localStyles = StyleSheet.create({
     marginTop: 16,
     alignItems: "center",
   },
+
   buttonDisabled: { opacity: 0.6 },
+
   buttonText: {
     color: COLORS.white,
     fontSize: 16,
     fontWeight: "600",
   },
+
   codeInput: {
     borderWidth: 1,
-    borderColor: COLORS.grey + "40",
+    borderColor: COLORS.border,
     borderRadius: 10,
     padding: 12,
     textAlign: "center",
     fontSize: 18,
     letterSpacing: 2,
     marginBottom: 20,
+    backgroundColor: COLORS.surface,
+    color: COLORS.text,
   },
 });

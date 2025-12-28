@@ -8,7 +8,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -164,6 +163,7 @@ export default function ProfileContent({
   openSheet,
   removeEmail,
   removeInterest,
+  primaryEmail,
   pickResume,
 }: any) {
   const [toast, setToast] = useState(false);
@@ -173,31 +173,89 @@ export default function ProfileContent({
       {/* BASIC INFO */}
       <View style={styles.infoCard}>
         {/* Primary Email */}
-        <View style={styles.row}>
-          <Ionicons name="mail-outline" size={18} color={COLORS.primary} />
-          {editing ? (
-            <TextInput
-              placeholder="Primary email"
-              value={emails[0] ?? ""}
-              style={styles.input}
-              onChangeText={(t) => setEmails([t, ...emails.slice(1)])}
-            />
-          ) : (
-            <Text style={styles.text}>{emails[0] ?? "—"}</Text>
-          )}
-        </View>
+        {primaryEmail && (
+          <View style={{ marginTop: 10 }}>
+            {/* ROW */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Ionicons name="mail-outline" size={15} color={COLORS.red} />
+
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: "500",
+                  color: "#222",
+                  paddingBottom: 4,
+                  borderBottomWidth: 2,
+                  borderBottomColor: COLORS.primary, // 🔴 underline only on text
+                }}
+              >
+                {primaryEmail}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Additional emails */}
-        {emails.slice(1).map((email: string, i: number) => (
-          <View key={i} style={styles.itemRow}>
-            <Text style={styles.subItem}>{email}</Text>
-            {editing && (
-              <TouchableOpacity onPress={() => removeEmail(i + 1)}>
-                <Ionicons name="close" size={18} color="#ff4d4d" />
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
+        {/* Additional emails (SECONDARY ONLY) */}
+        {emails
+          .filter(
+            (email: string) =>
+              !primaryEmail ||
+              email.toLowerCase() !== primaryEmail.toLowerCase()
+          )
+          .map((email: string, i: number) => (
+            <View
+              key={email} // ✅ use email as key (better than index)
+              style={{
+                marginTop: 10,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              {/* EMAIL + ICON */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={15}
+                  color={COLORS.textSecondary}
+                />
+
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "500",
+                    color: "#222",
+                  }}
+                >
+                  {email}
+                </Text>
+              </View>
+
+              {/* REMOVE BUTTON (ONLY WHEN EDITING) */}
+              {editing && (
+                <TouchableOpacity onPress={() => removeEmail(i)}>
+                  <Ionicons
+                    name="close-circle-outline"
+                    size={18}
+                    color={COLORS.red}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
 
         {/* Resume */}
         <TouchableOpacity

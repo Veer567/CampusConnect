@@ -1,8 +1,5 @@
-// app/components/ActivityStatsCard.tsx
+// ActivityStatsCard.tsx
 import { COLORS } from "@/constants/themes";
-import { api } from "@/convex/_generated/api";
-import { useProfile } from "@/hooks/useProfile";
-import { useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
@@ -13,19 +10,25 @@ import {
   View,
 } from "react-native";
 
-export function ActivityStatsCard() {
+/* ---------------- TYPES ---------------- */
+
+type ActivityStats = {
+  likes: number;
+  bookmarks: number;
+};
+
+interface Props {
+  stats?: ActivityStats | null;
+}
+
+/* ---------------- COMPONENT ---------------- */
+
+export function ActivityStatsCard({ stats }: Props) {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-  const { stats } = useProfile();
-
   const likes = stats?.likes ?? 0;
   const bookmarks = stats?.bookmarks ?? 0;
-
-  const navItems = [
-    { label: "Likes", value: likes, route: "/likes" as const },
-    { label: "Bookmarks", value: bookmarks, route: "/bookmarks" as const },
-  ];
 
   const cardWidth = (width - 60) / 2;
 
@@ -34,36 +37,54 @@ export function ActivityStatsCard() {
       <Text style={styles.heading}>Activity Stats</Text>
 
       <View style={styles.row}>
-        {navItems.map((item) => (
-          <TouchableOpacity
-            key={item.label}
-            style={[styles.card, { width: cardWidth }]}
-            activeOpacity={0.85}
-            onPress={() =>
-              router.push({
-                pathname: item.route,
-                params: { from: "profile" },
-              })
-            }
-          >
-            <Text style={styles.value}>{item.value}</Text>
-            <Text style={styles.label}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity
+          style={[styles.card, { width: cardWidth }]}
+          activeOpacity={0.8}
+          onPress={() =>
+            router.push({
+              pathname: "/likes",
+              params: { from: "profile" },
+            })
+          }
+        >
+          <Text style={styles.value}>{likes}</Text>
+          <Text style={styles.label}>Likes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.card, { width: cardWidth }]}
+          activeOpacity={0.8}
+          onPress={() =>
+            router.push({
+              pathname: "/bookmarks",
+              params: { from: "profile" },
+            })
+          }
+        >
+          <Text style={styles.value}>{bookmarks}</Text>
+          <Text style={styles.label}>Bookmarks</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
 
+/* ---------------- STYLES ---------------- */
+
 const styles = StyleSheet.create({
-  container: { marginTop: 24 },
+  container: {
+    marginTop: 24,
+  },
   heading: {
     color: COLORS.primary,
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 12,
   },
-  row: { flexDirection: "row", justifyContent: "space-between" },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
   card: {
     backgroundColor: "#fff",
     borderRadius: 14,

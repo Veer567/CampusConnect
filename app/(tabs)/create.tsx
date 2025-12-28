@@ -439,7 +439,7 @@ export default function CreateScreen() {
                     <DateTimePicker
                       mode="single"
                       date={selected}
-                      onChange={(params) => {
+                      onChange={(params: { date: any; }) => {
                         if (!params.date) return;
 
                         const dateObj =

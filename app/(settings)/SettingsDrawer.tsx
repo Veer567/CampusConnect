@@ -6,13 +6,13 @@ import React, { useEffect } from "react";
 import {
   BackHandler,
   Pressable,
-  
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "../../constants/themes";
 
 export default function SettingsDrawer() {
   const router = useRouter();
@@ -26,8 +26,16 @@ export default function SettingsDrawer() {
       icon: "person-circle-outline",
       route: "/(settings)/account",
     },
-    { label: "FAQ", icon: "help-circle-outline", route: "/(settings)/faq" },
-    { label: "Support", icon: "headset-outline", route: "/(settings)/support" },
+    {
+      label: "FAQ",
+      icon: "help-circle-outline",
+      route: "/(settings)/faq",
+    },
+    {
+      label: "Support",
+      icon: "headset-outline",
+      route: "/(settings)/support",
+    },
     {
       label: "Report Issue",
       icon: "alert-circle-outline",
@@ -43,13 +51,17 @@ export default function SettingsDrawer() {
       icon: "shield-checkmark-outline",
       route: "/(settings)/privacy",
     },
-    { label: "About Us", icon: "people-outline", route: "/(settings)/about" },
+    {
+      label: "About Us",
+      icon: "people-outline",
+      route: "/(settings)/about",
+    },
   ];
 
   // Android back button → return to Profile
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      router.replace("/(tabs)/profile"); // ← CHANGE IF NEEDED
+      router.replace("/(tabs)/profile");
       return true;
     });
 
@@ -57,11 +69,15 @@ export default function SettingsDrawer() {
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={[]}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: COLORS.background }}
+      edges={[]}
+    >
       <ScrollView contentContainerStyle={styles.container}>
-        
+        {/* Title */}
         <Text style={styles.title}>Settings</Text>
 
+        {/* Settings Card */}
         <View style={styles.card}>
           {items.map((item, idx) => (
             <Pressable
@@ -73,9 +89,16 @@ export default function SettingsDrawer() {
                 idx === items.length - 1 && { borderBottomWidth: 0 },
               ]}
             >
-              <Ionicons name={item.icon} size={20} />
+              <Ionicons name={item.icon} size={22} color={COLORS.text} />
+
               <Text style={styles.label}>{item.label}</Text>
-              <Ionicons name="chevron-forward" size={18} style={styles.chev} />
+
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={COLORS.grey}
+                style={styles.chev}
+              />
             </Pressable>
           ))}
         </View>
@@ -88,7 +111,7 @@ export default function SettingsDrawer() {
             router.replace("/(auth)/login");
           }}
         >
-          <Ionicons name="log-out-outline" size={22} color="#E53935" />
+          <Ionicons name="log-out-outline" size={22} color={COLORS.red} />
           <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
       </ScrollView>
@@ -97,26 +120,50 @@ export default function SettingsDrawer() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 50 },
-  title: { fontSize: 26, fontWeight: "700", marginBottom: 12 },
+  container: {
+    padding: 20,
+    paddingBottom: 50,
+    backgroundColor: COLORS.background,
+  },
+
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
+    marginBottom: 12,
+    color: COLORS.text, // ✅ correct text color
+  },
+
   card: {
     borderRadius: 12,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: COLORS.border,
   },
+
   item: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f4f4f4",
+    borderBottomColor: COLORS.border,
   },
-  itemPressed: { backgroundColor: "#f8f8f8" },
-  label: { marginLeft: 12, fontSize: 16, color: "#222" },
-  chev: { marginLeft: "auto", color: "#999" },
+
+  itemPressed: {
+    backgroundColor: COLORS.surfaceLight,
+  },
+
+  label: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: COLORS.text, // ✅ explicit
+  },
+
+  chev: {
+    marginLeft: "auto",
+  },
+
   logoutBtn: {
     marginTop: 40,
     flexDirection: "row",
@@ -125,9 +172,10 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 10,
   },
+
   logoutText: {
     marginLeft: 10,
-    color: "#E53935",
+    color: COLORS.red,
     fontSize: 17,
     fontWeight: "600",
   },

@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import { COLORS } from "@/constants/themes";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function SettingsHome() {
   const router = useRouter();
@@ -9,9 +10,9 @@ export default function SettingsHome() {
     <View style={styles.container}>
       <TouchableOpacity
         style={styles.button}
-        onPress={() =>  router.navigate("(settings)/SettingsDrawer" as any)}
+        onPress={() => router.navigate("(settings)/SettingsDrawer" as any)}
       >
-        <Ionicons name="settings-outline" size={22} color="#555" />
+        <Ionicons name="settings-outline" size={22} color={COLORS.shadow} />
         <Text style={styles.text}>Open Settings</Text>
       </TouchableOpacity>
     </View>

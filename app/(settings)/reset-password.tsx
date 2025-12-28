@@ -114,9 +114,7 @@ export default function ChangePasswordScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={26} color="#111" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Change Password</Text>
@@ -133,6 +131,7 @@ export default function ChangePasswordScreen() {
                 value={currentPass}
                 onChangeText={setCurrentPass}
                 placeholder="Enter current password"
+                placeholderTextColor={COLORS.grey}
                 style={styles.passwordInput}
                 returnKeyType="next"
                 onSubmitEditing={() => newPassRef.current?.focus()}
@@ -155,6 +154,7 @@ export default function ChangePasswordScreen() {
                 value={newPass}
                 onChangeText={setNewPass}
                 placeholder="Enter new password"
+                placeholderTextColor={COLORS.grey}
                 style={styles.passwordInput}
                 returnKeyType="next"
                 onSubmitEditing={() => confirmRef.current?.focus()}
@@ -177,6 +177,7 @@ export default function ChangePasswordScreen() {
                 value={confirmPass}
                 onChangeText={setConfirmPass}
                 placeholder="Confirm new password"
+                placeholderTextColor={COLORS.grey}
                 style={styles.passwordInput}
                 returnKeyType="done"
                 onSubmitEditing={handleChangePassword}

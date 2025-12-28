@@ -6,8 +6,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { COLORS } from "../../constants/themes";
 
 export default function FAQ() {
   const router = useRouter();
@@ -16,22 +18,24 @@ export default function FAQ() {
     <SafeAreaView
       style={{
         flex: 1,
-        backgroundColor: "#fff",
-        marginTop: Platform.OS === "android" ? -36 : 0,
+        backgroundColor: COLORS.background,
       }}
+      edges={[]}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Back Button */}
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={28} color="#222" />
+          <Ionicons name="arrow-back" size={26} color={COLORS.text} />
         </Pressable>
 
+        {/* Title */}
         <Text style={styles.title}>Frequently Asked Questions</Text>
 
-        {/* 🔔 NOTIFICATIONS (IMPORTANT – TOP) */}
+        {/* 🔔 NOTIFICATIONS */}
         <Text style={styles.q}>1. Why am I not receiving notifications?</Text>
         <Text style={styles.a}>
           Enable notifications for this app from your phone settings and keep
@@ -173,30 +177,37 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     paddingBottom: 40,
+    backgroundColor: COLORS.background,
   },
+
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#f1f1f1",
+    backgroundColor: COLORS.surfaceLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
   },
+
   title: {
     fontSize: 26,
     fontWeight: "700",
     marginTop: 10,
+    color: COLORS.text, // ✅ explicit
   },
+
   q: {
     marginTop: 25,
     fontSize: 18,
     fontWeight: "600",
+    color: COLORS.text, // ✅ explicit
   },
+
   a: {
     marginTop: 6,
     fontSize: 15,
-    color: "#555",
+    color: COLORS.textSecondary, // ✅ safe secondary text
     lineHeight: 22,
   },
 });

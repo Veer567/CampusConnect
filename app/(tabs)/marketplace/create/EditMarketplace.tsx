@@ -268,7 +268,7 @@ export default function EditMarketplace() {
               onChange={setDescription}
               multiline
             />
-            <Input label="Skills / Tags" value={tags} onChange={setTags} />
+            <Input label="Skills / Tags" value={tags}  onChange={setTags} />
             <Input
               label="Looking For"
               value={lookingFor}
@@ -370,6 +370,7 @@ function DateInput({ label, value, onPress }: any) {
         <TextInput
           value={value}
           placeholder="DD/MM/YYYY"
+          placeholderTextColor={COLORS.grey}
           editable={false}
           style={styles.dateInput}
         />
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
     padding: hp(2),
     alignItems: "center",
   },
-  uploadText: { fontWeight: "700", color: COLORS.text },
+  uploadText: { fontWeight: "700", color: COLORS.grey },
   uploadSub: { color: COLORS.textSecondary, marginTop: 4 },
   previewImage: { width: "100%", height: hp(25), borderRadius: wp(3) },
   input: {

@@ -169,6 +169,8 @@ const LoginScreen: React.FC = () => {
               placeholderTextColor={COLORS.grey}
               style={styles.input}
               returnKeyType="next"
+              selectionColor={COLORS.primary}
+              cursorColor={COLORS.primary}
               onSubmitEditing={() => passwordRef.current?.focus()}
             />
 
@@ -183,13 +185,15 @@ const LoginScreen: React.FC = () => {
                 placeholderTextColor={COLORS.grey}
                 style={styles.passwordInput}
                 returnKeyType="done"
+                selectionColor={COLORS.primary}
+                cursorColor={COLORS.primary}
                 onSubmitEditing={handleSignIn}
               />
               <TouchableOpacity onPress={() => setShowPassword((s) => !s)}>
                 <Ionicons
                   name={showPassword ? "eye-off" : "eye"}
                   size={22}
-                  color={COLORS.grey}
+                  color={COLORS.text}
                 />
               </TouchableOpacity>
             </View>
@@ -218,7 +222,7 @@ const LoginScreen: React.FC = () => {
                 }}
               >
                 {loading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={COLORS.white} />
                 ) : (
                   <Text style={styles.signInText}>Sign In</Text>
                 )}
@@ -246,60 +250,127 @@ export default LoginScreen;
 /* ---------------- Styles ---------------- */
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background },
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+
   flex: { flex: 1 },
+
   scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
     paddingVertical: isSmallPhone ? 18 : 28,
   },
-  brandSection: { alignItems: "center", marginBottom: 12 },
-  logoImage: { width: 100, height: 100 },
-  appName: { fontSize: 26, fontWeight: "700" },
-  tagline: { fontSize: 14, color: COLORS.grey, marginTop: 4 },
+
+  brandSection: {
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  logoImage: {
+    width: 100,
+    height: 100,
+  },
+
+  appName: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+
+  tagline: {
+    fontSize: 14,
+    color: COLORS.grey,
+    marginTop: 4,
+  },
+
   card: {
     marginTop: 24,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface,
     borderRadius: 20,
     padding: 20,
     elevation: 6,
   },
-  cardTitle: { fontSize: 18, fontWeight: "600", marginBottom: 12 },
-  label: { color: COLORS.grey, marginTop: 6 },
+
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 12,
+    color: COLORS.text,
+  },
+
+  label: {
+    color: COLORS.textSecondary,
+    marginTop: 6,
+  },
+
   input: {
     borderWidth: 1,
-    borderColor: COLORS.grey + "40",
+    borderColor: COLORS.border,
     borderRadius: 10,
     padding: 12,
     marginVertical: 8,
-
+    backgroundColor: COLORS.surface,
+    color: COLORS.text,
   },
+
   passwordRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.grey + "40",
+    borderColor: COLORS.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     marginVertical: 8,
+    backgroundColor: COLORS.surface,
   },
-  passwordInput: { flex: 1, paddingVertical: 10 },
-  forgot: { alignSelf: "flex-end", marginBottom: 8 },
-  forgotText: { color: COLORS.blue },
+
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 10,
+    color: COLORS.text,
+  },
+
+  forgot: {
+    alignSelf: "flex-end",
+    marginBottom: 8,
+  },
+
+  forgotText: {
+    color: COLORS.blue,
+  },
+
   signInButton: {
     backgroundColor: COLORS.blue,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
   },
-  buttonDisabled: { opacity: 0.7 },
-  signInText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+
+  signInText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
   signupRow: {
     marginTop: 20,
     flexDirection: "row",
     justifyContent: "center",
   },
-  greyText: { color: COLORS.grey },
-  signupLink: { color: COLORS.blue, fontWeight: "600" },
+
+  greyText: {
+    color: COLORS.grey,
+  },
+
+  signupLink: {
+    color: COLORS.blue,
+    fontWeight: "600",
+  },
 });

@@ -142,7 +142,6 @@ export function ProfileHeader(props: ProfileHeaderProps) {
                   borderRadius: imageSize / 2,
                 },
               ]}
-             
               contentFit="cover"
               transition={150}
               cachePolicy="memory-disk"
@@ -176,7 +175,8 @@ export function ProfileHeader(props: ProfileHeaderProps) {
           <TextInput
             value={year}
             onChangeText={setYear}
-            placeholder="e.g. 2026"
+            placeholder="e.g. 2"
+            placeholderTextColor={COLORS.grey}
             style={styles.yearInput}
           />
         ) : (

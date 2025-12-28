@@ -362,9 +362,15 @@ export const getOrStartConversation = mutation({
 export const getUnreadMessageCount = query({
   args: {},
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    // 🔒 IMPORTANT: logged out → return safe value
+    if (!identity) {
+      return 0;
+    }
+
     const me = await getAuthenticatedUser(ctx);
 
-    // fetch conversations where I'm a participant
     const conversations = await ctx.db.query("conversations").collect();
 
     const myConversations = conversations.filter((c) =>
@@ -374,7 +380,6 @@ export const getUnreadMessageCount = query({
     let unreadTotal = 0;
 
     for (const conv of myConversations) {
-      // fetch only last 200 messages for performance
       const msgs = await ctx.db
         .query("messages")
         .withIndex("by_conversation_createdAt", (q) =>

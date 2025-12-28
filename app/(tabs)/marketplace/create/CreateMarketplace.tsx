@@ -416,7 +416,7 @@ export default function CreateMarketplace() {
   --------------------------------------------------------- */
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background  , marginTop: -50}}>
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, paddingBottom: 55}} >
         {/* Header / Back */}
   
         <KeyboardAvoidingView

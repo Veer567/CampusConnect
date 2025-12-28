@@ -4,10 +4,8 @@ import AppHeader from "@/components/AppHeader";
 import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 import { COLORS } from "@/constants/themes";
 import { api } from "@/convex/_generated/api";
-import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
-import { BackHandler } from "react-native";
 
 import {
   differenceInCalendarWeeks,
@@ -17,8 +15,9 @@ import {
 } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
+  BackHandler,
   Dimensions,
   FlatList,
   Image,
@@ -31,6 +30,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+/* ──────────────────────────────────────
+  HELPERS
+────────────────────────────────────── */
 const { width } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 
@@ -97,38 +99,35 @@ function groupSimilarNotifications(
 ────────────────────────────────────── */
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { userId: clerkId } = useAuth();
   const showAlert = useAlert((s) => s.show);
-
-  useFocusEffect(
-  useCallback(() => {
-    hasNavigatedRef.current = false;
-
-    const onBackPress = () => {
-      router.replace("/(tabs)");
-      return true; // ⛔ stop default back behavior
-    };
-
-    const sub = BackHandler.addEventListener(
-      "hardwareBackPress",
-      onBackPress
-    );
-
-    return () => sub.remove();
-  }, [])
-);
-
-
 
   // 🔒 Prevent double navigation
   const hasNavigatedRef = useRef(false);
 
+  /* ──────────────────────────────────────
+    BACK HANDLER
+  ─────────────────────────────────────── */
   useFocusEffect(
     useCallback(() => {
       hasNavigatedRef.current = false;
+
+      const onBackPress = () => {
+        router.replace("/(tabs)");
+        return true;
+      };
+
+      const sub = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => sub.remove();
     }, [])
   );
 
+  /* ──────────────────────────────────────
+    DATA (NO ARGS — AUTH HANDLED IN CONVEX)
+  ─────────────────────────────────────── */
   const notificationsRaw = useQuery(api.notifications.getNotifications);
   const loading = notificationsRaw === undefined;
 
@@ -141,10 +140,17 @@ export default function NotificationsScreen() {
   const getOrStartConversation = useMutation(api.chat.getOrStartConversation);
 
   /* ──────────────────────────────────────
+    DEBUG (REMOVE LATER)
+  ─────────────────────────────────────── */
+  useEffect(() => {
+    console.log("Notifications:", notificationsRaw);
+  }, [notificationsRaw]);
+
+  /* ──────────────────────────────────────
     GROUP DATA
   ─────────────────────────────────────── */
   const grouped = useMemo(() => {
-    if (!notificationsRaw) return {};
+    if (!Array.isArray(notificationsRaw)) return {};
     const groupedSimilar = groupSimilarNotifications(notificationsRaw);
 
     return groupedSimilar.reduce<Record<string, NotificationItem[]>>(
@@ -167,21 +173,18 @@ export default function NotificationsScreen() {
   }, [grouped]);
 
   /* ──────────────────────────────────────
-    PRESS HANDLER (FULLY FIXED)
+    PRESS HANDLER
   ─────────────────────────────────────── */
   const onPressNotification = async (n: NotificationItem) => {
     if (hasNavigatedRef.current) return;
     hasNavigatedRef.current = true;
 
-    // MESSAGE (GROUPED)
+    // MESSAGE
     if (n.type === "message") {
       const senderId = n.sender?._id ?? n.senderId;
       if (!senderId) return;
 
-      // ✅ Mark ALL messages from this sender as read
-      await markMessagesFromSenderRead({
-        senderId: senderId as any,
-      });
+      await markMessagesFromSenderRead({ senderId: senderId as any });
 
       const conv = await getOrStartConversation({
         otherUserId: senderId as any,
@@ -197,11 +200,9 @@ export default function NotificationsScreen() {
       return;
     }
 
-    // NON-MESSAGE → mark only this one
+    // MARK READ
     if (!n.read) {
-      try {
-        await markSingleRead({ id: n._id as any });
-      } catch {}
+      await markSingleRead({ id: n._id as any });
     }
 
     // FOLLOW
@@ -213,7 +214,7 @@ export default function NotificationsScreen() {
       return;
     }
 
-    // POST / COMMENT
+    // POST
     if (n.postId || n.post?._id) {
       router.replace({
         pathname: "/post-details",
@@ -232,7 +233,6 @@ export default function NotificationsScreen() {
 
     return (
       <Pressable
-        key={n._id}
         style={styles.card}
         android_ripple={{ color: "rgba(0,0,0,0.05)" }}
         onPress={() => onPressNotification(n)}
@@ -289,9 +289,7 @@ export default function NotificationsScreen() {
               onConfirm: clearAll,
             })
           }
-          onBackPress={() => {
-            router.replace("/(tabs)");
-          }}
+          onBackPress={() => router.replace("/(tabs)")}
         />
 
         {loading ? (
@@ -299,6 +297,11 @@ export default function NotificationsScreen() {
             {Array.from({ length: 6 }).map((_, i) => (
               <View key={i} style={styles.skeleton} />
             ))}
+          </View>
+        ) : flattened.length === 0 ? (
+          <View style={styles.empty}>
+            <Ionicons name="notifications-off-outline" size={42} color="#aaa" />
+            <Text style={styles.emptyText}>No notifications yet</Text>
           </View>
         ) : (
           <FlatList
@@ -373,5 +376,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#eee",
     borderRadius: 12,
     marginBottom: 12,
+  },
+
+  empty: {
+    alignItems: "center",
+    marginTop: 60,
+  },
+
+  emptyText: {
+    marginTop: 12,
+    color: "#777",
   },
 });
