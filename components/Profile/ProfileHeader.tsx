@@ -26,8 +26,8 @@ interface ProfileHeaderProps {
   imageUrl?: string;
   imageCacheBuster: number;
 
-  fullname?: string; // editable, optional
-  username: string; // ✅ ALWAYS present (default display)
+  fullname?: string;
+  username: string;
 
   year: string;
   editing: boolean;
@@ -91,9 +91,10 @@ export function ProfileHeader(props: ProfileHeaderProps) {
     inputRange: [0, 1],
     outputRange: ["0deg", "180deg"],
   });
+
   const finalImageUrl = imageUrl
     ? imageCacheBuster
-      ? `${imageUrl}?v=${imageCacheBuster}` // only changes after upload
+      ? `${imageUrl}?v=${imageCacheBuster}`
       : imageUrl
     : "https://i.pravatar.cc/300";
 
@@ -129,8 +130,11 @@ export function ProfileHeader(props: ProfileHeaderProps) {
       )}
 
       <View style={styles.container}>
-        {/* PROFILE IMAGE */}
-        <Pressable onPress={openImageCropper} disabled={!isOwner}>
+        {/* PROFILE IMAGE — EDITABLE ONLY IN EDIT MODE */}
+        <Pressable
+          onPress={isOwner && editing ? openImageCropper : undefined}
+          disabled={!(isOwner && editing)} // ✅ FIX
+        >
           <View style={{ position: "relative" }}>
             <Image
               source={{ uri: finalImageUrl }}
@@ -147,7 +151,8 @@ export function ProfileHeader(props: ProfileHeaderProps) {
               cachePolicy="memory-disk"
             />
 
-            {isOwner && (
+            {/* CAMERA BADGE — ONLY IN EDIT MODE */}
+            {isOwner && editing && (
               <View style={styles.cameraBadge}>
                 <Ionicons name="camera" size={wp(4.5)} color="#fff" />
               </View>
@@ -155,7 +160,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
           </View>
         </Pressable>
 
-        {/* NAME (USERNAME fallback) */}
+        {/* NAME */}
         {editing ? (
           <TextInput
             value={fullname}
@@ -191,32 +196,21 @@ export function ProfileHeader(props: ProfileHeaderProps) {
             label="Followers"
             value={followers}
             onPress={() =>
-              router.push({
-                pathname: "/followers",
-                params: { userId, from: "profile" },
-              })
+              router.push({ pathname: "/followers", params: { userId } })
             }
           />
-
           <Stat
             label="Following"
             value={following}
             onPress={() =>
-              router.push({
-                pathname: "/following",
-                params: { userId, from: "profile" },
-              })
+              router.push({ pathname: "/following", params: { userId } })
             }
           />
-
           <Stat
             label="Posts"
             value={posts}
             onPress={() =>
-              router.push({
-                pathname: "/user-posts",
-                params: { userId, from: "profile" },
-              })
+              router.push({ pathname: "/user-posts", params: { userId } })
             }
           />
         </View>
@@ -225,7 +219,7 @@ export function ProfileHeader(props: ProfileHeaderProps) {
   );
 }
 
-/* ---------------- STAT COMPONENT ---------------- */
+/* ---------------- STAT ---------------- */
 
 function Stat({
   label,
@@ -251,7 +245,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: wp(4),
   },
-
   settingsFloatingBtn: {
     position: "absolute",
     top: hp(1.2),
@@ -260,18 +253,12 @@ const styles = StyleSheet.create({
     padding: wp(2.2),
     borderRadius: 50,
     elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
     zIndex: 10,
   },
-
   avatar: {
     borderWidth: 3,
     borderColor: COLORS.primary,
   },
-
   cameraBadge: {
     position: "absolute",
     bottom: hp(0.8),
@@ -279,16 +266,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 20,
     padding: wp(2.2),
-    elevation: 3,
   },
-
   nameText: {
     marginTop: hp(1.2),
     fontSize: wp(6),
     fontWeight: "700",
     color: COLORS.primary,
   },
-
   nameInput: {
     marginTop: hp(1.2),
     fontSize: wp(5),
@@ -301,7 +285,6 @@ const styles = StyleSheet.create({
     width: wp(70),
     color: COLORS.primary,
   },
-
   yearInput: {
     marginTop: hp(1),
     backgroundColor: "#f0f7ff",
@@ -310,11 +293,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: wp(4),
     fontWeight: "600",
-    color: COLORS.primary,
     width: wp(40),
     textAlign: "center",
   },
-
   yearBadge: {
     marginTop: hp(1),
     backgroundColor: COLORS.secondary,
@@ -322,26 +303,21 @@ const styles = StyleSheet.create({
     paddingVertical: hp(1),
     borderRadius: 20,
   },
-
   yearBadgeText: {
     color: "#fff",
     fontWeight: "600",
     fontSize: wp(4),
   },
-
   statsRow: {
     flexDirection: "row",
     gap: wp(12),
     marginTop: hp(2.2),
-    marginLeft: -wp(3.5),
   },
-
   statValue: {
     fontSize: wp(5),
     fontWeight: "700",
     textAlign: "center",
   },
-
   statLabel: {
     fontSize: wp(3.3),
     color: COLORS.textSecondary,
@@ -349,4 +325,5 @@ const styles = StyleSheet.create({
     marginTop: hp(0.4),
   },
 });
+
 export default React.memo(ProfileHeader);
