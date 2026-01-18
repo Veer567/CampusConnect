@@ -36,7 +36,7 @@ function Shimmer({ style }: any) {
         toValue: 1,
         duration: 1100,
         useNativeDriver: true,
-      })
+      }),
     ).start();
   }, []);
 
@@ -136,7 +136,7 @@ export default function SearchScreen() {
   const posts = useQuery(api.posts.searchPosts, { q: trimmed });
   const recentSearches = useQuery(
     api.users.getRecentSearches,
-    me ? { userId: me._id } : "skip"
+    me ? { userId: me._id } : "skip",
   );
 
   const saveRecentSearch = useMutation(api.users.saveRecentSearch);
@@ -158,23 +158,28 @@ export default function SearchScreen() {
   /* Filter Logic */
   const isHashtag = query.startsWith("#");
   const tagLower = query.replace("#", "").toLowerCase();
-
+  
   const filteredUsers = useMemo(() => {
     if (!trimmed || isHashtag) return [];
+
     return (
-      users?.filter(
-        (u: any) =>
-          u.clerkId !== clerkId && u.fullname?.toLowerCase().includes(trimmed)
-      ) ?? []
+      users?.filter((u: any) => {
+        if (u.clerkId === clerkId) return false;
+
+        const full = u.fullname?.toLowerCase() ?? "";
+        const user = u.username?.toLowerCase() ?? "";
+
+        return full.includes(trimmed) || user.includes(trimmed);
+      }) ?? []
     );
-  }, [users, trimmed]);
+  }, [users, trimmed, clerkId]);
 
   const filteredPosts = useMemo(() => {
     if (!trimmed) return [];
     if (isHashtag) {
       return (
         posts?.filter((p: any) =>
-          p.tags?.some((t: string) => t.toLowerCase().startsWith(tagLower))
+          p.tags?.some((t: string) => t.toLowerCase().startsWith(tagLower)),
         ) ?? []
       );
     }
@@ -195,26 +200,25 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
-     {/* HEADER */}
-<View style={styles.header}>
-  <View style={styles.headerRowSide}>
-    <Pressable onPress={() => router.back()} style={{ marginRight: 6 }}>
-      <Ionicons name="arrow-back" size={26} color={COLORS.text} />
-    </Pressable>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <View style={styles.headerRowSide}>
+          <Pressable onPress={() => router.back()} style={{ marginRight: 6 }}>
+            <Ionicons name="arrow-back" size={26} color={COLORS.text} />
+          </Pressable>
 
-    <Text style={styles.headerTitle}>Search</Text>
-  </View>
+          <Text style={styles.headerTitle}>Search</Text>
+        </View>
 
-  <TextInput
-    autoFocus
-    value={query}
-    onChangeText={setQuery}
-    placeholder="Search users, posts or #tags..."
-    style={styles.searchInput}
-    placeholderTextColor="#999"
-  />
-</View>
-
+        <TextInput
+          autoFocus
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search users, posts or #tags..."
+          style={styles.searchInput}
+          placeholderTextColor="#999"
+        />
+      </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* RECENT SEARCHES */}
@@ -262,7 +266,9 @@ export default function SearchScreen() {
                     />
 
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.userName}>{u.fullname}</Text>
+                      <Text style={styles.userName}>
+                        {u.fullname?.trim() ? u.fullname : u.username}
+                      </Text>
                       <Text style={styles.userHint}>Tap to view profile</Text>
                     </View>
 
@@ -445,9 +451,8 @@ const styles = StyleSheet.create({
     color: "#777",
   },
   headerRowSide: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginBottom: 5,
-},
-
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 5,
+  },
 });

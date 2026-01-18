@@ -16,7 +16,7 @@ export const createMarketplacePost = mutation(
       lookingFor?: string;
       eventDate?: string;
       lastDateToJoin?: string;
-      imageUrl?: string;
+   
       imageStorageId?: Id<"_storage">;
       location?: string;
     }
@@ -30,6 +30,15 @@ export const createMarketplacePost = mutation(
       .unique();
 
     if (!creator) throw new Error("User profile not found.");
+let imageUrl: string | undefined = undefined;
+
+if (input.imageStorageId) {
+  const url = await ctx.storage.getUrl(input.imageStorageId);
+  if (!url) {
+    throw new Error("Invalid image upload");
+  }
+  imageUrl = url;
+}
 
     const doc = {
       creatorId: creator._id,
@@ -44,9 +53,9 @@ export const createMarketplacePost = mutation(
       lookingFor: input.lookingFor,
       eventDate: input.eventDate,
       lastDateToJoin: input.lastDateToJoin,
-
-      imageUrl: input.imageUrl,
+      imageUrl,
       imageStorageId: input.imageStorageId,
+
       location: input.location,
 
       interestedUsers: [],
@@ -246,7 +255,7 @@ export const updateMarketplacePost = mutation(
       lookingFor?: string;
       eventDate?: string;
       lastDateToJoin?: string;
-      imageUrl?: string;
+      imageStorageId?: Id<"_storage">; // ✅ accept storageId, NOT imageUrl
       location?: string;
     }
   ) => {
@@ -264,6 +273,24 @@ export const updateMarketplacePost = mutation(
     if (!me || post.creatorId !== me._id)
       throw new Error("You cannot edit this post.");
 
+    // ✅ DEFAULT: keep existing image
+    let imageUrl = post.imageUrl;
+    let imageStorageId = post.imageStorageId;
+
+    // ✅ If a new image is provided, generate new URL
+    if (input.imageStorageId) {
+      const url = await ctx.storage.getUrl(input.imageStorageId);
+      if (!url) throw new Error("Invalid image upload");
+
+      // 🧹 Optional but recommended: delete old image
+      if (post.imageStorageId) {
+        await ctx.storage.delete(post.imageStorageId);
+      }
+
+      imageUrl = url;
+      imageStorageId = input.imageStorageId;
+    }
+
     await ctx.db.patch(input.id, {
       title: input.title,
       description: input.description,
@@ -271,12 +298,14 @@ export const updateMarketplacePost = mutation(
       lookingFor: input.lookingFor,
       eventDate: input.eventDate,
       lastDateToJoin: input.lastDateToJoin,
-      imageUrl: input.imageUrl,
+      imageUrl, // ✅ server-generated
+      imageStorageId, // ✅ stored for cleanup
       location: input.location,
     });
 
     return true;
   }
 );
+
 
 

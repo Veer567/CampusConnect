@@ -37,6 +37,8 @@ export default function AddLostItem() {
   const [status, setStatus] = useState<"lost" | "found">("lost");
   const [loading, setLoading] = useState(false);
 
+    const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
+
   const createLostItem = useMutation(api.lostItems.addLostItem);
   const navigation = useNavigation();
   const toast = useToast();
@@ -87,81 +89,71 @@ export default function AddLostItem() {
     });
     if (!res.canceled) setImage(res.assets[0].uri);
   };
+  
+const uploadImageToConvex = async (uri: string) => {
+  // ✅ 1. Get signed upload URL from Convex
+  const uploadUrl = await generateUploadUrl();
 
-  const handleSubmit = async () => {
-    if(!image) {
-      toast.show(
-        {
-          title: "Image Required",
-          message: "Please upload an image of the item.",
-        },
-        "error"
-      );
-    }
-    if (!title.trim())
-      return toast.show(
-        { title: "Missing Title", message: "Please enter the item title." },
-        "error"
-      );
+  // ✅ 2. Convert local image to blob
+  const res = await fetch(uri);
+  const blob = await res.blob();
 
-    if (!desc.trim())
-      return toast.show(
-        { title: "Missing Description", message: "Please describe the item." },
-        "error"
-      );
+  // ✅ 3. Upload to Convex Storage
+  const uploadRes = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": blob.type,
+    },
+    body: blob,
+  });
 
-    if (!location.trim())
-      return toast.show(
-        {
-          title: "Missing Location",
-          message: "Please enter where the item was lost or found.",
-        },
-        "error"
-      );
+  if (!uploadRes.ok) {
+    throw new Error("Image upload failed");
+  }
 
-    if (!image)
-      return toast.show(
-        {
-          title: "Image Required",
-          message: "Please upload an image of the item.",
-        },
-        "error"
-      );
+  const { storageId } = await uploadRes.json();
+  return storageId;
+};
 
-    try {
-      setLoading(true);
 
-      await createLostItem({
-        title,
-        description: desc,
-        location,
-        status,
-        category: undefined,
-        imageUrl: image ?? "",
-      });
+const handleSubmit = async () => {
+  if (!image) {
+    toast.show(
+      { title: "Image Required", message: "Upload an image." },
+      "error"
+    );
+    return;
+  }
 
-      toast.show(
-        {
-          title: "Success 🎉",
-          message: "Your lost/found item has been posted.",
-        },
-        "success"
-      );
+  try {
+    setLoading(true);
 
-      router.back();
-    } catch (err) {
-      toast.show(
-        {
-          title: "Upload Failed",
-          message: "Could not upload the item. Try again.",
-        },
-        "error"
-      );
-      console.log(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // 🔥 THIS IS WHAT YOU WERE MISSING
+    const storageId = await uploadImageToConvex(image);
+
+    await createLostItem({
+      title,
+      description: desc,
+      location,
+      status,
+      category: undefined,
+      imageStorageId: storageId, // ✅ CORRECT TYPE
+    });
+
+    toast.show(
+      { title: "Success 🎉", message: "Item posted successfully." },
+      "success"
+    );
+
+    router.back();
+  } catch (err) {
+    console.error(err);
+    toast.show({ title: "Upload Failed", message: "Try again." }, "error");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
      <View style={{ flex: 1, backgroundColor: COLORS.background  , marginTop: -50}}>

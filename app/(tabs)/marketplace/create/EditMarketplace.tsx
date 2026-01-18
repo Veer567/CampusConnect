@@ -53,6 +53,8 @@ export default function EditMarketplace() {
   /* ---------------------------
      Local state
 ----------------------------*/
+const [imageChanged, setImageChanged] = useState(false);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
@@ -62,6 +64,7 @@ export default function EditMarketplace() {
   const [image, setImage] = useState<string | null>(null);
   const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
+const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
 
   /* ---------------------------
      Load post data
@@ -112,6 +115,25 @@ export default function EditMarketplace() {
       useNativeDriver: true,
     }).start(() => setShowPicker(false));
   };
+const uploadImageToConvex = async (uri: string) => {
+  const uploadUrl = await generateUploadUrl();
+
+  const res = await fetch(uri);
+  const blob = await res.blob();
+
+  const uploadRes = await fetch(uploadUrl, {
+    method: "POST",
+    headers: { "Content-Type": blob.type },
+    body: blob,
+  });
+
+  if (!uploadRes.ok) {
+    throw new Error("Image upload failed");
+  }
+
+  const { storageId } = await uploadRes.json();
+  return storageId;
+};
 
   /* ---------------------------
      Android back
@@ -144,53 +166,71 @@ export default function EditMarketplace() {
         [{ resize: { width: 1080 } }],
         { compress: 0.7 }
       );
-      setImage(compressed.uri);
+     setImage(compressed.uri);
+     setImageChanged(true);
+
     }
   };
 
   /* ---------------------------
      Submit
 ----------------------------*/
-  const submit = useCallback(async () => {
-    if (!title.trim() || !description.trim()) {
-      show(
-        {
-          title: "Missing Information",
-          message: "Title and description are required",
-        },
-        "info"
-      );
-      return;
+const submit = useCallback(async () => {
+  if (!title.trim() || !description.trim()) {
+    show(
+      {
+        title: "Missing Information",
+        message: "Title and description required",
+      },
+      "info"
+    );
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    let imageStorageId: any = undefined;
+
+    // ✅ Only upload if user changed image
+    if (imageChanged && image) {
+      imageStorageId = await uploadImageToConvex(image);
     }
 
-    setLoading(true);
-    try {
-      await updatePost({
-        id: id as any,
-        title,
-        description,
-        tags: tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-        lookingFor,
-        eventDate: eventDate || undefined,
-        lastDateToJoin: lastDateToJoin || undefined,
-        imageUrl: image || undefined,
-        location: location.trim() || "Remote",
-      });
+    await updatePost({
+      id: id as any,
+      title,
+      description,
+      tags: tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+      lookingFor,
+      eventDate: eventDate || undefined,
+      lastDateToJoin: lastDateToJoin || undefined,
+      imageStorageId, // ✅ CORRECT
+      location: location.trim() || "Remote",
+    });
 
-      show(
-        { title: "Updated", message: "Post updated successfully" },
-        "success"
-      );
+    show({ title: "Updated", message: "Post updated successfully" }, "success");
 
-      router.replace(`/marketplace?tab=${postType}`);
-    } catch {
-      show({ title: "Update Failed", message: "Please try again" }, "error");
-    }
+    router.replace(`/marketplace?tab=${postType}`);
+  } catch {
+    show({ title: "Update Failed", message: "Please try again" }, "error");
+  } finally {
     setLoading(false);
-  }, [title, description, tags, lookingFor, eventDate, lastDateToJoin, image]);
+  }
+}, [
+  title,
+  description,
+  tags,
+  lookingFor,
+  eventDate,
+  lastDateToJoin,
+  image,
+  imageChanged,
+]);
+
 
   /* ---------------------------
      Delete

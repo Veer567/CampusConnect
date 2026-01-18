@@ -12,6 +12,7 @@ import * as ImagePicker from "expo-image-picker";
 
 import dayjs from "dayjs";
 import { LinearGradient } from "expo-linear-gradient";
+import { BackHandler } from "react-native";
 import DateTimePicker from "react-native-ui-datepicker";
 
 import { useRouter } from "expo-router";
@@ -49,7 +50,6 @@ const { height } = Dimensions.get("window");
 type Category = { id: number; name: string; icon: React.JSX.Element };
 
 export const categories = [
-
   {
     id: 1,
     name: "Placements",
@@ -86,14 +86,13 @@ export const categories = [
 
 export default function CreateScreen() {
   const router = useRouter();
-
   const toast = useToast();
 
   // Form Data
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null
+    null,
   );
 
   const [title, setTitle] = useState("");
@@ -107,6 +106,34 @@ export default function CreateScreen() {
 
   const slideAnim = useRef(new Animated.Value(0)).current;
 
+  const resetForm = useCallback(() => {
+    setSelectedImage(null);
+    setIsSharing(false);
+    setSelectedCategory(null);
+
+    setTitle("");
+    setDescription("");
+    setLocation("");
+
+    setEventDate("");
+    setSelected(new Date());
+    setShowPicker(false);
+
+    setTags([]);
+    setTagInput("");
+  }, []);
+  
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        resetForm();
+        return false; // allow default back behavior
+      },
+    );
+
+    return () => backHandler.remove();
+  }, [resetForm]);
   const openPickerAnimated = () => {
     setShowPicker(true);
     slideAnim.setValue(0);
@@ -132,12 +159,12 @@ export default function CreateScreen() {
 
   const isFormValid = useMemo(
     () => !!selectedImage && !!title && !!description,
-    [selectedImage, title, description]
+    [selectedImage, title, description],
   );
 
   const categoryScales = useMemo(
     () => categories.map(() => new Animated.Value(1)),
-    []
+    [],
   );
 
   const fabScale = useRef(new Animated.Value(1)).current;
@@ -188,7 +215,7 @@ export default function CreateScreen() {
     if (!selectedCategory)
       return toast.show(
         { title: "Missing Category", message: "Please select a category." },
-        "error"
+        "error",
       );
 
     if (!title.trim())
@@ -197,25 +224,25 @@ export default function CreateScreen() {
           title: "Event Title Missing",
           message: "Please enter the event title.",
         },
-        "error"
+        "error",
       );
 
     if (!description.trim())
       return toast.show(
         { title: "Description Missing", message: "Add a description." },
-        "error"
+        "error",
       );
 
     if (!location.trim())
       return toast.show(
         { title: "Location Missing", message: "Please enter event location." },
-        "error"
+        "error",
       );
 
     if (!selectedImage)
       return toast.show(
         { title: "Image Missing", message: "Please upload an event image." },
-        "error"
+        "error",
       );
 
     if (isSharing) return;
@@ -232,7 +259,7 @@ export default function CreateScreen() {
           httpMethod: "POST",
           mimeType: "image/jpeg",
           uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-        }
+        },
       );
 
       if (uploadResult.status !== 200) throw new Error("Upload failed");
@@ -254,14 +281,15 @@ export default function CreateScreen() {
           title: "Post Created 🎉",
           message: "Your event has been shared successfully!",
         },
-        "success"
+        "success",
       );
 
+      resetForm();
       router.replace("/(tabs)");
     } catch (error) {
       toast.show(
         { title: "Error", message: "Unable to share post. Try again." },
-        "error"
+        "error",
       );
     }
 
@@ -302,7 +330,10 @@ export default function CreateScreen() {
           <AppHeader
             title="Create Post"
             showBackButton
-            onBackPress={() => router.back()}
+            onBackPress={() => {
+              resetForm();
+              router.back();
+            }}
           />
 
           <KeyboardAvoidingView
@@ -439,7 +470,7 @@ export default function CreateScreen() {
                     <DateTimePicker
                       mode="single"
                       date={selected}
-                      onChange={(params: { date: any; }) => {
+                      onChange={(params: { date: any }) => {
                         if (!params.date) return;
 
                         const dateObj =
@@ -580,7 +611,6 @@ export default function CreateScreen() {
             </View>
           </KeyboardAvoidingView>
         </SafeAreaView>
-   
       </LinearGradient>
     </View>
   );

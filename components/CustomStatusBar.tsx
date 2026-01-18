@@ -1,11 +1,12 @@
 // CustomStatusBar.tsx  
 // A gradient status bar component that adapts to both Android and iOS,  
-// ensuring visual consistency with a smooth gradient background.
+// ensuring visual consistency with a smooth gradient background on all devices including foldables and tablets.
 
-import React from "react";
-import { View, Platform, StatusBar as RNStatusBar, ColorValue } from "react-native";
-import { StatusBar, StatusBarStyle } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar, StatusBarStyle } from "expo-status-bar";
+import React from "react";
+import { ColorValue, Platform, StatusBar as RNStatusBar, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Props definition for customizing colors and status bar style
 type Props = {
@@ -18,9 +19,15 @@ export default function CustomStatusBar({
   colors = ["#3B82F6", "#0EA5E9"], // default blue gradient
   style = "light", // light text/icons by default
 }: Props) {
-  // Get status bar height depending on platform
-  const statusBarHeight =
-    Platform.OS === "android" ? RNStatusBar.currentHeight ?? 0 : 44; // approx for iOS notch area
+  // Get safe area insets to properly handle foldables, tablets, and notched devices
+  const insets = useSafeAreaInsets();
+  
+  // Use safe area top inset for accurate status bar height across all devices
+  const statusBarHeight = insets.top > 0 
+    ? insets.top 
+    : Platform.OS === "android" 
+      ? RNStatusBar.currentHeight ?? 0 
+      : 44; // fallback for iOS without notch
 
   return (
     // Wrapper view to match native status bar height

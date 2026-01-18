@@ -4,18 +4,22 @@
     "slug": "Spotlight",
     "version": "1.0.0",
     "orientation": "portrait",
-
-    "icon": "./assets/splash/image2.png",
-
-    "scheme": "spotlight",
     "userInterfaceStyle": "light",
 
+    /* 🚫 Neutralize Expo default splash */
     "splash": {
-      "image": "./assets/splash/image2.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "image": "./assets/transparent.png",
+      "resizeMode": "contain"
     },
 
+    /* 📱 App Icon */
+    "icon": "./assets/splash/image2.png",
+
+    /* 🔗 Deep linking */
+    "scheme": "spotlight",
+
+    /* ───────────────── iOS ───────────────── */
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.vir567.Spotlight",
@@ -23,13 +27,16 @@
       "googleServicesFile": "./firebase/GoogleService-Info.plist"
     },
 
+    /* ───────────────── Android ───────────────── */
     "android": {
       "package": "com.vir567.Spotlight",
-      "userInterfaceStyle": "light",
       "versionCode": 2,
+      "userInterfaceStyle": "light",
       "googleServicesFile": "./firebase/google-services.json",
+
       "permissions": ["NOTIFICATIONS"],
 
+      /* 🟢 Android 12+ native splash uses this */
       "adaptiveIcon": {
         "foregroundImage": "./assets/splash/image2.png",
         "backgroundColor": "#ffffff"
@@ -39,6 +46,7 @@
       "edgeToEdgeEnabled": false
     },
 
+    /* ───────────────── Plugins ───────────────── */
     "plugins": [
       "./plugins/disableForceDark",
       "expo-router",
@@ -51,7 +59,6 @@
         }
       ],
 
-      "expo-splash-screen",
       "expo-secure-store",
       "expo-font",
       "expo-web-browser",
@@ -60,21 +67,25 @@
       "@react-native-firebase/messaging"
     ],
 
+    /* 🧪 Experiments */
     "experiments": {
       "typedRoutes": true
     },
 
+    /* 🔄 OTA Updates */
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+
+    /* 🧩 Runtime */
+    "runtimeVersion": "1.0.0",
+
+    /* 📦 Extra */
     "extra": {
       "router": {},
       "eas": {
         "projectId": "bfeea64c-946c-4d50-8b0c-9e0d0d495f52"
       }
-    },
-
-    "runtimeVersion": "1.0.0",
-
-    "updates": {
-      "fallbackToCacheTimeout": 0
     }
   }
 }

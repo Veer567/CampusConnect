@@ -46,7 +46,8 @@
       android:exported="true"
       android:theme="@style/Theme.App.SplashScreen"
       android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
-      android:windowSoftInputMode="adjustPan">
+      android:windowSoftInputMode="adjustPan"
+      android:screenOrientation="portrait">  
 
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>

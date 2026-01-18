@@ -88,47 +88,8 @@ export default function About() {
           making student life organized, simple, and efficient.
         </Text>
       </View>
-      {/* SECTION: Developers */}
-      <View style={[styles.sectionBox, { marginBottom: 50 }]}>
-        <Text style={styles.heading}>Project Team</Text>
 
-        {/* Viral */}
-        <Pressable
-          style={styles.devRow}
-          onPress={() =>
-            openLink(
-              "https://www.linkedin.com/in/viral-bhojani-5a5650328?utm_source=share_via&utm_content=profile&utm_medium=member_android"
-            )
-          }
-        >
-          <Text style={styles.devName}>• Viral Bhojani</Text>
-          <Ionicons name="logo-linkedin" size={24} color="#0077B5" />
-        </Pressable>
 
-        {/* Vikas */}
-        <Pressable
-          style={styles.devRow}
-          onPress={() =>
-            openLink("https://www.linkedin.com/in/vikas-singh-android")
-          }
-        >
-          <Text style={styles.devName}>• Vikas Singh</Text>
-          <Ionicons name="logo-linkedin" size={24} color="#0077B5" />
-        </Pressable>
-
-        {/* Aryan */}
-        <Pressable
-          style={styles.devRow}
-          onPress={() =>
-            openLink(
-              "https://www.linkedin.com/in/aryan-bhojani-62360936b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"
-            )
-          }
-        >
-          <Text style={styles.devName}>• Aryan Bhojani</Text>
-          <Ionicons name="logo-linkedin" size={24} color="#0077B5" />
-        </Pressable>
-      </View>
     </ScrollView>
   );
 }

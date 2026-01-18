@@ -1,6 +1,7 @@
 // AppHeader.tsx  
 // A reusable header component with gradient background, optional back/right icons,  
 // and flexible title alignment for different screen contexts.
+// Optimized for foldables, tablets, and all screen sizes.
 
 import { COLORS } from "@/constants/themes";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Get screen dimensions for responsive layout
 const { width, height } = Dimensions.get("window");
@@ -41,6 +43,7 @@ export default function AppHeader({
   alignLeft = false,
 }: HeaderProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // Default back behavior if user did not pass custom handler
   const handleBack = () => {
@@ -48,12 +51,21 @@ export default function AppHeader({
     else router.back();
   };
 
+  // Calculate minimum header content height (base height without safe area)
+  const baseHeaderHeight = Math.max(hp(6.5), 50);
+
   return (
     <LinearGradient
       colors={[COLORS.primary, COLORS.secondary]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={styles.header}
+      style={[
+        styles.header, 
+        { 
+          paddingTop: insets.top, // Add safe area padding at top
+          minHeight: baseHeaderHeight + insets.top, // Ensure minimum height including safe area
+        }
+      ]}
     >
       <View style={styles.headerContent}>
         
@@ -108,7 +120,6 @@ export default function AppHeader({
 const styles = StyleSheet.create({
   header: {
     width: "100%",
-    height: hp(6.5),
     justifyContent: "center",
     shadowColor: "#000",
     shadowOpacity: 0.15,
@@ -120,7 +131,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: wp(5),
-    marginTop: Platform.OS === "android" ? hp(1) : hp(0.5),
+    flex: 1,
+    minHeight: 50, // Minimum height for header content
   },
   titleContainer: {
     flex: 1,

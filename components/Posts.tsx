@@ -150,7 +150,7 @@ export default function Post({ post, onDeleted }: PostProps) {
       setTimeAgo(
         formatDistanceToNow(new Date(post._creationTime || Date.now()), {
           addSuffix: true,
-        })
+        }),
       );
     };
     update();
@@ -212,7 +212,7 @@ export default function Post({ post, onDeleted }: PostProps) {
               title: "Post Deleted",
               message: "Your post was removed successfully.",
             },
-            "success"
+            "success",
           );
         } catch {
           toast.show(
@@ -220,7 +220,7 @@ export default function Post({ post, onDeleted }: PostProps) {
               title: "Delete Failed",
               message: "Unable to delete post. Try again.",
             },
-            "error"
+            "error",
           );
         }
       },
@@ -295,10 +295,8 @@ export default function Post({ post, onDeleted }: PostProps) {
           )}
         </View>
       </View>
-
       {/* ---------------------------------- TITLE ---------------------------------- */}
       <Text style={styles.title}>{post.title}</Text>
-
       {post.caption && (
         <Text style={styles.description}>
           {post.caption.length > 120
@@ -319,18 +317,17 @@ export default function Post({ post, onDeleted }: PostProps) {
           )}
         </Text>
       )}
-
       {/* ---------------------------------- TAGS ---------------------------------- */}
-      {post.tags?.length ? (
+      {post.tags && Array.isArray(post.tags) && post.tags.length > 0 && (
         <View style={styles.tagsContainer}>
-          {post.tags.map((tag) => (
-            <View key={tag} style={styles.tagChip}>
+          {post.tags.map((tag, i) => (
+            <View key={`${post._id}-${tag}-${i}`} style={styles.tagChip}>
               <Text style={styles.tagText}>#{tag}</Text>
             </View>
           ))}
         </View>
-      ) : null}
-
+      )}
+      
       {/* ---------------------------------- IMAGE ---------------------------------- */}
       {post.imageUrl && (
         <T
@@ -344,7 +341,6 @@ export default function Post({ post, onDeleted }: PostProps) {
           <Image source={{ uri: post.imageUrl }} style={styles.image} />
         </T>
       )}
-
       {/* ---------------------------------- META ---------------------------------- */}
       {(post.eventDate || post.location) && (
         <View style={styles.metaRow}>
@@ -371,7 +367,6 @@ export default function Post({ post, onDeleted }: PostProps) {
           )}
         </View>
       )}
-
       {/* ---------------------------------- ACTIONS ---------------------------------- */}
       <View style={styles.actions}>
         <View style={styles.leftActions}>
@@ -402,7 +397,6 @@ export default function Post({ post, onDeleted }: PostProps) {
           />
         </T>
       </View>
-
       {/* ---------------------------------- COMMENTS MODAL ---------------------------------- */}
       <CommentsModal
         targetId={post._id}
@@ -411,7 +405,6 @@ export default function Post({ post, onDeleted }: PostProps) {
         onClose={() => setShowComments(false)}
         onCommentAdded={refresh}
       />
-
       {/* ---------------------------------- ACTION SHEET ---------------------------------- */}
       <ActionSheet ref={actionSheetRef}>
         <View style={styles.sheetContainer}>
@@ -525,6 +518,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: wp(2),
+    marginTop: wp(2),
     marginBottom: wp(3),
   },
 

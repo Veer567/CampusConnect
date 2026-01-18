@@ -56,6 +56,11 @@ export default function SettingsDrawer() {
       icon: "people-outline",
       route: "/(settings)/about",
     },
+    {
+      label: "About Developers",
+      icon: "code-slash-outline",
+      route: "/(settings)/about-developers",
+    },
   ];
 
   // Android back button → return to Profile

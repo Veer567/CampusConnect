@@ -1,26 +1,26 @@
 // SignupScreen.tsx
-import React, { useRef, useState } from "react";
-import {
-  Image,
-  KeyboardAvoidingView,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  Pressable,
-  Platform,
-  ActivityIndicator,
-  StyleSheet,
-  useWindowDimensions,
-} from "react-native";
+import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
+import { COLORS } from "@/constants/themes";
+import { styles as authStyles } from "@/styles/auth.styles";
 import { useSignUp } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { COLORS } from "@/constants/themes";
-import { styles as authStyles } from "@/styles/auth.styles";
+import React, { useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 
 export default function SignupScreen() {
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -101,9 +101,7 @@ export default function SignupScreen() {
       showAlert({
         title: "Sign-up Failed",
         message:
-          err?.errors?.[0]?.message ||
-          err?.message ||
-          "Something went wrong.",
+          err?.errors?.[0]?.message || err?.message || "Something went wrong.",
       });
     } finally {
       setLoading(false);
@@ -156,13 +154,13 @@ export default function SignupScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: "center",
             paddingHorizontal: horizontalPadding,
             paddingVertical: 24,
           }}
@@ -176,6 +174,7 @@ export default function SignupScreen() {
                 source={require("@/assets/images/education.png")}
               />
             </View>
+
             <Text style={[authStyles.appName, { color: COLORS.primary }]}>
               CampusConnect
             </Text>
@@ -216,13 +215,9 @@ export default function SignupScreen() {
                     style={localStyles.passwordInput}
                     selectionColor={COLORS.primary}
                     cursorColor={COLORS.primary}
-                    onSubmitEditing={() =>
-                      confirmPassRef.current?.focus()
-                    }
+                    onSubmitEditing={() => confirmPassRef.current?.focus()}
                   />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword((p) => !p)}
-                  >
+                  <TouchableOpacity onPress={() => setShowPassword((p) => !p)}>
                     <Ionicons
                       name={showPassword ? "eye-off" : "eye"}
                       size={22}
@@ -246,9 +241,7 @@ export default function SignupScreen() {
                     onSubmitEditing={handleSignUp}
                   />
                   <TouchableOpacity
-                    onPress={() =>
-                      setShowConfirmPassword((p) => !p)
-                    }
+                    onPress={() => setShowConfirmPassword((p) => !p)}
                   >
                     <Ionicons
                       name={showConfirmPassword ? "eye-off" : "eye"}
@@ -304,8 +297,7 @@ export default function SignupScreen() {
                   disabled={verificationLoading}
                   style={[
                     localStyles.button,
-                    verificationLoading &&
-                      localStyles.buttonDisabled,
+                    verificationLoading && localStyles.buttonDisabled,
                   ]}
                 >
                   {verificationLoading ? (

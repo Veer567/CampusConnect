@@ -154,11 +154,31 @@ export const searchUsers = query({
   args: { q: v.string() },
   handler: async (ctx, { q }) => {
     const users = await ctx.db.query("users").collect();
-    return users.filter((u) =>
-      u.fullname.toLowerCase().includes(q.toLowerCase())
-    );
+    const queryLower = q.toLowerCase();
+
+    return users.filter((u) => {
+      const fullname = (u.fullname ?? "").toLowerCase();
+      const username = (u.username ?? "").toLowerCase();
+
+      // 🔥 NORMALIZE fullname
+      const normalizedFullname = fullname
+        .replace(/[0-9]/g, "") // remove numbers
+        .replace(/[._-]/g, " ") // split dots/underscores
+        .replace(/\s+/g, " ") // clean spaces
+        .trim();
+
+      // split words
+      const fullnameParts = normalizedFullname.split(" ");
+
+      return (
+        username.includes(queryLower) ||
+        fullname.includes(queryLower) ||
+        fullnameParts.some((p) => p.startsWith(queryLower))
+      );
+    });
   },
 });
+
 
 /*───────────────────────────────────────────────
  🧹 DELETE USER DATA

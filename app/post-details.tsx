@@ -51,7 +51,7 @@ const Shimmer: React.FC<{
           duration: 900,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, []);
 
@@ -99,13 +99,13 @@ export default function PostDetailsScreen() {
 
   const post = useQuery(
     api.posts.getPostById,
-    normalizedPostId ? { postId: normalizedPostId as Id<"posts"> } : "skip"
+    normalizedPostId ? { postId: normalizedPostId as Id<"posts"> } : "skip",
   );
 
   const comments =
     useQuery(
       api.comments.getComments,
-      normalizedPostId ? { targetId: normalizedPostId as Id<"posts"> } : "skip"
+      normalizedPostId ? { targetId: normalizedPostId as Id<"posts"> } : "skip",
     ) ?? [];
 
   const toggleLike = useMutation(api.posts.toggleLikePost);
@@ -332,6 +332,26 @@ export default function PostDetailsScreen() {
 
             {/* CAPTION */}
             {post.caption && <Text style={styles.caption}>{post.caption}</Text>}
+            {/* HASHTAGS */}
+            {post.tags && Array.isArray(post.tags) && post.tags.length > 0 && (
+              <View style={styles.tagsContainer}>
+                {post.tags.map((tag: string, index: number) => (
+                  <TouchableOpacity
+                    key={`${post._id}-tag-${index}`}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/search",
+                        params: { q: `#${tag}` },
+                      })
+                    }
+                    style={styles.tagChip}
+                  >
+                    <Text style={styles.tagText}>#{tag}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
             {/* META CARD (White box with date + location) */}
             <View
@@ -495,6 +515,28 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     gap: 20,
     backgroundColor: "#fff",
+  },
+  tagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: wp(2),
+    marginTop: wp(2),
+    marginBottom: wp(4),
+  },
+
+  tagChip: {
+    backgroundColor: "#EEF4FF",
+    borderWidth: 1,
+    borderColor: COLORS.primary + "40",
+    paddingHorizontal: wp(3),
+    paddingVertical: wp(1.4),
+    borderRadius: wp(5),
+  },
+
+  tagText: {
+    color: COLORS.primary,
+    fontSize: wp(3.4),
+    fontWeight: "700",
   },
 
   cardContainer: { flex: 1, backgroundColor: COLORS.surface },

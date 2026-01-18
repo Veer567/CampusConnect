@@ -1,38 +1,45 @@
 // lostItems.ts
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getAuthenticatedUser } from "./users"; // you already have this helper
+import { getAuthenticatedUser } from "./users";
 
+/*───────────────────────────────────────────────
+  CREATE LOST ITEM (IMAGE REQUIRED, STORAGE SAFE)
+───────────────────────────────────────────────*/
 export const addLostItem = mutation({
   args: {
     title: v.string(),
     description: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    imageStorageId: v.id("_storage"),
     location: v.optional(v.string()),
     status: v.union(v.literal("lost"), v.literal("found")),
-    category: v.optional(v.string()), // ✅ NEW FIELD
+    category: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await getAuthenticatedUser(ctx);
 
+    const imageUrl = await ctx.storage.getUrl(args.imageStorageId);
+    if (!imageUrl) throw new Error("Invalid image upload");
+
     return await ctx.db.insert("lostItems", {
       title: args.title,
       description: args.description,
-      imageUrl: args.imageUrl ?? "",
+      imageStorageId: args.imageStorageId,
+      imageUrl,
       location: args.location,
       status: args.status,
-      category: args.category ?? "Other", // ✅ DEFAULT
+      category: args.category ?? "Other",
       reporterId: user._id,
       reporterName: user.fullname,
-      reporterImage: user.image ?? "", // ✅ STORE PROFILE IMAGE
+      reporterImage: user.image,
       createdAt: Date.now(),
     });
   },
 });
 
-
-
-
+/*───────────────────────────────────────────────
+  GET LOST ITEMS (FILTERED)
+───────────────────────────────────────────────*/
 export const getLostItems = query({
   args: {
     status: v.optional(v.union(v.literal("lost"), v.literal("found"))),
@@ -42,15 +49,18 @@ export const getLostItems = query({
     if (status) {
       return await ctx.db
         .query("lostItems")
-        .withIndex("by_status", (qq) => qq.eq("status", status))
+        .withIndex("by_status", (q) => q.eq("status", status))
         .order("desc")
         .take(limit);
     }
-    // fallback order by createdAt
+
     return await ctx.db.query("lostItems").order("desc").take(limit);
   },
 });
 
+/*───────────────────────────────────────────────
+  GET SINGLE ITEM
+───────────────────────────────────────────────*/
 export const getLostItemById = query({
   args: { id: v.id("lostItems") },
   handler: async (ctx, { id }) => {
@@ -60,6 +70,9 @@ export const getLostItemById = query({
   },
 });
 
+/*───────────────────────────────────────────────
+  GET USER'S LOST ITEMS
+───────────────────────────────────────────────*/
 export const getMyLostItems = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
@@ -71,37 +84,27 @@ export const getMyLostItems = query({
   },
 });
 
+/*───────────────────────────────────────────────
+  SEARCH LOST ITEMS
+───────────────────────────────────────────────*/
 export const searchLostItems = query({
   args: { q: v.string() },
   handler: async (ctx, { q }) => {
     const items = await ctx.db.query("lostItems").collect();
     const qLower = q.toLowerCase();
+
     return items.filter(
       (i) =>
         i.title.toLowerCase().includes(qLower) ||
-        (i.description && i.description.toLowerCase().includes(qLower)) ||
-        (i.location && i.location.toLowerCase().includes(qLower))
+        i.description?.toLowerCase().includes(qLower) ||
+        i.location?.toLowerCase().includes(qLower)
     );
   },
 });
-export const deleteLostItem = mutation({
-  args: { id: v.id("lostItems") },
-  handler: async (ctx, { id }) => {
-    const user = await getAuthenticatedUser(ctx);
 
-    const item = await ctx.db.get(id);
-    if (!item) throw new Error("Item not found");
-
-    // Only item owner can delete
-    if (item.reporterId !== user._id) {
-      throw new Error("Unauthorized: You can only delete your own item.");
-    }
-
-    await ctx.db.delete(id);
-    return true;
-  },
-});
-// UPDATE LOST ITEM
+/*───────────────────────────────────────────────
+  UPDATE LOST ITEM (SAFE IMAGE REPLACEMENT)
+───────────────────────────────────────────────*/
 export const updateLostItem = mutation({
   args: {
     id: v.id("lostItems"),
@@ -110,85 +113,137 @@ export const updateLostItem = mutation({
     location: v.optional(v.string()),
     category: v.optional(v.string()),
     status: v.union(v.literal("lost"), v.literal("found")),
-    imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
+    const user = await getAuthenticatedUser(ctx);
+    const item = await ctx.db.get(args.id);
+
+    if (!item) throw new Error("Item not found");
+    if (item.reporterId !== user._id) throw new Error("Unauthorized");
+
+    let imageUrl = item.imageUrl;
+    let imageStorageId = item.imageStorageId;
+
+    if (args.imageStorageId && args.imageStorageId !== item.imageStorageId) {
+      // delete old image
+      try {
+        if (item.imageStorageId) {
+          await ctx.storage.delete(item.imageStorageId);
+        }
+      } catch {}
+
+      const url = await ctx.storage.getUrl(args.imageStorageId);
+      if (!url) throw new Error("Invalid image upload");
+
+      imageUrl = url;
+      imageStorageId = args.imageStorageId;
+    }
+
     await ctx.db.patch(args.id, {
       title: args.title,
       description: args.description,
+      location: args.location,
       category: args.category,
       status: args.status,
-      location: args.location,
-      imageUrl: args.imageUrl,
+      imageUrl,
+      imageStorageId,
     });
   },
 });
-export const getItemById = query({
+
+/*───────────────────────────────────────────────
+  DELETE LOST ITEM (CLEANS STORAGE)
+───────────────────────────────────────────────*/
+export const deleteLostItem = mutation({
   args: { id: v.id("lostItems") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+  handler: async (ctx, { id }) => {
+    const user = await getAuthenticatedUser(ctx);
+    const item = await ctx.db.get(id);
+
+    if (!item) throw new Error("Item not found");
+    if (item.reporterId !== user._id) throw new Error("Unauthorized");
+
+    if (item.imageStorageId) {
+      try {
+        await ctx.storage.delete(item.imageStorageId);
+      } catch {}
+    }
+
+    await ctx.db.delete(id);
+    return true;
   },
 });
-export const getLostFoundStats = query({
-  handler: async (ctx) => {
-    // Count lost
-    const lostItems = await ctx.db
-      .query("lostItems")
-      .withIndex("by_status", (q) => q.eq("status", "lost"))
-      .collect();
-    const foundItems = await ctx.db
-      .query("lostItems")
-      .withIndex("by_status", (q) => q.eq("status", "found"))
-      .collect();
 
-    // reunited events table (we'll insert an event each time owner marks reunited)
-    // It's fine to use collect() if dataset is small; else you'd store a counter doc.
-    const reunitedEvents = await ctx.db.query("reunitedEvents").collect();
-
-    return {
-      lostCount: lostItems.length,
-      foundCount: foundItems.length,
-      reunitedCount: reunitedEvents.length,
-    };
-  },
-});
+/*───────────────────────────────────────────────
+  MARK ITEM AS FOUND
+───────────────────────────────────────────────*/
 export const markItemFound = mutation({
   args: { id: v.id("lostItems") },
   handler: async (ctx, { id }) => {
     const user = await getAuthenticatedUser(ctx);
     const item = await ctx.db.get(id);
+
     if (!item) throw new Error("Item not found");
-    if (String(item.reporterId) !== String(user._id))
-      throw new Error("Unauthorized");
+    if (item.reporterId !== user._id) throw new Error("Unauthorized");
+
     await ctx.db.patch(id, { status: "found" });
     return await ctx.db.get(id);
   },
 });
 
-// 2) mutation: mark reunited -> record event then delete the lostItems doc
+/*───────────────────────────────────────────────
+  MARK ITEM AS REUNITED (ARCHIVE EVENT)
+───────────────────────────────────────────────*/
 export const markItemReunited = mutation({
   args: { id: v.id("lostItems") },
   handler: async (ctx, { id }) => {
     const user = await getAuthenticatedUser(ctx);
     const item = await ctx.db.get(id);
+
     if (!item) throw new Error("Item not found");
+    if (item.reporterId !== user._id) throw new Error("Unauthorized");
 
-    // Only reporter can mark reunited
-    if (String(item.reporterId) !== String(user._id))
-      throw new Error("Unauthorized");
-
-    // Record a reunite event (so we can compute reunited count later)
     await ctx.db.insert("reunitedEvents", {
       itemId: id,
       reporterId: user._id,
       reporterName: user.fullname,
-      reporterImage: user.image ?? "",
+      reporterImage: user.image,
       createdAt: Date.now(),
     });
 
-    // delete the original item (per your requirement)
-    await ctx.db.delete(id);
+    if (item.imageStorageId) {
+      try {
+        await ctx.storage.delete(item.imageStorageId);
+      } catch {}
+    }
 
+    await ctx.db.delete(id);
     return true;
+  },
+});
+
+/*───────────────────────────────────────────────
+  LOST / FOUND STATS
+───────────────────────────────────────────────*/
+export const getLostFoundStats = query({
+  handler: async (ctx) => {
+    const lost = await ctx.db
+      .query("lostItems")
+      .withIndex("by_status", (q) => q.eq("status", "lost"))
+      .collect();
+
+    const found = await ctx.db
+      .query("lostItems")
+      .withIndex("by_status", (q) => q.eq("status", "found"))
+      .collect();
+
+    const reunited = await ctx.db.query("reunitedEvents").collect();
+
+    return {
+      lostCount: lost.length,
+      foundCount: found.length,
+      reunitedCount: reunited.length,
+    };
   },
 });

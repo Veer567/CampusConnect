@@ -208,6 +208,22 @@ export default function MarketplacePostDetail() {
           </View>
         </>
       )}
+      {/* LOOKING FOR */}
+      {post.lookingFor && (
+        <>
+          <Text style={styles.sectionTitle}>Looking For</Text>
+          <View style={styles.lookingForBox}>
+            <Ionicons
+              name="person-outline"
+              size={18}
+              color={COLORS.primary}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.lookingForText}>{post.lookingFor}</Text>
+          </View>
+        </>
+      )}
+
       <View>
         <Text style={styles.sectionTitle}>Interested Members</Text>
 
@@ -273,6 +289,21 @@ export default function MarketplacePostDetail() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
+  lookingForBox: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 14,
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  lookingForText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
 
   heroContainer: {
     width: "100%",

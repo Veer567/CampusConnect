@@ -29,6 +29,7 @@ import {
 import dayjs from "dayjs";
 import DateTimePicker from "react-native-ui-datepicker";
 
+import { Id } from "@/convex/_generated/dataModel";
 import { COLORS } from "../../../../constants/themes";
 import { api } from "../../../../convex/_generated/api";
 
@@ -82,6 +83,7 @@ export default function CreateMarketplace() {
   const [image, setImage] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
 
   /* ---------------------------------------------------------
      PICK IMAGE
@@ -92,7 +94,7 @@ export default function CreateMarketplace() {
       if (!perm.granted) {
         Alert.alert(
           "Permission required",
-          "Please allow photo access to upload an image."
+          "Please allow photo access to upload an image.",
         );
         return;
       }
@@ -111,7 +113,7 @@ export default function CreateMarketplace() {
           const compressed = await ImageManipulator.manipulateAsync(
             uri,
             [{ resize: { width: 1080 } }],
-            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
           );
           setImage(compressed.uri);
         } catch {
@@ -122,6 +124,22 @@ export default function CreateMarketplace() {
       console.error("Image pick error", err);
       Alert.alert("Error", "Could not pick image.");
     }
+  };
+
+  const uploadImageToConvex = async (uri: string) => {
+    const uploadUrl = await generateUploadUrl();
+
+    const res = await fetch(uri);
+    const blob = await res.blob();
+
+    const uploadRes = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": blob.type },
+      body: blob,
+    });
+
+    const { storageId } = await uploadRes.json();
+    return storageId;
   };
 
   /* ---------------------------------------------------------
@@ -142,7 +160,7 @@ export default function CreateMarketplace() {
      - eventDate only for hackathon
   --------------------------------------------------------- */
   const [calendarField, setCalendarField] = useState<"event" | "join" | null>(
-    null
+    null,
   );
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState(false);
@@ -153,7 +171,7 @@ export default function CreateMarketplace() {
     setCalendarField(field);
 
     const parsed = tryParseDate(
-      currentVal || (field === "event" ? eventDate : lastDateToJoin)
+      currentVal || (field === "event" ? eventDate : lastDateToJoin),
     );
     setSelectedDate(parsed ?? new Date());
 
@@ -187,7 +205,7 @@ export default function CreateMarketplace() {
     if (!title.trim()) {
       return toast.show(
         { title: "Missing Title", message: "Please enter a title." },
-        "error"
+        "error",
       );
     }
 
@@ -195,7 +213,7 @@ export default function CreateMarketplace() {
     if (!description.trim()) {
       return toast.show(
         { title: "Missing Description", message: "Please enter description." },
-        "error"
+        "error",
       );
     }
 
@@ -206,7 +224,7 @@ export default function CreateMarketplace() {
           title: "Event Date Missing",
           message: "Please select the event date.",
         },
-        "error"
+        "error",
       );
     }
 
@@ -214,21 +232,21 @@ export default function CreateMarketplace() {
     if (!lastDateToJoin) {
       return toast.show(
         { title: "Last Date Missing", message: "Enter last date to join." },
-        "error"
+        "error",
       );
     }
 
     if (!location.trim()) {
       return toast.show(
         { title: "Location Missing", message: "Please enter the location." },
-        "error"
+        "error",
       );
     }
     //Looking For
     if (!lookingFor.trim()) {
       return toast.show(
         { title: "Looking For Missing", message: "Please enter looking for." },
-        "error"
+        "error",
       );
     }
 
@@ -240,6 +258,12 @@ export default function CreateMarketplace() {
         .map((tag) => tag.trim())
         .filter((tag) => tag.length > 0);
 
+      let imageStorageId: Id<"_storage"> | undefined = undefined;
+
+      if (image) {
+        imageStorageId = await uploadImageToConvex(image);
+      }
+
       await createPost({
         type: postType,
         title: title.trim(),
@@ -249,7 +273,7 @@ export default function CreateMarketplace() {
         eventDate: eventDate || undefined,
         lastDateToJoin: lastDateToJoin || undefined,
         location: location.trim() || "Remote",
-        imageUrl: image || undefined,
+        imageStorageId, // ✅ NOT imageUrl
       });
 
       toast.show(
@@ -257,14 +281,14 @@ export default function CreateMarketplace() {
           title: "Post Published 🎉",
           message: "Your marketplace post is now live!",
         },
-        "success"
+        "success",
       );
 
       router.replace(`/marketplace?tab=${postType}`);
     } catch (err) {
       toast.show(
         { title: "Failed to Publish", message: "Something went wrong." },
-        "error"
+        "error",
       );
     } finally {
       setLoading(false);
@@ -301,6 +325,8 @@ export default function CreateMarketplace() {
     hackathon: [
       "title",
       "description",
+      "lookingFor", // ✅ ADD
+      "tags", // ✅ ADD
       "eventDate",
       "lastDateToJoin",
       "location",
@@ -415,10 +441,12 @@ export default function CreateMarketplace() {
      Render
   --------------------------------------------------------- */
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.background  , marginTop: -50}}>
-      <SafeAreaView style={{ flex: 1, paddingBottom: 55}} >
+    <View
+      style={{ flex: 1, backgroundColor: COLORS.background, marginTop: -50 }}
+    >
+      <SafeAreaView style={{ flex: 1, paddingBottom: 55 }}>
         {/* Header / Back */}
-  
+
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
