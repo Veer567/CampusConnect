@@ -64,6 +64,11 @@ const ALLOWED_DOMAIN = "@marwadiuniversity.ac.in"; // change to your university'
       <img src="./screenshots/splashScreen.jpg" width="200"/><br/>
       <b>Splash Screen</b><br/>
       <sub>App launch screen with branding</sub>
+    </td>    
+    <td align="center">
+      <img src="screenshots/createAccount.png" width="200"/><br/>
+      <b>Create Account</b><br/>
+      <sub>Creating account via university email ID</sub>
     </td>
     <td align="center">
       <img src="./screenshots/login.png" width="200"/><br/>
