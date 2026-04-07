@@ -249,7 +249,7 @@ aligning seamlessly with **Marwadi University's digital transformation** and com
 - **Project Name:** CampusConnect  
 - **Built With:** ❤️ React Native, Expo, Convex, and Clerk  
 - **Institution:** Marwadi University  
-- **Team:** Vir, Vikas Singh, Aryan Bhojani
+- **Team:** Viral Bhojani, Vikas Singh, Aryan Bhojani
 
 ---
 
