@@ -44,17 +44,25 @@ function NotificationDeepLinkHandler() {
     if (!navState?.key) return;
 
     Notifications.getLastNotificationResponseAsync().then((response) => {
-      const screen = response?.notification?.request?.content?.data?.screen;
+      const data = response?.notification?.request?.content?.data;
+      const screen = data?.screen;
       if (isValidRoute(screen)) {
-        router.replace(screen as any);
+        router.replace({
+          pathname: screen as any,
+          params: data as any,
+        });
       }
     });
 
     const subscription = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        const screen = response.notification.request.content.data?.screen;
+        const data = response.notification.request.content.data;
+        const screen = data?.screen;
         if (isValidRoute(screen)) {
-          router.push(screen as any);
+          router.push({
+            pathname: screen as any,
+            params: data as any,
+          });
         }
       },
     );
@@ -99,6 +107,8 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <ToastProvider>
               <StatusBarController />
+              <AppWithNotifications />
+              <NotificationDeepLinkHandler />
 
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />

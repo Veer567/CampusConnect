@@ -38,11 +38,12 @@ export default function EditLostItem() {
 
   // ITEM QUERY
   const item = useQuery(
-    api.lostItems.getItemById,
+    api.lostItems.getLostItemById,
     id ? { id: id as any } : "skip"
   );
 
   const updateLostItem = useMutation(api.lostItems.updateLostItem);
+  const generateUploadUrl = useMutation(api.posts.generateUploadUrl);
 
   // FORM STATES
   const [title, setTitle] = useState("");
@@ -73,9 +74,32 @@ export default function EditLostItem() {
     if (!result.canceled) setImageUrl(result.assets[0].uri);
   };
 
+  const uploadImageToConvex = async (uri: string) => {
+    const uploadUrl = await generateUploadUrl();
+    const res = await fetch(uri);
+    const blob = await res.blob();
+    const uploadRes = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": blob.type,
+      },
+      body: blob,
+    });
+    if (!uploadRes.ok) throw new Error("Image upload failed");
+    const { storageId } = await uploadRes.json();
+    return storageId;
+  };
+
   // SUBMIT
   const handleSubmit = async () => {
     try {
+      let imageStorageId: string | undefined = undefined;
+
+      // Only upload if it's a new local image
+      if (imageUrl && imageUrl !== item?.imageUrl) {
+        imageStorageId = await uploadImageToConvex(imageUrl);
+      }
+
       await updateLostItem({
         id: id as any,
         title,
@@ -83,7 +107,7 @@ export default function EditLostItem() {
         location,
         status,
         category: undefined,
-        imageUrl: imageUrl || undefined,
+        imageStorageId: imageStorageId as any,
       });
 
       toast.show({ type: "success", message: "Your item was successfully updated." });

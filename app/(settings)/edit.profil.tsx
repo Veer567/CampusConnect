@@ -80,7 +80,6 @@ export default function EditProfileScreen() {
       }
 
       await updateProfile({
-        id: dbUser._id,
         fullname,
         year,
         departments: departments.split(",").map((s) => s.trim()),

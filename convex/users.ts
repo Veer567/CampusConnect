@@ -417,3 +417,15 @@ export const updateUserProfile = mutation({
     return await ctx.db.get(user._id);
   },
 });
+
+export const updateProfilePicture = mutation({
+  args: { storageId: v.string() },
+  handler: async (ctx, { storageId }) => {
+    const user = await getAuthenticatedUser(ctx);
+    const imageUrl = await ctx.storage.getUrl(storageId);
+    if (!imageUrl) throw new Error("File not found");
+
+    await ctx.db.patch(user._id, { image: imageUrl });
+    return imageUrl;
+  },
+});
