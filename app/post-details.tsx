@@ -25,7 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 /* ============================================================
    INLINE SHIMMER SKELETON — No separate file needed
@@ -93,6 +93,7 @@ const hp = (p: number) => (height * p) / 100;
 
 export default function PostDetailsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { postId, scrollTo, from } = useLocalSearchParams();
 
   const normalizedPostId = Array.isArray(postId) ? postId[0] : postId;
@@ -287,7 +288,7 @@ export default function PostDetailsScreen() {
           <StatusBar translucent barStyle="light-content" />
 
           {/* BACK */}
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={[styles.backButton, { top: insets.top + 10 }]}>
             <Ionicons name="arrow-back" size={26} color={COLORS.text} />
           </TouchableOpacity>
 

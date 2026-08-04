@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
+import { COLORS } from "@/constants/themes";
 
 /**
  * Central redirect screen for notifications
@@ -82,4 +83,18 @@ export default function NotificationRedirect() {
     }
   }, [params]);
 
+  return (
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color={COLORS.primary} />
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});

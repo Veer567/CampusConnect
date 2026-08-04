@@ -20,7 +20,6 @@ export default function FAQ() {
         flex: 1,
         backgroundColor: COLORS.background,
       }}
-      edges={[]}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}

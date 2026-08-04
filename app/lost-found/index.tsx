@@ -253,8 +253,7 @@ export default function LostFoundScreen() {
         colors={[COLORS.primary, COLORS.secondary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        
-        style={[styles.header, { paddingTop: 10 }]}
+        style={[styles.header, { paddingTop: insets.top + 10 }]}
       >
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>

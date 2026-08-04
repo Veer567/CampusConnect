@@ -42,7 +42,7 @@
         "backgroundColor": "#ffffff"
       },
 
-      "softwareKeyboardLayoutMode": "pan",
+      "softwareKeyboardLayoutMode": "resize",
       "edgeToEdgeEnabled": false
     },
 

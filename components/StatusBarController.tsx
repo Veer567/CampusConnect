@@ -1,21 +1,31 @@
 import { usePathname } from "expo-router";
-import CustomStatusBar from "@/components/CustomStatusBar";
-import { COLORS } from "@/constants/themes";
+import { StatusBar } from "expo-status-bar";
+import React from "react";
 
 export default function StatusBarController() {
-  const pathname = usePathname();
+  const pathname = usePathname() || "";
 
-  const hiddenScreens = ["/index", "/profile", "/other-profile",];
+  const lightScreens = [
+    "/profile",
+    "/other-profile",
+    "/search",
+    "/edit-post",
+    "/post-details",
+    "/lost-found/add",
+    "/lost-found/edit",
+  ];
 
-  const shouldHide =
-    hiddenScreens.includes(pathname) || pathname.startsWith("/hello");
-
-  if (shouldHide) return null;
+  const isLight =
+    lightScreens.some((p) => pathname === p || pathname.startsWith(p)) ||
+    pathname.includes("settings") ||
+    pathname.includes("reset-password") ||
+    pathname.includes("create");
 
   return (
-    <CustomStatusBar
-      colors={[COLORS.primary, COLORS.secondary]}
-      style="light"
+    <StatusBar
+      translucent
+      backgroundColor="transparent"
+      style={isLight ? "dark" : "light"}
     />
   );
 }

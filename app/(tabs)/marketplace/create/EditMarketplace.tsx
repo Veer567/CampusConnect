@@ -268,9 +268,7 @@ const submit = useCallback(async () => {
      UI
 ----------------------------*/
   return (
-    <View
-      style={{ flex: 1, backgroundColor: COLORS.background, marginTop: -50 }}
-    >
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <SafeAreaView style={{ flex: 1 }}>
         {/* Header / Back */}
 

@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "@/constants/themes";
 import TopTabs from "./TopTabs";
 
@@ -10,6 +10,8 @@ type MarketplaceTabsProps = {
 };
 
 export default function MarketplaceTabs({ initialTab }: MarketplaceTabsProps) {
+  const insets = useSafeAreaInsets();
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={[]}>
       {/* HEADER */}
@@ -17,7 +19,7 @@ export default function MarketplaceTabs({ initialTab }: MarketplaceTabsProps) {
         colors={[COLORS.primary, COLORS.secondary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.header}
+        style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <View style={{ alignItems: "flex-start" }}>
           <Text style={styles.title}>Innovation Hub</Text>

@@ -3,12 +3,15 @@ import { useRouter } from "expo-router";
 import { ScrollView, Text, StyleSheet, Pressable, View } from "react-native";
 
 import useBackToSettingsRoot from "@/hooks/useBackToSettingsRoot";
+import { COLORS } from "@/constants/themes";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Terms() {
   const router = useRouter();
   useBackToSettingsRoot();
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <ScrollView style={styles.container}>
       
       {/* Back Button */}
       <Pressable style={styles.backBtn} onPress={() => router.back()}>
@@ -145,6 +148,7 @@ export default function Terms() {
       </View>
 
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

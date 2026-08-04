@@ -282,55 +282,59 @@ export default function FeedScreen() {
   return (
     <SafeAreaProvider>
       <LinearGradient colors={["#EFF6FF", "#FFFFFF"]} style={{ flex: 1 }}>
-        <SafeAreaView style={feedStyles.container}>
+        <SafeAreaView
+          style={feedStyles.container}
+          edges={["bottom", "left", "right"]}
+        >
           {/* HEADER */}
-          <View style={{ position: "relative" }}>
-            <AppHeader
-              title="Campus Connect "
-              alignLeft
-              showBackButton={false}
-            />
+          <AppHeader
+            title="Campus Connect"
+            alignLeft
+            showBackButton={false}
+            rightElement={
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+                {/* Notifications */}
+                <TouchableOpacity
+                  onPress={() => router.push("/notifications")}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={24}
+                    color="white"
+                  />
 
-            {/* ICONS */}
-            <View style={feedStyles.headerRightContainer}>
-              {/* Notifications */}
-              <TouchableOpacity
-                style={{ marginRight: 18 }}
-                onPress={() => router.push("/notifications")}
-              >
-                <Ionicons
-                  name="notifications-outline"
-                  size={24}
-                  color="white"
-                />
+                  {unreadNotifications > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>
+                        {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
 
-                {unreadNotifications > 0 && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                      {unreadNotifications > 9 ? "9+" : unreadNotifications}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                {/* Chat */}
+                <TouchableOpacity
+                  onPress={() => router.push("/chat")}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="chatbubble-ellipses-outline"
+                    size={24}
+                    color="white"
+                  />
 
-              {/* Chat */}
-              <TouchableOpacity onPress={() => router.push("/chat")}>
-                <Ionicons
-                  name="chatbubble-ellipses-outline"
-                  size={24}
-                  color="white"
-                />
-
-                {unreadMessages > 0 && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                      {unreadMessages > 9 ? "9+" : unreadMessages}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
+                  {unreadMessages > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>
+                        {unreadMessages > 9 ? "9+" : unreadMessages}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+            }
+          />
 
           {/* SEARCH */}
           <TouchableOpacity

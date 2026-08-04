@@ -8,11 +8,14 @@ import { useMutation, useQuery } from "convex/react";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
   InteractionManager,
   Modal,
+  Platform,
+  KeyboardAvoidingView,
   Pressable,
   StyleSheet,
   Text,
@@ -26,15 +29,29 @@ import { useKeepAwake } from "expo-keep-awake";
 const { width } = Dimensions.get("window");
 const BUBBLE_MAX_WIDTH = width * 0.78;
 
+function isValidConvexId(id?: string | null): boolean {
+  if (!id) return false;
+  if (id === "undefined" || id === "null" || id.trim() === "") return false;
+  return typeof id === "string" && id.length > 5;
+}
+
 export default function ChatScreen() {
   useKeepAwake();
   
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const convId = params.conversationId as Id<"conversations">;
+  const rawConvId = params.conversationId as string | undefined;
+  const rawOtherId = params.otherUserId as string | undefined;
 
-  const otherId = params.otherUserId as Id<"users">;
+  const validConvParam = isValidConvexId(rawConvId)
+    ? (rawConvId as Id<"conversations">)
+    : undefined;
+
+  const validOtherId = isValidConvexId(rawOtherId)
+    ? (rawOtherId as Id<"users">)
+    : undefined;
+
   const { userId: clerkId } = useAuth();
 
   const me = useQuery(
@@ -42,28 +59,61 @@ export default function ChatScreen() {
     clerkId ? { clerkId } : "skip"
   );
 
-  const meId = me?._id; // ✅ ALWAYS CORRECT
+  const meId = me?._id;
+
+  const [activeConvId, setActiveConvId] = useState<Id<"conversations"> | undefined>(validConvParam);
+
+  const getOrStartConv = useMutation(api.chat.getOrStartConversation);
+
+  useEffect(() => {
+    if (validConvParam) {
+      setActiveConvId(validConvParam);
+    } else if (validOtherId && meId && !activeConvId) {
+      getOrStartConv({ otherUserId: validOtherId })
+        .then((res) => {
+          const resolvedId =
+            typeof res === "object" && res && "_id" in res
+              ? res._id
+              : (res as unknown as Id<"conversations">);
+          if (resolvedId && isValidConvexId(String(resolvedId))) {
+            setActiveConvId(resolvedId as Id<"conversations">);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [validConvParam, validOtherId, meId]);
+
+  const conversation = useQuery(
+    api.chat.getConversation,
+    activeConvId && meId ? { conversationId: activeConvId } : "skip"
+  );
+
+  const resolvedOtherUserId =
+    validOtherId ||
+    (meId && conversation
+      ? conversation.participants.find((p) => String(p) !== String(meId))
+      : undefined);
 
   /* ---------------- Queries ---------------- */
 
   const other = useQuery(
     api.users.getUserProfile,
-    convId ? { id: otherId } : "skip"
+    resolvedOtherUserId ? { id: resolvedOtherUserId } : "skip"
   );
 
   const presence = useQuery(
     api.chat.getUserPresence,
-    otherId ? { userId: otherId } : "skip"
+    resolvedOtherUserId ? { userId: resolvedOtherUserId } : "skip"
   );
 
   const messages = useQuery(
     api.chat.getMessagesLive,
-    convId ? { conversationId: convId } : "skip"
+    activeConvId ? { conversationId: activeConvId } : "skip"
   );
 
   const typingUsers = useQuery(
     api.chat.getTypingForConversation,
-    convId ? { conversationId: convId } : "skip"
+    activeConvId ? { conversationId: activeConvId } : "skip"
   );
 
   /* ---------------- Mutations ---------------- */
@@ -89,7 +139,7 @@ export default function ChatScreen() {
   const [editingMessage, setEditingMessage] = useState<any | null>(null);
 
   const isOtherTyping = typingUsers?.some(
-    (t: any) => String(t.userId) === String(otherId)
+    (t: any) => String(t.userId) === String(resolvedOtherUserId)
   );
 
   /* ---------------- Effects ---------------- */
@@ -101,17 +151,17 @@ export default function ChatScreen() {
   );
 
   useEffect(() => {
-    if (!messages?.length || !convId) return;
-    markRead({ conversationId: convId }).catch(() => {});
+    if (!messages?.length || !activeConvId) return;
+    markRead({ conversationId: activeConvId }).catch(() => {});
     scrollToBottom(false);
-  }, [messages]);
+  }, [messages, activeConvId]);
 
   useEffect(() => {
-    if (!convId) return;
-    if (text.length > 0) startTyping({ conversationId: convId });
-    const t = setTimeout(() => stopTyping({ conversationId: convId }), 800);
+    if (!activeConvId) return;
+    if (text.length > 0) startTyping({ conversationId: activeConvId });
+    const t = setTimeout(() => stopTyping({ conversationId: activeConvId }), 800);
     return () => clearTimeout(t);
-  }, [text]);
+  }, [text, activeConvId]);
 
   /* ---------------- Helpers ---------------- */
 
@@ -123,7 +173,7 @@ export default function ChatScreen() {
 
   const handleSend = async () => {
     const trimmed = text.trim();
-    if (!trimmed || !convId) return;
+    if (!trimmed || !activeConvId) return;
 
     setText("");
     scrollToBottom();
@@ -139,7 +189,7 @@ export default function ChatScreen() {
     }
 
     await sendMessage({
-      conversationId: convId,
+      conversationId: activeConvId,
       text: trimmed,
     });
   };
@@ -200,6 +250,29 @@ export default function ChatScreen() {
 
   /* ---------------- UI ---------------- */
 
+  if (!activeConvId || messages === undefined) {
+    return (
+      <View style={[styles.container, { justifyContent: "flex-start" }]}>
+        <SafeAreaView edges={["top"]} style={styles.headerSafe}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={handleBack}>
+              <Ionicons name="arrow-back" size={26} color={COLORS.text || "#000"} />
+            </TouchableOpacity>
+            <View style={{ marginLeft: 10, flex: 1 }}>
+              <Text style={styles.headerName}>
+                {other?.fullname || other?.username || "Chat"}
+              </Text>
+            </View>
+          </View>
+        </SafeAreaView>
+
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <>
       <View style={styles.container}>
@@ -214,7 +287,7 @@ export default function ChatScreen() {
               onPress={() =>
                 router.push({
                   pathname: "/other-profile",
-                  params: { userId: otherId },
+                  params: { userId: resolvedOtherUserId },
                 })
               }
             >
@@ -228,11 +301,11 @@ export default function ChatScreen() {
               />
             </TouchableOpacity>
 
-            <View style={{ marginLeft: 10 }}>
-              <Text style={styles.headerName}>
+            <View style={{ marginLeft: 10, flex: 1, marginRight: 10 }}>
+              <Text style={styles.headerName} numberOfLines={1} ellipsizeMode="tail">
                 {other?.fullname || other?.username}
               </Text>
-              <Text style={styles.typingText}>
+              <Text style={styles.typingText} numberOfLines={1}>
                 {isOtherTyping
                   ? "typing…"
                   : presence?.online
@@ -244,7 +317,11 @@ export default function ChatScreen() {
         </SafeAreaView>
 
         {/* 🟢 CHAT BODY (PANS, HEADER DOES NOT) */}
-        <View style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        >
           <FlatList
             ref={flatRef}
             data={messages}
@@ -283,7 +360,7 @@ export default function ChatScreen() {
               />
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
 
         {/* ACTION SHEET */}
         <Modal visible={isMenuVisible} transparent animationType="fade">
@@ -344,7 +421,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    marginTop: -50,
   },
 
   headerSafe: {

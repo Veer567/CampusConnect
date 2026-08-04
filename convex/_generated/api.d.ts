@@ -11,6 +11,7 @@
 import type * as bookmark from "../bookmark.js";
 import type * as chat from "../chat.js";
 import type * as comments from "../comments.js";
+import type * as encryption from "../encryption.js";
 import type * as fcm from "../fcm.js";
 import type * as http from "../http.js";
 import type * as lostItems from "../lostItems.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   bookmark: typeof bookmark;
   chat: typeof chat;
   comments: typeof comments;
+  encryption: typeof encryption;
   fcm: typeof fcm;
   http: typeof http;
   lostItems: typeof lostItems;

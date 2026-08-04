@@ -57,6 +57,7 @@ export const sendMessageNotification = action({
     senderName: v.string(),
     message: v.string(),
     conversationId: v.string(),
+    senderId: v.string(),
   },
   handler: async (_, args) => {
     const app = getFirebaseAdmin();
@@ -71,6 +72,7 @@ export const sendMessageNotification = action({
         screen: "/notification-redirect",
         type: "message",
         conversationId: args.conversationId,
+        senderId: args.senderId,
       }),
       android: {
         priority: "high",

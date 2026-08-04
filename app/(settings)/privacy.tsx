@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import useBackToSettingsRoot from "@/hooks/useBackToSettingsRoot";
+import { COLORS } from "@/constants/themes";
 import {
   ScrollView,
   Text,
@@ -8,13 +9,15 @@ import {
   Pressable,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function PrivacyPolicy() {
   const router = useRouter();
   useBackToSettingsRoot();
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <ScrollView style={styles.container}>
 
       {/* Back Button */}
       <Pressable style={styles.backBtn} onPress={() => router.back()}>
@@ -142,6 +145,7 @@ export default function PrivacyPolicy() {
       </View>
 
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

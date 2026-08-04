@@ -441,9 +441,7 @@ export default function CreateMarketplace() {
      Render
   --------------------------------------------------------- */
   return (
-    <View
-      style={{ flex: 1, backgroundColor: COLORS.background, marginTop: -50 }}
-    >
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <SafeAreaView style={{ flex: 1, paddingBottom: 55 }}>
         {/* Header / Back */}
 

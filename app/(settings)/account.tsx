@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 import { useToast } from "@/components/Toast/ToastProvider";
@@ -71,7 +72,7 @@ export default function AccountScreen() {
 
   /* ------------------------- UI ------------------------- */
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -126,7 +127,7 @@ export default function AccountScreen() {
       </View>
 
       <GlobalAlert />
-    </View>
+    </SafeAreaView>
   );
 }
 

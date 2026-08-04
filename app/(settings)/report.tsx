@@ -12,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import GlobalAlert, { useAlert } from "@/components/GlobalAlert";
 import { COLORS } from "@/constants/themes";
@@ -45,7 +46,7 @@ export default function Report() {
   };
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Back Button */}
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
@@ -75,7 +76,7 @@ export default function Report() {
 
       {/* Required for alerts */}
       <GlobalAlert />
-    </>
+    </SafeAreaView>
   );
 }
 

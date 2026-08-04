@@ -104,10 +104,7 @@ export default function ChangePasswordScreen() {
 
   /* ------------------------- UI ------------------------- */
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: COLORS.background, marginTop: -1 }}
-      edges={[]}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

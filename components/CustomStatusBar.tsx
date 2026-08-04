@@ -30,8 +30,17 @@ export default function CustomStatusBar({
       : 44; // fallback for iOS without notch
 
   return (
-    // Wrapper view to match native status bar height
-    <View style={{ height: statusBarHeight }}>
+    // Wrapper view positioned absolutely to overlay content without pushing layout down
+    <View
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: statusBarHeight,
+        zIndex: 999,
+      }}
+    >
       {/* Gradient background behind the translucent status bar */}
       <LinearGradient
         colors={colors}

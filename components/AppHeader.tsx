@@ -18,7 +18,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Get screen dimensions for responsive layout
+// Get screen dimensions for responsive layout (kept for other potential responsive elements if any)
 const { width, height } = Dimensions.get("window");
 const wp = (p: number) => (width * p) / 100;
 const hp = (p: number) => (height * p) / 100;
@@ -28,6 +28,7 @@ interface HeaderProps {
   title: string;
   showBackButton?: boolean;
   rightIcon?: string;
+  rightElement?: React.ReactNode;
   onBackPress?: () => void;   // <── CUSTOM BACK HANDLER
   onRightPress?: () => void;
   alignLeft?: boolean;        // enables left-aligned title
@@ -38,6 +39,7 @@ export default function AppHeader({
   title,
   showBackButton = true,
   rightIcon,
+  rightElement,
   onBackPress,
   onRightPress,
   alignLeft = false,
@@ -51,8 +53,7 @@ export default function AppHeader({
     else router.back();
   };
 
-  // Calculate minimum header content height (base height without safe area)
-  const baseHeaderHeight = Math.max(hp(6.5), 50);
+  const baseHeaderHeight = 56; // Standard Material Design header height
 
   return (
     <LinearGradient
@@ -63,7 +64,7 @@ export default function AppHeader({
         styles.header, 
         { 
           paddingTop: insets.top, // Add safe area padding at top
-          minHeight: baseHeaderHeight + insets.top, // Ensure minimum height including safe area
+          height: baseHeaderHeight + insets.top, // Fixed height including safe area
         }
       ]}
     >
@@ -91,9 +92,9 @@ export default function AppHeader({
               alignLeft && {
                 textAlign: "left",
                 alignSelf: "flex-start",
-                marginLeft: wp(-7.5),
+                marginLeft: -16,
                 fontFamily: "Poppins_700Bold",
-                fontSize: wp(6.2),
+                fontSize: 22,
                 letterSpacing: 0.3,
               },
             ]}
@@ -102,8 +103,10 @@ export default function AppHeader({
           </Text>
         </View>
 
-        {/* RIGHT ICON */}
-        {rightIcon ? (
+        {/* RIGHT ICON OR CUSTOM ELEMENT */}
+        {rightElement ? (
+          rightElement
+        ) : rightIcon ? (
           <TouchableOpacity onPress={onRightPress} style={styles.iconButton}>
             <Ionicons name={rightIcon as any} size={22} color={COLORS.white} />
           </TouchableOpacity>
@@ -130,9 +133,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: wp(5),
+    paddingHorizontal: 16,
     flex: 1,
-    minHeight: 50, // Minimum height for header content
+    height: 56, // Fixed height for header content
   },
   titleContainer: {
     flex: 1,
@@ -140,15 +143,15 @@ const styles = StyleSheet.create({
   },
   title: {
     color: COLORS.white,
-    fontSize: wp(5),
+    fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
     letterSpacing: 0.5,
   },
   iconButton: {
-    padding: wp(0.5),
+    padding: 4,
   },
   placeholder: {
-    width: wp(6),
+    width: 26,
   },
 });

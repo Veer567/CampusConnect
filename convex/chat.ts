@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { getAuthenticatedUser } from "./users";
+import { encryptText, decryptText } from "./encryption";
 
 /*───────────────────────────────────────────
   START OR GET CONVERSATION
@@ -64,10 +65,12 @@ export const sendMessage = mutation({
 
     const now = Date.now();
 
+    const encryptedText = args.text ? await encryptText(args.text) : undefined;
+
     await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       senderId: me._id,
-      text: args.text,
+      text: encryptedText,
       imageUrl,
       storageId: args.storageId,
       createdAt: now,
@@ -77,8 +80,10 @@ export const sendMessage = mutation({
     const preview =
       args.text?.trim() || (imageUrl ? "📷 Photo" : "New message");
 
+    const encryptedPreview = await encryptText(preview);
+
     await ctx.db.patch(args.conversationId, {
-      lastMessage: preview,
+      lastMessage: encryptedPreview,
       lastMessageAt: now,
     });
 
@@ -103,6 +108,7 @@ export const sendMessage = mutation({
         senderName: me.username || me.fullname || "New message",
         message: preview,
         conversationId: String(args.conversationId),
+        senderId: String(me._id),
       });
     }
   },
@@ -140,7 +146,9 @@ export const getMyConversations = query({
         if (!isMine && !isRead) unread++;
       }
 
-      result.push({ ...c, unreadCount: unread });
+      const decryptedLastMessage = c.lastMessage ? await decryptText(c.lastMessage) : c.lastMessage;
+
+      result.push({ ...c, lastMessage: decryptedLastMessage, unreadCount: unread });
     }
 
     return result.sort(
@@ -155,13 +163,20 @@ export const getMyConversations = query({
 export const getMessagesLive = query({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, { conversationId }) => {
-    return await ctx.db
+    const messages = await ctx.db
       .query("messages")
       .withIndex("by_conversation_createdAt", (q) =>
         q.eq("conversationId", conversationId)
       )
       .order("desc")
       .take(50);
+
+    return await Promise.all(
+      messages.map(async (m) => ({
+        ...m,
+        text: m.text ? await decryptText(m.text) : undefined,
+      }))
+    );
   },
 });
 
@@ -217,6 +232,29 @@ export const startTyping = mutation({
       createdAt: now,
       expiresAt: now + 5000,
     });
+  },
+});
+
+export const getConversation = query({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, { conversationId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const me = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+    if (!me) return null;
+
+    const conv = await ctx.db.get(conversationId);
+    if (!conv) return null;
+
+    if (!conv.participants.map(String).includes(String(me._id))) {
+      return null;
+    }
+
+    return conv;
   },
 });
 
@@ -320,7 +358,8 @@ export const editMessage = mutation({
     if (String(msg.senderId) !== String(me._id))
       throw new Error("Not your message");
 
-    await ctx.db.patch(messageId, { text });
+    const encryptedText = await encryptText(text);
+    await ctx.db.patch(messageId, { text: encryptedText });
   },
 });
 
